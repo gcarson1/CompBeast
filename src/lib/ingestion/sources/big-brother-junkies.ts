@@ -35,6 +35,30 @@ function playerIdFromHref(href: string | undefined): string | null {
   return href.slice(index + PLAYER_PATH.length).split(/[?#/]/)[0] || null;
 }
 
+/**
+ * Cast photos are served through Next.js's image optimizer
+ * (`/_next/image?url=<encoded-original>&w=...&q=75`), so the attribute value
+ * itself is a relative path scoped to their proxy, not a portable URL. The
+ * original file the `url` param points at is what's stable to store.
+ */
+function photoUrlFromCard($: cheerio.CheerioAPI, card: Element): string | undefined {
+  const img = $(card).find('img').first();
+  const raw = img.attr('src') || img.attr('srcset');
+  if (!raw) return undefined;
+
+  const proxied = /[?&]url=([^&\s]+)/.exec(raw);
+  if (proxied) {
+    try {
+      const decoded = decodeURIComponent(proxied[1]);
+      return decoded.startsWith('http') ? decoded : undefined;
+    } catch {
+      return undefined;
+    }
+  }
+
+  return raw.startsWith('http') ? raw : undefined;
+}
+
 function playersInCell($: cheerio.CheerioAPI, cell: Element): RawPlayerRef[] {
   const players: RawPlayerRef[] = [];
   $(cell)
@@ -137,6 +161,7 @@ export const bigBrotherJunkiesAdapter: SeasonSourceAdapter = {
       cast.push({
         externalId,
         name,
+        photoUrl: photoUrlFromCard($, card),
         statusLabel: $(card).find('.tag').first().text().trim() || null,
         placeLabel: $(card).find('.s').first().text().trim() || null,
       });

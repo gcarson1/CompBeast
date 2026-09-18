@@ -1,16 +1,41 @@
+'use client';
+
+import { useState } from 'react';
 import { avatarColor, cn, initials } from '@/lib/ui';
 
 export function Avatar({
   name,
+  photoUrl,
   size = 40,
   dimmed = false,
   className,
 }: {
   name: string;
+  /** Contestant headshot, when the source has one. Falls back to initials on load failure. */
+  photoUrl?: string | null;
   size?: number;
   dimmed?: boolean;
   className?: string;
 }) {
+  const [broken, setBroken] = useState(false);
+
+  if (photoUrl && !broken) {
+    return (
+      <img
+        src={photoUrl}
+        alt=""
+        loading="lazy"
+        onError={() => setBroken(true)}
+        className={cn(
+          'inline-block shrink-0 rounded-full object-cover ring-2 ring-surface',
+          dimmed && 'opacity-40 grayscale',
+          className,
+        )}
+        style={{ width: size, height: size }}
+      />
+    );
+  }
+
   return (
     <span
       className={cn(

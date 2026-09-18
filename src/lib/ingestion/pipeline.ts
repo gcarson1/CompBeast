@@ -29,6 +29,7 @@ export interface BootstrapResult {
   seasonId: string;
   contestantsCreated: number;
   contestantsLinked: number;
+  photosBackfilled: number;
   cyclesCreated: number;
 }
 
@@ -106,15 +107,29 @@ export async function bootstrapSeasonFromSource(input: {
   // Contestants, keyed by the source's slug.
   let contestantsCreated = 0;
   let contestantsLinked = 0;
+  let photosBackfilled = 0;
 
   for (const member of facts.cast) {
     const existingLink = await prisma.contestantExternalRef.findUnique({
       where: {
         sourceSlug_externalId: { sourceSlug: facts.sourceSlug, externalId: member.externalId },
       },
-      select: { contestantId: true },
+      select: { contestantId: true, contestant: { select: { photoUrl: true } } },
     });
-    if (existingLink) continue;
+
+    if (existingLink) {
+      // Bootstrap is safe to re-run, and the adapter only just started
+      // capturing photoUrl — backfill it for contestants that were already
+      // linked before that, without overwriting one set some other way.
+      if (member.photoUrl && !existingLink.contestant.photoUrl) {
+        await prisma.contestant.update({
+          where: { id: existingLink.contestantId },
+          data: { photoUrl: member.photoUrl },
+        });
+        photosBackfilled += 1;
+      }
+      continue;
+    }
 
     const contestant = await prisma.contestant.create({
       data: {
@@ -136,7 +151,7 @@ export async function bootstrapSeasonFromSource(input: {
     contestantsLinked += 1;
   }
 
-  return { seasonId: season.id, contestantsCreated, contestantsLinked, cyclesCreated };
+  return { seasonId: season.id, contestantsCreated, contestantsLinked, photosBackfilled, cyclesCreated };
 }
 
 /**

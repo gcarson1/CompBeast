@@ -28,7 +28,7 @@ export default async function PlayerPage({ params }: { params: { contestantId: s
       </Link>
 
       <div className="mt-4 flex flex-col items-center text-center">
-        <Avatar name={player.name} size={84} dimmed={!player.isActive} />
+        <Avatar name={player.name} photoUrl={player.photoUrl} size={84} dimmed={!player.isActive} />
         <h1 className="mt-3 text-[22px] font-semibold tracking-tight">{player.name}</h1>
         <p className="mt-0.5 text-[13px] text-muted">
           {player.isActive ? 'In the house' : `Evicted · ${player.eliminatedCycle?.label ?? '—'}`}

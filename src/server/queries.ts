@@ -375,6 +375,7 @@ export async function getSeasonsByStatus() {
 export interface SeasonPlayerScore {
   contestantId: string;
   name: string;
+  photoUrl: string | null;
   isActive: boolean;
   placement: number | null;
   eliminatedLabel: string | null;
@@ -438,6 +439,7 @@ export async function getSeasonScoreboard(slug: string): Promise<{
     select: {
       id: true,
       name: true,
+      photoUrl: true,
       isActive: true,
       placement: true,
       metadata: true,
@@ -453,6 +455,7 @@ export async function getSeasonScoreboard(slug: string): Promise<{
     .map((contestant) => ({
       contestantId: contestant.id,
       name: contestant.name,
+      photoUrl: contestant.photoUrl,
       isActive: contestant.isActive,
       placement: contestant.placement,
       eliminatedLabel: contestant.eliminatedCycle?.label ?? null,

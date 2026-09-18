@@ -63,7 +63,12 @@ export default async function SeasonPage({ params }: { params: { slug: string } 
                   <span className="w-6 shrink-0 text-center text-[13px] font-semibold tabular-nums text-muted">
                     {index + 1}
                   </span>
-                  <Avatar name={player.name} size={42} dimmed={isArchived ? false : !player.isActive} />
+                  <Avatar
+                    name={player.name}
+                    photoUrl={player.photoUrl}
+                    size={42}
+                    dimmed={isArchived ? false : !player.isActive}
+                  />
                   <span className="min-w-0 flex-1">
                     <span className="block truncate text-[15px] font-semibold">{player.name}</span>
                     <span className="mt-0.5 block truncate text-[12px] text-muted">
