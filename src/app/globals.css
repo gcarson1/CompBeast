@@ -1,0 +1,57 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+@layer base {
+  html {
+    -webkit-tap-highlight-color: transparent;
+  }
+
+  body {
+    @apply bg-canvas text-ink antialiased;
+    font-family: ui-sans-serif, -apple-system, 'SF Pro Text', 'Segoe UI', Roboto, sans-serif;
+  }
+}
+
+@layer components {
+  .card {
+    @apply rounded-card bg-surface shadow-card;
+  }
+
+  .pill {
+    @apply inline-flex items-center justify-center rounded-pill px-3 py-1.5 text-sm font-medium;
+  }
+
+  .btn-primary {
+    @apply pill bg-lime text-ink transition active:scale-[0.97];
+  }
+
+  .btn-ghost {
+    @apply pill bg-canvas text-ink transition active:scale-[0.97];
+  }
+
+  .tab-active {
+    @apply pill bg-ink text-white;
+  }
+
+  .tab-idle {
+    @apply pill text-muted;
+  }
+
+  .field {
+    @apply w-full rounded-2xl border border-hairline bg-canvas px-4 py-3 text-[15px] outline-none transition placeholder:text-muted focus:border-lime-deep focus:bg-surface;
+  }
+
+  .label {
+    @apply mb-1.5 block text-[13px] font-medium text-muted;
+  }
+}
+
+/* Hide scrollbars on the horizontal chip rows without losing scroll. */
+.no-scrollbar::-webkit-scrollbar {
+  display: none;
+}
+.no-scrollbar {
+  -ms-overflow-style: none;
+  scrollbar-width: none;
+}

@@ -1,0 +1,438 @@
+// Comp Beast — Pluggable Domain Model
+//
+// Design principle: the platform core (League/Team/Roster/User) and the
+// scoring core (EventDefinition/ScoredEvent) never reference show-specific
+// concepts directly. Everything that varies by show (Big Brother, Survivor,
+// The Traitors, ...) lives behind Show/Season/Contestant/EventDefinition,
+// which are just rows — adding a new show is a seed script, not a schema
+// change or a code change to the scoring engine.
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+// ---------------------------------------------------------------------------
+// Platform: identity & multi-tenancy
+// ---------------------------------------------------------------------------
+
+model User {
+  id        String   @id @default(cuid())
+  // Opaque subject id from whichever auth provider is wired up (Clerk, Auth.js,
+  // Supabase). Kept provider-neutral so swapping providers is a config change.
+  authId    String   @unique
+  email     String   @unique
+  name      String?
+  avatarUrl String?
+  handle    String?  @unique
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  leaguesOwned   League[]       @relation("LeagueCommissioner")
+  memberships    LeagueMember[]
+  teams          Team[]
+  auditedActions ScoreAudit[]
+  recordedEvents ScoredEvent[]  @relation("EventRecorder")
+
+  @@map("users")
+}
+
+// ---------------------------------------------------------------------------
+// Show-agnostic program containers
+// ---------------------------------------------------------------------------
+
+/// A reality program franchise, e.g. "Big Brother", "Survivor", "The Traitors".
+model Show {
+  id        String     @id @default(cuid())
+  slug      String     @unique
+  name      String
+  format    ShowFormat @default(TRADITIONAL_FANTASY_SPORT)
+  /// Show-specific display vocabulary so the UI can say "Week"/"Episode"/"Round"
+  /// and "Houseguest"/"Castaway" without any hardcoded per-show branching.
+  lexicon   Json?
+  createdAt DateTime   @default(now())
+
+  seasons          Season[]
+  eventDefinitions EventDefinition[]
+  scoringRulesets  ScoringRuleset[]
+
+  @@map("shows")
+}
+
+/// The kind of fantasy competition this show is played as. MVP only implements
+/// TRADITIONAL_FANTASY_SPORT (fixed squads, weekly cycles, leaderboard).
+enum ShowFormat {
+  TRADITIONAL_FANTASY_SPORT
+}
+
+/// A single airing season/series of a Show, e.g. "Big Brother 27".
+model Season {
+  id        String    @id @default(cuid())
+  showId    String
+  show      Show      @relation(fields: [showId], references: [id], onDelete: Cascade)
+  slug      String    @unique
+  name      String
+  year      Int
+  startDate DateTime?
+  endDate   DateTime?
+  createdAt DateTime  @default(now())
+
+  contestants Contestant[]
+  cycles      Cycle[]
+  leagues     League[]
+
+  @@unique([showId, name])
+  @@map("seasons")
+}
+
+/// A reality TV player available for drafting within a season. Show-specific
+/// attributes (hometown, occupation, tribe, ...) live in `metadata` so the
+/// column set never has to change per show.
+model Contestant {
+  id                String     @id @default(cuid())
+  seasonId          String
+  season            Season     @relation(fields: [seasonId], references: [id], onDelete: Cascade)
+  name              String
+  photoUrl          String?
+  /// e.g. { hometown, occupation, age, tribe }
+  metadata          Json?
+  /// false once evicted / voted out / eliminated
+  isActive          Boolean    @default(true)
+  /// Final placement once the season resolves (1 = winner)
+  placement         Int?
+  eliminatedCycleId String?
+  eliminatedCycle   Cycle?     @relation("EliminationCycle", fields: [eliminatedCycleId], references: [id])
+  createdAt         DateTime   @default(now())
+
+  rosterSlots  RosterSlot[]
+  scoredEvents ScoredEvent[]
+  draftPicks   DraftPick[]
+
+  @@index([seasonId])
+  @@map("contestants")
+}
+
+/// A weekly or episode-based bounding box used to lock rosters and window
+/// scoring events. Named generically since not every show calls this a "week".
+model Cycle {
+  id        String      @id @default(cuid())
+  seasonId  String
+  season    Season      @relation(fields: [seasonId], references: [id], onDelete: Cascade)
+  label     String
+  /// 1-indexed ordering within the season
+  sequence  Int
+  /// Hard roster lock timestamp
+  locksAt   DateTime
+  airsAt    DateTime?
+  status    CycleStatus @default(UPCOMING)
+  createdAt DateTime    @default(now())
+
+  rosterSlots       RosterSlot[]
+  scoredEvents      ScoredEvent[]
+  teamCycleScores   TeamCycleScore[]
+  eliminatedInCycle Contestant[]     @relation("EliminationCycle")
+
+  @@unique([seasonId, sequence])
+  @@index([seasonId])
+  @@map("cycles")
+}
+
+enum CycleStatus {
+  UPCOMING
+  /// rosters can no longer be edited
+  LOCKED
+  /// episode airing, events may be recorded
+  LIVE
+  /// all events recorded and finalized, leaderboard settled
+  SCORED
+}
+
+// ---------------------------------------------------------------------------
+// Multi-tenant league structures (Traditional Fantasy Sport format)
+// ---------------------------------------------------------------------------
+
+model League {
+  id               String         @id @default(cuid())
+  seasonId         String
+  season           Season         @relation(fields: [seasonId], references: [id])
+  name             String
+  inviteCode       String         @unique
+  commissionerId   String
+  commissioner     User           @relation("LeagueCommissioner", fields: [commissionerId], references: [id])
+  isPublic         Boolean        @default(false)
+  requiresApproval Boolean        @default(true)
+  rosterSize       Int            @default(5)
+  maxTeams         Int            @default(12)
+  draftType        DraftType      @default(SNAKE)
+  scoringRulesetId String
+  scoringRuleset   ScoringRuleset @relation(fields: [scoringRulesetId], references: [id])
+  draftStatus      DraftStatus    @default(NOT_STARTED)
+  draftStartsAt    DateTime?
+  draftCompletedAt DateTime?
+  /// Minutes before Cycle.airsAt that this league's rosters hard-lock. Null
+  /// falls back to the season-wide Cycle.locksAt.
+  lockOffsetMinutes Int?
+  createdAt        DateTime       @default(now())
+  updatedAt        DateTime       @updatedAt
+
+  members    LeagueMember[]
+  teams      Team[]
+  draftPicks DraftPick[]
+
+  @@index([seasonId])
+  @@map("leagues")
+}
+
+enum DraftType {
+  SNAKE
+  LINEAR
+  AUCTION
+}
+
+enum DraftStatus {
+  NOT_STARTED
+  IN_PROGRESS
+  COMPLETED
+}
+
+model LeagueMember {
+  id       String           @id @default(cuid())
+  leagueId String
+  league   League           @relation(fields: [leagueId], references: [id], onDelete: Cascade)
+  userId   String
+  user     User             @relation(fields: [userId], references: [id])
+  role     LeagueRole       @default(MEMBER)
+  status   MembershipStatus @default(ACTIVE)
+  joinedAt DateTime         @default(now())
+
+  @@unique([leagueId, userId])
+  @@map("league_members")
+}
+
+enum LeagueRole {
+  COMMISSIONER
+  ADMIN
+  MEMBER
+}
+
+enum MembershipStatus {
+  PENDING
+  ACTIVE
+  REMOVED
+}
+
+/// A user's fixed squad within a league for the whole season.
+model Team {
+  id                 String   @id @default(cuid())
+  leagueId           String
+  league             League   @relation(fields: [leagueId], references: [id], onDelete: Cascade)
+  ownerId            String
+  owner              User     @relation(fields: [ownerId], references: [id])
+  name               String
+  draftOrderPosition Int?
+  createdAt          DateTime @default(now())
+
+  rosterSlots RosterSlot[]
+  draftPicks  DraftPick[]
+  cycleScores TeamCycleScore[]
+
+  @@unique([leagueId, ownerId])
+  @@unique([leagueId, draftOrderPosition])
+  @@map("teams")
+}
+
+/// Assignment of a Contestant to a Team, scoped to a Cycle. Modeled per-cycle
+/// so "roster as of cycle N" is always reconstructible and so a league can
+/// later allow waiver-style swaps without a migration. The MVP snake draft
+/// writes one row per contestant per remaining cycle.
+model RosterSlot {
+  id           String     @id @default(cuid())
+  teamId       String
+  team         Team       @relation(fields: [teamId], references: [id], onDelete: Cascade)
+  contestantId String
+  contestant   Contestant @relation(fields: [contestantId], references: [id])
+  cycleId      String
+  cycle        Cycle      @relation(fields: [cycleId], references: [id])
+  acquiredAt   DateTime   @default(now())
+
+  @@unique([teamId, contestantId, cycleId])
+  @@index([cycleId])
+  @@map("roster_slots")
+}
+
+/// Immutable record of the draft. The unique constraints are what actually
+/// enforce "no duplicate players exist on rosters" at the database level.
+model DraftPick {
+  id           String     @id @default(cuid())
+  leagueId     String
+  league       League     @relation(fields: [leagueId], references: [id], onDelete: Cascade)
+  teamId       String
+  team         Team       @relation(fields: [teamId], references: [id])
+  contestantId String
+  contestant   Contestant @relation(fields: [contestantId], references: [id])
+  round        Int
+  /// overall pick number across the whole draft, 1-indexed
+  pickNumber   Int
+  pickedAt     DateTime   @default(now())
+
+  @@unique([leagueId, contestantId])
+  @@unique([leagueId, pickNumber])
+  @@map("draft_picks")
+}
+
+// ---------------------------------------------------------------------------
+// Scoring engine: show-agnostic rule dictionary + transactional ledger
+// ---------------------------------------------------------------------------
+
+/// A named collection of EventDefinitions a league can select, e.g.
+/// "Classic/Measurable" vs "Drama/Social". This is what turns "toggle between
+/// rule sets" into a league configuration choice rather than a code branch.
+model ScoringRuleset {
+  id          String   @id @default(cuid())
+  showId      String
+  show        Show     @relation(fields: [showId], references: [id], onDelete: Cascade)
+  slug        String
+  name        String
+  description String?
+  isDefault   Boolean  @default(false)
+  createdAt   DateTime @default(now())
+
+  eventDefinitions ScoringRulesetEventDefinition[]
+  leagues          League[]
+
+  @@unique([showId, slug])
+  @@map("scoring_rulesets")
+}
+
+/// The dynamic rule dictionary: every scorable event for a Show with its point
+/// value. Adding a show or rebalancing scoring is a data change here — never a
+/// schema change and never a change to the scoring engine.
+model EventDefinition {
+  id              String        @id @default(cuid())
+  showId          String
+  show            Show          @relation(fields: [showId], references: [id], onDelete: Cascade)
+  /// stable machine key, e.g. "HOH_WIN"
+  code            String
+  label           String
+  category        EventCategory
+  points          Decimal       @db.Decimal(6, 2)
+  /// false for once-per-season awards (placement, jury) so the admin UI and
+  /// validation layer can prevent accidental duplicates
+  isRepeatable    Boolean       @default(true)
+  /// true when the event is expected once per cycle for each surviving
+  /// contestant (e.g. "weeks in the house") and can be auto-generated
+  isPerCycleAward Boolean       @default(false)
+  description     String?
+  createdAt       DateTime      @default(now())
+
+  scoringRulesetLinks ScoringRulesetEventDefinition[]
+  scoredEvents        ScoredEvent[]
+
+  @@unique([showId, code])
+  @@index([showId, category])
+  @@map("event_definitions")
+}
+
+/// Show-agnostic bucketing so UIs and rule browsers never need to know
+/// show-specific category names.
+enum EventCategory {
+  COMPETITION_GAMEPLAY
+  ELIMINATION_ENDGAME
+  SOCIAL_DRAMA
+}
+
+/// Which EventDefinitions are active — and at what point value — within a
+/// given ScoringRuleset. Lets rulesets share EventDefinition rows while
+/// enabling different subsets and different point values.
+model ScoringRulesetEventDefinition {
+  id                String          @id @default(cuid())
+  scoringRulesetId  String
+  scoringRuleset    ScoringRuleset  @relation(fields: [scoringRulesetId], references: [id], onDelete: Cascade)
+  eventDefinitionId String
+  eventDefinition   EventDefinition @relation(fields: [eventDefinitionId], references: [id], onDelete: Cascade)
+  pointsOverride    Decimal?        @db.Decimal(6, 2)
+
+  @@unique([scoringRulesetId, eventDefinitionId])
+  @@map("scoring_ruleset_event_definitions")
+}
+
+/// The transactional ledger: one row per contestant-event-cycle occurrence.
+/// Team totals are always derived from this, never stored as the primary fact,
+/// which is what makes retroactive audits and corrections safe.
+model ScoredEvent {
+  id                String          @id @default(cuid())
+  contestantId      String
+  contestant        Contestant      @relation(fields: [contestantId], references: [id])
+  eventDefinitionId String
+  eventDefinition   EventDefinition @relation(fields: [eventDefinitionId], references: [id])
+  cycleId           String
+  cycle             Cycle           @relation(fields: [cycleId], references: [id])
+  /// Snapshot of the point value at recording time, so later rule edits do not
+  /// silently rewrite settled history. The engine can re-resolve against the
+  /// live ruleset on demand (see `pointsSource` in the scoring engine).
+  pointsAwarded     Decimal         @db.Decimal(6, 2)
+  /// Free-form context: alliance name, competition name, opposing contestant.
+  metadata          Json?
+  note              String?
+  occurredAt        DateTime        @default(now())
+  recordedById      String?
+  recordedBy        User?           @relation("EventRecorder", fields: [recordedById], references: [id])
+  /// Soft-void for corrections instead of hard delete
+  isVoided          Boolean         @default(false)
+  voidedReason      String?
+  createdAt         DateTime        @default(now())
+
+  audits ScoreAudit[]
+
+  @@index([cycleId, isVoided])
+  @@index([contestantId])
+  @@map("scored_events")
+}
+
+/// Audit trail for retroactive score corrections, so history is appended to
+/// rather than mutated in place.
+model ScoreAudit {
+  id             String      @id @default(cuid())
+  scoredEventId  String
+  scoredEvent    ScoredEvent @relation(fields: [scoredEventId], references: [id], onDelete: Cascade)
+  action         AuditAction
+  previousPoints Decimal?    @db.Decimal(6, 2)
+  newPoints      Decimal?    @db.Decimal(6, 2)
+  reason         String?
+  performedById  String
+  performedBy    User        @relation(fields: [performedById], references: [id])
+  createdAt      DateTime    @default(now())
+
+  @@map("score_audits")
+}
+
+enum AuditAction {
+  CREATED
+  VOIDED
+  RESTORED
+  POINTS_ADJUSTED
+}
+
+// ---------------------------------------------------------------------------
+// Derived leaderboard state — written only by the recalculation job
+// ---------------------------------------------------------------------------
+
+model TeamCycleScore {
+  id               String   @id @default(cuid())
+  teamId           String
+  team             Team     @relation(fields: [teamId], references: [id], onDelete: Cascade)
+  cycleId          String
+  cycle            Cycle    @relation(fields: [cycleId], references: [id], onDelete: Cascade)
+  cyclePoints      Decimal  @db.Decimal(8, 2)
+  cumulativePoints Decimal  @db.Decimal(8, 2)
+  rank             Int?
+  computedAt       DateTime @default(now())
+
+  @@unique([teamId, cycleId])
+  @@index([cycleId])
+  @@map("team_cycle_scores")
+}
