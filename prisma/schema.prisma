@@ -76,15 +76,18 @@ enum ShowFormat {
 
 /// A single airing season/series of a Show, e.g. "Big Brother 27".
 model Season {
-  id        String    @id @default(cuid())
+  id        String       @id @default(cuid())
   showId    String
-  show      Show      @relation(fields: [showId], references: [id], onDelete: Cascade)
-  slug      String    @unique
+  show      Show         @relation(fields: [showId], references: [id], onDelete: Cascade)
+  slug      String       @unique
   name      String
   year      Int
+  /// Explicit rather than derived from dates: ingested seasons often arrive
+  /// with no reliable air dates, but a finished season always has a winner.
+  status    SeasonStatus @default(UPCOMING)
   startDate DateTime?
   endDate   DateTime?
-  createdAt DateTime  @default(now())
+  createdAt DateTime     @default(now())
 
   contestants Contestant[]
   cycles      Cycle[]
@@ -93,6 +96,16 @@ model Season {
 
   @@unique([showId, name])
   @@map("seasons")
+}
+
+/// Whether a season can still be played, or is only an archive.
+///
+/// Leagues may only be created or joined on UPCOMING and ACTIVE seasons —
+/// drafting a cast whose whole season already aired is not a game.
+enum SeasonStatus {
+  UPCOMING
+  ACTIVE
+  COMPLETED
 }
 
 /// A reality TV player available for drafting within a season. Show-specific

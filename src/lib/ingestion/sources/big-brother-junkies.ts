@@ -61,6 +61,21 @@ export const bigBrotherJunkiesAdapter: SeasonSourceAdapter = {
 
     const seasonLabel = $('h1').first().text().trim();
 
+    // Premiere/finale live in a <dl> of season facts. Used to schedule cycles,
+    // since the results grid carries no dates of its own.
+    const facts = new Map<string, string>();
+    $('section#overview dl dt').each((_, term) => {
+      const key = $(term).text().trim().toLowerCase();
+      const value = $(term).next('dd').text().trim();
+      if (key && value) facts.set(key, value);
+    });
+
+    const parseDate = (value: string | undefined): Date | null => {
+      if (!value) return null;
+      const parsed = new Date(value);
+      return Number.isNaN(parsed.getTime()) ? null : parsed;
+    };
+
     // --- Weekly results ----------------------------------------------------
     // The first grid row is the header; data rows follow. Each row is
     // [week label, HoH cell, Veto cell, Noms cell, Evicted cell].
@@ -100,8 +115,11 @@ export const bigBrotherJunkiesAdapter: SeasonSourceAdapter = {
       const externalId = playerIdFromHref(anchor.attr('href'));
       if (!externalId) return;
 
+      // Houseguests still in the house occupy rows with no number.
+      const rawOrder = Number($(cells[0]).text().trim());
+
       evictionOrder.push({
-        order: Number($(cells[0]).text().trim()),
+        order: Number.isFinite(rawOrder) ? rawOrder : null,
         player: { externalId, name: anchor.text().trim() },
         dateLabel: $(cells[2]).text().trim(),
         dayLabel: $(cells[3]).text().trim(),
@@ -135,6 +153,8 @@ export const bigBrotherJunkiesAdapter: SeasonSourceAdapter = {
       sourceSlug: SLUG,
       sourceUrl,
       seasonLabel,
+      premiereDate: parseDate(facts.get('premiere')),
+      finaleDate: parseDate(facts.get('finale')),
       weeks,
       evictionOrder,
       cast,

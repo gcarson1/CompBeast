@@ -23,8 +23,8 @@ export default async function PlayerPage({ params }: { params: { contestantId: s
 
   return (
     <div className="pt-2">
-      <Link href="/players" className="text-[13px] text-muted">
-        ← Players
+      <Link href={`/seasons/${player.season.slug}`} className="text-[13px] text-muted">
+        ← {player.season.name}
       </Link>
 
       <div className="mt-4 flex flex-col items-center text-center">

@@ -48,10 +48,16 @@ export async function createLeague(userId: string, input: z.infer<typeof createL
   });
   const season = await prisma.season.findUnique({
     where: { id: data.seasonId },
-    select: { showId: true },
+    select: { showId: true, status: true, name: true },
   });
   if (!ruleset || !season || ruleset.showId !== season.showId) {
     throw new DomainError('That ruleset does not belong to the selected show.', 'RULESET_MISMATCH');
+  }
+  if (season.status === 'COMPLETED') {
+    throw new DomainError(
+      `${season.name} has already finished. You can browse its results, but not start a league on it.`,
+      'SEASON_COMPLETED',
+    );
   }
 
   return prisma.$transaction(async (tx) => {
@@ -85,10 +91,18 @@ export async function joinLeague(userId: string, inviteCode: string, teamName: s
       maxTeams: true,
       requiresApproval: true,
       draftStatus: true,
+      season: { select: { status: true, name: true } },
       _count: { select: { teams: true } },
     },
   });
   if (!league) throw new DomainError('No league found for that invite code.', 'LEAGUE_NOT_FOUND', 404);
+  if (league.season.status === 'COMPLETED') {
+    throw new DomainError(
+      `${league.season.name} has already finished, so this league is closed.`,
+      'SEASON_COMPLETED',
+      409,
+    );
+  }
   if (league.draftStatus !== 'NOT_STARTED') {
     throw new DomainError('This league has already started drafting.', 'DRAFT_STARTED', 409);
   }

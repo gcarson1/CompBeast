@@ -233,7 +233,7 @@ export async function getContestantProfile(contestantId: string) {
       placement: true,
       seasonId: true,
       eliminatedCycle: { select: { label: true } },
-      season: { select: { name: true, show: { select: { name: true } } } },
+      season: { select: { slug: true, name: true, show: { select: { name: true } } } },
       scoredEvents: {
         where: { isVoided: false },
         orderBy: [{ cycle: { sequence: 'asc' } }, { createdAt: 'asc' }],
@@ -280,6 +280,133 @@ export async function getContestantProfile(contestantId: string) {
     gameLog: [...byCycle.entries()]
       .sort((a, b) => a[0] - b[0])
       .map(([sequence, v]) => ({ sequence, ...v })),
+  };
+}
+
+export async function getSeasonsByStatus() {
+  const seasons = await prisma.season.findMany({
+    orderBy: [{ year: 'desc' }, { name: 'desc' }],
+    select: {
+      id: true,
+      slug: true,
+      name: true,
+      year: true,
+      status: true,
+      show: { select: { name: true } },
+      _count: { select: { contestants: true, leagues: true } },
+    },
+  });
+
+  return {
+    open: seasons.filter((s) => s.status !== 'COMPLETED'),
+    archived: seasons.filter((s) => s.status === 'COMPLETED'),
+  };
+}
+
+export interface SeasonPlayerScore {
+  contestantId: string;
+  name: string;
+  isActive: boolean;
+  placement: number | null;
+  eliminatedLabel: string | null;
+  metadata: unknown;
+  points: number;
+}
+
+/**
+ * Season-wide player scores, independent of any league.
+ *
+ * Scored against the show's default ruleset rather than every recorded event:
+ * a contestant's archive total should mean the same thing everywhere, and
+ * summing raw events would silently mix in rules most leagues never enabled.
+ */
+export async function getSeasonScoreboard(slug: string): Promise<{
+  season: {
+    id: string;
+    slug: string;
+    name: string;
+    year: number;
+    status: string;
+    showName: string;
+  };
+  rulesetName: string;
+  players: SeasonPlayerScore[];
+} | null> {
+  const season = await prisma.season.findUnique({
+    where: { slug },
+    select: {
+      id: true,
+      slug: true,
+      name: true,
+      year: true,
+      status: true,
+      showId: true,
+      show: { select: { name: true } },
+    },
+  });
+  if (!season) return null;
+
+  const ruleset = await prisma.scoringRuleset.findFirst({
+    where: { showId: season.showId },
+    orderBy: { isDefault: 'desc' },
+    select: {
+      name: true,
+      eventDefinitions: {
+        select: { eventDefinitionId: true, pointsOverride: true },
+      },
+    },
+  });
+
+  const pointsByDefinition = new Map(
+    (ruleset?.eventDefinitions ?? []).map((link) => [
+      link.eventDefinitionId,
+      link.pointsOverride === null ? null : Number(link.pointsOverride),
+    ]),
+  );
+
+  const contestants = await prisma.contestant.findMany({
+    where: { seasonId: season.id },
+    select: {
+      id: true,
+      name: true,
+      isActive: true,
+      placement: true,
+      metadata: true,
+      eliminatedCycle: { select: { label: true } },
+      scoredEvents: {
+        where: { isVoided: false },
+        select: { pointsAwarded: true, eventDefinitionId: true },
+      },
+    },
+  });
+
+  const players = contestants
+    .map((contestant) => ({
+      contestantId: contestant.id,
+      name: contestant.name,
+      isActive: contestant.isActive,
+      placement: contestant.placement,
+      eliminatedLabel: contestant.eliminatedCycle?.label ?? null,
+      metadata: contestant.metadata,
+      points: contestant.scoredEvents.reduce((sum, event) => {
+        if (!pointsByDefinition.has(event.eventDefinitionId)) return sum;
+        const override = pointsByDefinition.get(event.eventDefinitionId);
+        return sum + (override ?? Number(event.pointsAwarded));
+      }, 0),
+    }))
+    .sort((a, b) => b.points - a.points);
+
+  return {
+    season: {
+      id: season.id,
+      slug: season.slug,
+      name: season.name,
+      year: season.year,
+      status: season.status,
+      showName: season.show.name,
+    },
+    rulesetName: ruleset?.name ?? 'Default',
+    players,
   };
 }
 
