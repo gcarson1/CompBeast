@@ -1,0 +1,68 @@
+'use client';
+
+import Link from 'next/link';
+import { usePathname } from 'next/navigation';
+import { cn } from '@/lib/ui';
+
+const TABS = [
+  { href: '/leagues', label: 'Leagues', icon: HomeIcon },
+  { href: '/players', label: 'Players', icon: BoxIcon },
+  { href: '/rules', label: 'Rules', icon: BookIcon },
+];
+
+export function BottomNav() {
+  const pathname = usePathname();
+
+  return (
+    <nav className="sticky bottom-0 z-20 border-t border-hairline bg-surface/95 px-4 pb-[env(safe-area-inset-bottom)] pt-2 backdrop-blur">
+      <ul className="mx-auto flex max-w-md items-center justify-around">
+        {TABS.map((tab) => {
+          const active = pathname === tab.href || pathname.startsWith(`${tab.href}/`);
+          const Icon = tab.icon;
+          return (
+            <li key={tab.href}>
+              <Link
+                href={tab.href}
+                aria-current={active ? 'page' : undefined}
+                className={cn(
+                  'flex w-20 flex-col items-center gap-1 rounded-card py-2 transition',
+                  active ? 'bg-canvas text-ink' : 'text-muted',
+                )}
+              >
+                <Icon />
+                <span className="text-[11px] font-medium">{tab.label}</span>
+              </Link>
+            </li>
+          );
+        })}
+      </ul>
+    </nav>
+  );
+}
+
+function HomeIcon() {
+  return (
+    <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8">
+      <path d="M3 10.5 12 3l9 7.5" strokeLinecap="round" strokeLinejoin="round" />
+      <path d="M5.5 9.5V20h13V9.5" strokeLinecap="round" strokeLinejoin="round" />
+    </svg>
+  );
+}
+
+function BoxIcon() {
+  return (
+    <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8">
+      <path d="M12 3l8 4.5v9L12 21l-8-4.5v-9L12 3Z" strokeLinejoin="round" />
+      <path d="M4 7.5 12 12l8-4.5M12 12v9" strokeLinejoin="round" />
+    </svg>
+  );
+}
+
+function BookIcon() {
+  return (
+    <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8">
+      <path d="M5 4.5h9a3 3 0 0 1 3 3V20a2.5 2.5 0 0 0-2.5-2.5H5Z" strokeLinejoin="round" />
+      <path d="M19 6.5V20" strokeLinecap="round" />
+    </svg>
+  );
+}

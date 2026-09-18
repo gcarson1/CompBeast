@@ -22,9 +22,13 @@ datasource db {
 
 model User {
   id        String   @id @default(cuid())
-  clerkId   String   @unique
+  // Opaque subject id from whichever auth provider is wired up (Clerk, Auth.js,
+  // Supabase). Kept provider-neutral so swapping providers is a config change.
+  authId    String   @unique
   email     String   @unique
   name      String?
+  avatarUrl String?
+  handle    String?  @unique
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
 
@@ -32,6 +36,7 @@ model User {
   memberships    LeagueMember[]
   teams          Team[]
   auditedActions ScoreAudit[]
+  recordedEvents ScoredEvent[]  @relation("EventRecorder")
 
   @@map("users")
 }
@@ -40,38 +45,41 @@ model User {
 // Show-agnostic program containers
 // ---------------------------------------------------------------------------
 
-// A reality program franchise, e.g. "Big Brother", "Survivor", "The Traitors".
+/// A reality program franchise, e.g. "Big Brother", "Survivor", "The Traitors".
 model Show {
-  id        String   @id @default(cuid())
-  slug      String   @unique // "big-brother"
+  id        String     @id @default(cuid())
+  slug      String     @unique
   name      String
   format    ShowFormat @default(TRADITIONAL_FANTASY_SPORT)
-  createdAt DateTime @default(now())
+  /// Show-specific display vocabulary so the UI can say "Week"/"Episode"/"Round"
+  /// and "Houseguest"/"Castaway" without any hardcoded per-show branching.
+  lexicon   Json?
+  createdAt DateTime   @default(now())
 
   seasons          Season[]
   eventDefinitions EventDefinition[]
+  scoringRulesets  ScoringRuleset[]
 
   @@map("shows")
 }
 
-// The kind of fantasy competition this show is played as. MVP only
-// implements TRADITIONAL_FANTASY_SPORT (fixed squads, weekly cycles,
-// leaderboard) but the enum lets future formats (e.g. draft-and-hold,
-// survivor pools) be added without new tables.
+/// The kind of fantasy competition this show is played as. MVP only implements
+/// TRADITIONAL_FANTASY_SPORT (fixed squads, weekly cycles, leaderboard).
 enum ShowFormat {
   TRADITIONAL_FANTASY_SPORT
 }
 
-// A single airing season/series of a Show, e.g. "Big Brother 27".
+/// A single airing season/series of a Show, e.g. "Big Brother 27".
 model Season {
-  id        String   @id @default(cuid())
+  id        String    @id @default(cuid())
   showId    String
-  show      Show     @relation(fields: [showId], references: [id], onDelete: Cascade)
+  show      Show      @relation(fields: [showId], references: [id], onDelete: Cascade)
+  slug      String    @unique
   name      String
   year      Int
   startDate DateTime?
   endDate   DateTime?
-  createdAt DateTime @default(now())
+  createdAt DateTime  @default(now())
 
   contestants Contestant[]
   cycles      Cycle[]
@@ -81,20 +89,24 @@ model Season {
   @@map("seasons")
 }
 
-// A reality TV player available for drafting within a season. Show-specific
-// attributes (age, hometown, occupation, etc.) live in `metadata` so the
-// column set never has to change per show.
+/// A reality TV player available for drafting within a season. Show-specific
+/// attributes (hometown, occupation, tribe, ...) live in `metadata` so the
+/// column set never has to change per show.
 model Contestant {
-  id         String   @id @default(cuid())
-  seasonId   String
-  season     Season   @relation(fields: [seasonId], references: [id], onDelete: Cascade)
-  name       String
-  photoUrl   String?
-  metadata   Json?    // e.g. { hometown, occupation, age }
-  isActive   Boolean  @default(true) // false once evicted/voted out/eliminated
+  id                String     @id @default(cuid())
+  seasonId          String
+  season            Season     @relation(fields: [seasonId], references: [id], onDelete: Cascade)
+  name              String
+  photoUrl          String?
+  /// e.g. { hometown, occupation, age, tribe }
+  metadata          Json?
+  /// false once evicted / voted out / eliminated
+  isActive          Boolean    @default(true)
+  /// Final placement once the season resolves (1 = winner)
+  placement         Int?
   eliminatedCycleId String?
-  eliminatedCycle   Cycle? @relation("EliminationCycle", fields: [eliminatedCycleId], references: [id])
-  createdAt  DateTime @default(now())
+  eliminatedCycle   Cycle?     @relation("EliminationCycle", fields: [eliminatedCycleId], references: [id])
+  createdAt         DateTime   @default(now())
 
   rosterSlots  RosterSlot[]
   scoredEvents ScoredEvent[]
@@ -104,23 +116,25 @@ model Contestant {
   @@map("contestants")
 }
 
-// A weekly or episode-based bounding box used to lock rosters and window
-// scoring events. Naming is generic ("Cycle") since not every show calls
-// this a "week" — Survivor might call it an "episode", Traitors a "round".
+/// A weekly or episode-based bounding box used to lock rosters and window
+/// scoring events. Named generically since not every show calls this a "week".
 model Cycle {
-  id            String    @id @default(cuid())
-  seasonId      String
-  season        Season    @relation(fields: [seasonId], references: [id], onDelete: Cascade)
-  label         String    // "Week 1", "Episode 3"
-  sequence      Int       // ordering, 1-indexed
-  locksAt       DateTime  // roster lock timestamp, configurable per league via League.lockOffsetMinutes if needed
-  airsAt        DateTime?
-  status        CycleStatus @default(UPCOMING)
-  createdAt     DateTime  @default(now())
+  id        String      @id @default(cuid())
+  seasonId  String
+  season    Season      @relation(fields: [seasonId], references: [id], onDelete: Cascade)
+  label     String
+  /// 1-indexed ordering within the season
+  sequence  Int
+  /// Hard roster lock timestamp
+  locksAt   DateTime
+  airsAt    DateTime?
+  status    CycleStatus @default(UPCOMING)
+  createdAt DateTime    @default(now())
 
   rosterSlots       RosterSlot[]
   scoredEvents      ScoredEvent[]
-  eliminatedInCycle Contestant[] @relation("EliminationCycle")
+  teamCycleScores   TeamCycleScore[]
+  eliminatedInCycle Contestant[]     @relation("EliminationCycle")
 
   @@unique([seasonId, sequence])
   @@index([seasonId])
@@ -129,9 +143,12 @@ model Cycle {
 
 enum CycleStatus {
   UPCOMING
-  LOCKED   // rosters can no longer be edited
-  LIVE     // episode airing, events may be recorded
-  SCORED   // all events recorded and finalized, leaderboard settled
+  /// rosters can no longer be edited
+  LOCKED
+  /// episode airing, events may be recorded
+  LIVE
+  /// all events recorded and finalized, leaderboard settled
+  SCORED
 }
 
 // ---------------------------------------------------------------------------
@@ -139,22 +156,28 @@ enum CycleStatus {
 // ---------------------------------------------------------------------------
 
 model League {
-  id                String   @id @default(cuid())
-  seasonId          String
-  season            Season   @relation(fields: [seasonId], references: [id])
-  name              String
-  commissionerId    String
-  commissioner      User     @relation("LeagueCommissioner", fields: [commissionerId], references: [id])
-  isPublic          Boolean  @default(false)
-  rosterSize        Int      @default(5)
-  draftType         DraftType @default(SNAKE)
-  scoringRulesetId  String
-  scoringRuleset    ScoringRuleset @relation(fields: [scoringRulesetId], references: [id])
-  draftStatus       DraftStatus @default(NOT_STARTED)
-  draftStartedAt    DateTime?
-  draftCompletedAt  DateTime?
-  createdAt         DateTime @default(now())
-  updatedAt         DateTime @updatedAt
+  id               String         @id @default(cuid())
+  seasonId         String
+  season           Season         @relation(fields: [seasonId], references: [id])
+  name             String
+  inviteCode       String         @unique
+  commissionerId   String
+  commissioner     User           @relation("LeagueCommissioner", fields: [commissionerId], references: [id])
+  isPublic         Boolean        @default(false)
+  requiresApproval Boolean        @default(true)
+  rosterSize       Int            @default(5)
+  maxTeams         Int            @default(12)
+  draftType        DraftType      @default(SNAKE)
+  scoringRulesetId String
+  scoringRuleset   ScoringRuleset @relation(fields: [scoringRulesetId], references: [id])
+  draftStatus      DraftStatus    @default(NOT_STARTED)
+  draftStartsAt    DateTime?
+  draftCompletedAt DateTime?
+  /// Minutes before Cycle.airsAt that this league's rosters hard-lock. Null
+  /// falls back to the season-wide Cycle.locksAt.
+  lockOffsetMinutes Int?
+  createdAt        DateTime       @default(now())
+  updatedAt        DateTime       @updatedAt
 
   members    LeagueMember[]
   teams      Team[]
@@ -177,13 +200,14 @@ enum DraftStatus {
 }
 
 model LeagueMember {
-  id       String   @id @default(cuid())
+  id       String           @id @default(cuid())
   leagueId String
-  league   League   @relation(fields: [leagueId], references: [id], onDelete: Cascade)
+  league   League           @relation(fields: [leagueId], references: [id], onDelete: Cascade)
   userId   String
-  user     User     @relation(fields: [userId], references: [id])
-  role     LeagueRole @default(MEMBER)
-  joinedAt DateTime @default(now())
+  user     User             @relation(fields: [userId], references: [id])
+  role     LeagueRole       @default(MEMBER)
+  status   MembershipStatus @default(ACTIVE)
+  joinedAt DateTime         @default(now())
 
   @@unique([leagueId, userId])
   @@map("league_members")
@@ -195,29 +219,36 @@ enum LeagueRole {
   MEMBER
 }
 
-// A user's fixed squad within a league for the whole season.
+enum MembershipStatus {
+  PENDING
+  ACTIVE
+  REMOVED
+}
+
+/// A user's fixed squad within a league for the whole season.
 model Team {
-  id       String   @id @default(cuid())
-  leagueId String
-  league   League   @relation(fields: [leagueId], references: [id], onDelete: Cascade)
-  ownerId  String
-  owner    User     @relation(fields: [ownerId], references: [id])
-  name     String
+  id                 String   @id @default(cuid())
+  leagueId           String
+  league             League   @relation(fields: [leagueId], references: [id], onDelete: Cascade)
+  ownerId            String
+  owner              User     @relation(fields: [ownerId], references: [id])
+  name               String
   draftOrderPosition Int?
-  createdAt DateTime @default(now())
+  createdAt          DateTime @default(now())
 
   rosterSlots RosterSlot[]
   draftPicks  DraftPick[]
   cycleScores TeamCycleScore[]
 
   @@unique([leagueId, ownerId])
+  @@unique([leagueId, draftOrderPosition])
   @@map("teams")
 }
 
-// The (season-long, fixed) assignment of a Contestant to a Team. Modeled
-// per-cycle so a "current roster as of cycle N" can be reconstructed even if
-// a league later allows waiver-style swaps — MVP just inserts one row per
-// contestant at draft time, all cycles.
+/// Assignment of a Contestant to a Team, scoped to a Cycle. Modeled per-cycle
+/// so "roster as of cycle N" is always reconstructible and so a league can
+/// later allow waiver-style swaps without a migration. The MVP snake draft
+/// writes one row per contestant per remaining cycle.
 model RosterSlot {
   id           String     @id @default(cuid())
   teamId       String
@@ -233,8 +264,8 @@ model RosterSlot {
   @@map("roster_slots")
 }
 
-// Immutable record of the draft, used to enforce no-duplicate-picks and to
-// reconstruct draft history/order.
+/// Immutable record of the draft. The unique constraints are what actually
+/// enforce "no duplicate players exist on rosters" at the database level.
 model DraftPick {
   id           String     @id @default(cuid())
   leagueId     String
@@ -244,10 +275,11 @@ model DraftPick {
   contestantId String
   contestant   Contestant @relation(fields: [contestantId], references: [id])
   round        Int
-  pickNumber   Int // overall pick number across the whole draft
+  /// overall pick number across the whole draft, 1-indexed
+  pickNumber   Int
   pickedAt     DateTime   @default(now())
 
-  @@unique([leagueId, contestantId]) // enforces no duplicate players across the league
+  @@unique([leagueId, contestantId])
   @@unique([leagueId, pickNumber])
   @@map("draft_picks")
 }
@@ -256,15 +288,14 @@ model DraftPick {
 // Scoring engine: show-agnostic rule dictionary + transactional ledger
 // ---------------------------------------------------------------------------
 
-// A named, versioned collection of EventDefinitions a league can select,
-// e.g. "Big Brother — Classic/Measurable" vs "Big Brother — Drama/Social".
-// This is what makes the "toggle between rule sets" requirement a league
-// configuration choice rather than a code branch.
+/// A named collection of EventDefinitions a league can select, e.g.
+/// "Classic/Measurable" vs "Drama/Social". This is what turns "toggle between
+/// rule sets" into a league configuration choice rather than a code branch.
 model ScoringRuleset {
   id          String   @id @default(cuid())
   showId      String
-  show        Show     @relation(fields: [showId], references: [id])
-  slug        String   // "classic-measurable" | "drama-social" | league can compose a custom one
+  show        Show     @relation(fields: [showId], references: [id], onDelete: Cascade)
+  slug        String
   name        String
   description String?
   isDefault   Boolean  @default(false)
@@ -277,20 +308,26 @@ model ScoringRuleset {
   @@map("scoring_rulesets")
 }
 
-// The dynamic rule dictionary: every scorable event for a Show, with its
-// point value. Adding a new show or rebalancing a show's scoring is a data
-// change here, never a schema or scoring-engine code change.
+/// The dynamic rule dictionary: every scorable event for a Show with its point
+/// value. Adding a show or rebalancing scoring is a data change here — never a
+/// schema change and never a change to the scoring engine.
 model EventDefinition {
-  id          String   @id @default(cuid())
-  showId      String
-  show        Show     @relation(fields: [showId], references: [id], onDelete: Cascade)
-  code        String   // stable machine key, e.g. "HOH_WIN", "EVICTED_UNANIMOUS"
-  label       String   // human-readable, e.g. "Win HOH"
-  category    EventCategory
-  points      Decimal  @db.Decimal(6, 2)
-  isPerOccurrence Boolean @default(true) // e.g. "weeks survived" awards points each cycle it recurs
-  description String?
-  createdAt   DateTime @default(now())
+  id              String        @id @default(cuid())
+  showId          String
+  show            Show          @relation(fields: [showId], references: [id], onDelete: Cascade)
+  /// stable machine key, e.g. "HOH_WIN"
+  code            String
+  label           String
+  category        EventCategory
+  points          Decimal       @db.Decimal(6, 2)
+  /// false for once-per-season awards (placement, jury) so the admin UI and
+  /// validation layer can prevent accidental duplicates
+  isRepeatable    Boolean       @default(true)
+  /// true when the event is expected once per cycle for each surviving
+  /// contestant (e.g. "weeks in the house") and can be auto-generated
+  isPerCycleAward Boolean       @default(false)
+  description     String?
+  createdAt       DateTime      @default(now())
 
   scoringRulesetLinks ScoringRulesetEventDefinition[]
   scoredEvents        ScoredEvent[]
@@ -300,72 +337,75 @@ model EventDefinition {
   @@map("event_definitions")
 }
 
-// Show-agnostic bucketing so UIs and rule browsers don't need to know
-// show-specific category names.
+/// Show-agnostic bucketing so UIs and rule browsers never need to know
+/// show-specific category names.
 enum EventCategory {
   COMPETITION_GAMEPLAY
   ELIMINATION_ENDGAME
   SOCIAL_DRAMA
 }
 
-// Join table: which EventDefinitions are active (and at what point value
-// override, if any) within a given ScoringRuleset. Lets "Classic" and
-// "Drama" rulesets share the same EventDefinition rows while enabling
-// different subsets, and lets a league override a point value without
-// forking the base definition.
+/// Which EventDefinitions are active — and at what point value — within a
+/// given ScoringRuleset. Lets rulesets share EventDefinition rows while
+/// enabling different subsets and different point values.
 model ScoringRulesetEventDefinition {
-  id                String   @id @default(cuid())
+  id                String          @id @default(cuid())
   scoringRulesetId  String
   scoringRuleset    ScoringRuleset  @relation(fields: [scoringRulesetId], references: [id], onDelete: Cascade)
   eventDefinitionId String
   eventDefinition   EventDefinition @relation(fields: [eventDefinitionId], references: [id], onDelete: Cascade)
-  pointsOverride    Decimal? @db.Decimal(6, 2)
+  pointsOverride    Decimal?        @db.Decimal(6, 2)
 
   @@unique([scoringRulesetId, eventDefinitionId])
   @@map("scoring_ruleset_event_definitions")
 }
 
-// The transactional ledger: one row per contestant-event-cycle occurrence.
-// This is the single source of truth the scoring engine aggregates from —
-// team totals are always derived, never stored as the primary fact, which
-// is what makes retroactive audits/corrections safe (see ScoreAudit).
+/// The transactional ledger: one row per contestant-event-cycle occurrence.
+/// Team totals are always derived from this, never stored as the primary fact,
+/// which is what makes retroactive audits and corrections safe.
 model ScoredEvent {
-  id                String   @id @default(cuid())
+  id                String          @id @default(cuid())
   contestantId      String
-  contestant        Contestant @relation(fields: [contestantId], references: [id])
+  contestant        Contestant      @relation(fields: [contestantId], references: [id])
   eventDefinitionId String
   eventDefinition   EventDefinition @relation(fields: [eventDefinitionId], references: [id])
   cycleId           String
-  cycle             Cycle    @relation(fields: [cycleId], references: [id])
-  pointsAwarded     Decimal  @db.Decimal(6, 2) // snapshot of points at time of recording (survives later rule edits)
-  occurredAt        DateTime @default(now())
-  recordedById      String?  // admin/User.id who recorded it
-  isVoided          Boolean  @default(false) // soft-void for corrections instead of hard delete
+  cycle             Cycle           @relation(fields: [cycleId], references: [id])
+  /// Snapshot of the point value at recording time, so later rule edits do not
+  /// silently rewrite settled history. The engine can re-resolve against the
+  /// live ruleset on demand (see `pointsSource` in the scoring engine).
+  pointsAwarded     Decimal         @db.Decimal(6, 2)
+  /// Free-form context: alliance name, competition name, opposing contestant.
+  metadata          Json?
+  note              String?
+  occurredAt        DateTime        @default(now())
+  recordedById      String?
+  recordedBy        User?           @relation("EventRecorder", fields: [recordedById], references: [id])
+  /// Soft-void for corrections instead of hard delete
+  isVoided          Boolean         @default(false)
   voidedReason      String?
-  createdAt         DateTime @default(now())
+  createdAt         DateTime        @default(now())
 
   audits ScoreAudit[]
 
-  @@index([cycleId])
+  @@index([cycleId, isVoided])
   @@index([contestantId])
   @@map("scored_events")
 }
 
-// Audit trail for retroactive score corrections (a ScoredEvent voided,
-// re-added, or point-adjusted after initial recording), satisfying the
-// "retroactive score corrections if game events are audited" requirement
-// without mutating history in place.
+/// Audit trail for retroactive score corrections, so history is appended to
+/// rather than mutated in place.
 model ScoreAudit {
-  id            String   @id @default(cuid())
-  scoredEventId String
-  scoredEvent   ScoredEvent @relation(fields: [scoredEventId], references: [id], onDelete: Cascade)
-  action        AuditAction
-  previousPoints Decimal? @db.Decimal(6, 2)
-  newPoints      Decimal? @db.Decimal(6, 2)
-  reason        String?
-  performedById String
-  performedBy   User     @relation(fields: [performedById], references: [id])
-  createdAt     DateTime @default(now())
+  id             String      @id @default(cuid())
+  scoredEventId  String
+  scoredEvent    ScoredEvent @relation(fields: [scoredEventId], references: [id], onDelete: Cascade)
+  action         AuditAction
+  previousPoints Decimal?    @db.Decimal(6, 2)
+  newPoints      Decimal?    @db.Decimal(6, 2)
+  reason         String?
+  performedById  String
+  performedBy    User        @relation(fields: [performedById], references: [id])
+  createdAt      DateTime    @default(now())
 
   @@map("score_audits")
 }
@@ -378,19 +418,19 @@ enum AuditAction {
 }
 
 // ---------------------------------------------------------------------------
-// Derived/materialized leaderboard state (recomputed by the score
-// distribution job — see roadmap Step 2/4 — never hand-edited)
+// Derived leaderboard state — written only by the recalculation job
 // ---------------------------------------------------------------------------
 
 model TeamCycleScore {
-  id        String   @id @default(cuid())
-  teamId    String
-  team      Team     @relation(fields: [teamId], references: [id], onDelete: Cascade)
-  cycleId   String
-  cyclePoints   Decimal @db.Decimal(8, 2)
-  cumulativePoints Decimal @db.Decimal(8, 2)
-  rank      Int?
-  computedAt DateTime @default(now())
+  id               String   @id @default(cuid())
+  teamId           String
+  team             Team     @relation(fields: [teamId], references: [id], onDelete: Cascade)
+  cycleId          String
+  cycle            Cycle    @relation(fields: [cycleId], references: [id], onDelete: Cascade)
+  cyclePoints      Decimal  @db.Decimal(8, 2)
+  cumulativePoints Decimal  @db.Decimal(8, 2)
+  rank             Int?
+  computedAt       DateTime @default(now())
 
   @@unique([teamId, cycleId])
   @@index([cycleId])
