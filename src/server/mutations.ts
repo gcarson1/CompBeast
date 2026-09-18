@@ -4,6 +4,9 @@ import { prisma } from '../lib/db';
 import { assertLeagueRole } from '../lib/auth';
 import { buildDraftOrder, validatePick } from '../lib/draft/snake';
 import { recalculateLeague, recalculateLeaguesForCycle } from '../lib/scoring/repository';
+import { createLeagueSchema } from '../lib/validation';
+
+export { createLeagueSchema };
 
 export class DomainError extends Error {
   constructor(
@@ -28,16 +31,6 @@ function generateInviteCode(): string {
 // ---------------------------------------------------------------------------
 // League lifecycle
 // ---------------------------------------------------------------------------
-
-export const createLeagueSchema = z.object({
-  name: z.string().trim().min(3).max(60),
-  seasonId: z.string().min(1),
-  scoringRulesetId: z.string().min(1),
-  rosterSize: z.coerce.number().int().min(1).max(12),
-  maxTeams: z.coerce.number().int().min(2).max(24),
-  isPublic: z.coerce.boolean().default(false),
-  teamName: z.string().trim().min(2).max(40),
-});
 
 export async function createLeague(userId: string, input: z.infer<typeof createLeagueSchema>) {
   const data = createLeagueSchema.parse(input);

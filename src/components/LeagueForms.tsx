@@ -7,7 +7,7 @@ import { zodResolver } from '@hookform/resolvers/zod';
 import { toast } from 'sonner';
 import { z } from 'zod';
 import { createLeagueAction, joinLeagueAction, type ActionState } from '@/server/actions';
-import { createLeagueSchema } from '@/server/mutations';
+import { createLeagueSchema } from '@/lib/validation';
 
 // z.input, not z.infer/z.output — the .default() on isPublic makes the parsed
 // *output* required, but RHF needs the pre-parse *input* shape (optional).
