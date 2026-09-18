@@ -22,13 +22,29 @@ engine, the API, or the UI.
 
 ## Getting started
 
+You need a running PostgreSQL server first — the app is server-rendered and every page
+queries the database, so without one each route returns `Can't reach database server`.
+
+On macOS with Homebrew:
+
+```bash
+brew services start postgresql@16
+createdb compbeast
+```
+
+Then set `DATABASE_URL` in `.env` to `postgresql://<your-mac-username>@localhost:5432/compbeast?schema=public`
+(a stock Homebrew install has no password and uses your macOS username as the superuser),
+and run:
+
 ```bash
 npm install
-cp .env.example .env    # point DATABASE_URL at your Postgres
 npm run db:push
 npm run db:seed
 npm run dev
 ```
+
+If you change `.env` while `npm run dev` is already running, restart it — Next.js reads
+environment variables at boot, not per request.
 
 The seed creates a 16-houseguest *Big Brother 27* season, three scoring rulesets, a
 four-team demo league (invite code `DEMO-BB27`) with a completed snake draft, and three
