@@ -133,6 +133,63 @@ curl -X POST localhost:3000/api/admin/events \
   -d '{"cycleId":"<id>","events":[{"contestantId":"<id>","eventCode":"HOH_WIN"}]}'
 ```
 
+## Automated data ingestion
+
+Results are captured from external sources instead of typed in by hand.
+
+```bash
+npx tsx scripts/ingest.ts bootstrap big-brother-27 2025   # season, cast, cycles
+npx tsx scripts/ingest.ts sync      big-brother-27        # weekly results
+```
+
+Or use the **Sync** button at `/admin/ingestion`. Both are safe to re-run —
+candidates are upserted on `(sourceSlug, sourceRef)`, so re-syncing an unchanged
+page is a no-op and cannot double-score anyone.
+
+### Three layers
+
+```
+adapter  → parses one site's markup into RawSeasonFacts
+           (knows HTML, knows nothing about our schema)
+mapper   → RawSeasonFacts into candidate events using a show's rule codes
+           (knows the show, knows nothing about HTML)
+pipeline → resolves candidates against the database and publishes them
+```
+
+A new site needs only a new adapter. A new show needs only a new mapper.
+
+### Nothing writes straight to the ledger
+
+Scrapers misread pages and sites redesign without warning, so parsed results land
+in `IngestedEventCandidate` first. A candidate auto-publishes only when it is
+HIGH confidence *and* resolves to a known contestant and cycle; everything else
+waits at `/admin/ingestion` with the reason it was held. Published candidates
+keep a link to the `ScoredEvent` they created, so every automated point on the
+board is traceable back to the page it came from.
+
+Contestants are matched on a source-side slug (`ContestantExternalRef`), never on
+display names — sources use nicknames (`Vince "The Lip" Panaro`) and inconsistent
+legal names, so names are not an identity.
+
+### What is deliberately not automated
+
+The mapper only emits what a source states plainly. It will not infer whether a
+veto was used on self or another, whether an eviction was unanimous, or anything
+in the Drama & Social ruleset. Those stay manual via `POST /api/admin/events`.
+Guessing at them would put fabricated points on real scoreboards.
+
+`IngestionRun` records every sync. A run that parses zero weeks off a page that
+should have them is recorded as `EMPTY` rather than a success — that is the
+signal that a parser has silently broken.
+
+### Sources
+
+- **[Big Brother Junkies](https://bigbrotherjunkies.com)** — season results grid,
+  eviction order, and cast. Their `robots.txt` permits these pages; the client
+  identifies itself honestly and fetches one page per sync.
+
+Parser tests run against a saved HTML fixture and never hit the network.
+
 ## Draft
 
 Snake by default, linear and auction modeled in the schema. `buildDraftOrder` reverses
