@@ -22,6 +22,14 @@ async function resolveAuthId(): Promise<string | null> {
   // Auth.js:   const session = await auth(); return session?.user?.id ?? null;
   // Supabase:  const { data } = await supabase.auth.getUser(); return data.user?.id ?? null;
   // ────────────────────────────────────────────────────────────────────────
+
+  // The dev cookie is a stand-in for a real session and must never be honored
+  // in production: seeded authIds (e.g. "seed_alicorak") are visible in this
+  // public repo, so trusting this cookie in prod would let anyone set it
+  // themselves and sign in as whichever seeded user they choose — including
+  // the platform admin.
+  if (process.env.NODE_ENV === 'production') return null;
+
   const devUser = cookies().get(DEV_SESSION_COOKIE)?.value;
   return devUser ?? null;
 }
