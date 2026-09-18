@@ -18,14 +18,6 @@ export function AppHeader({ isPlatformAdmin = false }: { isPlatformAdmin?: boole
               <FeedIcon />
             </Link>
           )}
-          <button
-            type="button"
-            className="relative grid h-9 w-9 place-items-center rounded-full bg-surface shadow-card"
-            aria-label="Notifications"
-          >
-            <BellIcon />
-            <span className="absolute right-2 top-2 h-2 w-2 rounded-full bg-danger ring-2 ring-surface" />
-          </button>
           <SignedOut>
             <SignInButton mode="modal">
               <button type="button" className="pill bg-surface px-4 py-2 text-[13px] text-ink shadow-card">
@@ -72,15 +64,6 @@ function FeedIcon() {
     <svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8">
       <path d="M4 11a9 9 0 0 1 9 9M4 4a16 16 0 0 1 16 16" strokeLinecap="round" />
       <circle cx="5" cy="19" r="1.4" fill="currentColor" stroke="none" />
-    </svg>
-  );
-}
-
-function BellIcon() {
-  return (
-    <svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8">
-      <path d="M6.5 10a5.5 5.5 0 1 1 11 0c0 4 1.5 5.5 1.5 5.5H5S6.5 14 6.5 10Z" strokeLinejoin="round" />
-      <path d="M10 18.5a2 2 0 0 0 4 0" strokeLinecap="round" />
     </svg>
   );
 }

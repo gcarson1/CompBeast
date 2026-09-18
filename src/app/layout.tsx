@@ -42,7 +42,7 @@ export default async function RootLayout({ children }: { children: React.ReactNo
           <div className="flex min-h-dvh flex-col">
             <AppHeader isPlatformAdmin={user?.isPlatformAdmin ?? false} />
             <main className="mx-auto w-full max-w-md flex-1 px-5 pb-6">{children}</main>
-            <BottomNav />
+            {user && <BottomNav />}
           </div>
           <Toaster theme="dark" position="top-center" richColors closeButton />
         </body>
