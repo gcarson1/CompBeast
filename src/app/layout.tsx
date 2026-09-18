@@ -23,7 +23,10 @@ export default async function RootLayout({ children }: { children: React.ReactNo
     <html lang="en">
       <body>
         <div className="flex min-h-dvh flex-col">
-          <AppHeader userName={user?.name ?? null} />
+          <AppHeader
+            userName={user?.name ?? null}
+            isPlatformAdmin={user?.isPlatformAdmin ?? false}
+          />
           <main className="mx-auto w-full max-w-md flex-1 px-5 pb-6">{children}</main>
           <BottomNav />
         </div>

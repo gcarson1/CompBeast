@@ -142,13 +142,16 @@ async function main() {
   }
 
   // --- Season, houseguests, cycles -----------------------------------------
+  // Deliberately namespaced away from real season slugs (`big-brother-27`):
+  // ingestion claims those, and demo data must never squat on a real season's
+  // identifier or the two casts merge into one.
   const season = await prisma.season.upsert({
-    where: { slug: 'big-brother-27' },
+    where: { slug: 'demo-big-brother' },
     update: {},
     create: {
       showId: show.id,
-      slug: 'big-brother-27',
-      name: 'Big Brother 27',
+      slug: 'demo-big-brother',
+      name: 'Demo Season',
       year: 2026,
       startDate: SEASON_START,
     },
@@ -189,15 +192,19 @@ async function main() {
 
   // --- Demo users & league --------------------------------------------------
   const users = [];
-  for (const spec of DEMO_USERS) {
+  for (const [index, spec] of DEMO_USERS.entries()) {
+    // The first seeded user doubles as the platform admin so ingestion review
+    // is reachable out of the box in development.
+    const isPlatformAdmin = index === 0;
     const user = await prisma.user.upsert({
       where: { email: spec.email },
-      update: { name: spec.name, handle: spec.handle },
+      update: { name: spec.name, handle: spec.handle, isPlatformAdmin },
       create: {
         authId: `seed_${spec.handle}`,
         email: spec.email,
         name: spec.name,
         handle: spec.handle,
+        isPlatformAdmin,
       },
     });
     users.push(user);

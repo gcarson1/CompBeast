@@ -32,6 +32,7 @@ export type SessionUser = {
   email: string;
   handle: string | null;
   avatarUrl: string | null;
+  isPlatformAdmin: boolean;
 };
 
 export async function getCurrentUser(): Promise<SessionUser | null> {
@@ -40,7 +41,7 @@ export async function getCurrentUser(): Promise<SessionUser | null> {
   if (authId) {
     const user = await prisma.user.findUnique({
       where: { authId },
-      select: { id: true, name: true, email: true, handle: true, avatarUrl: true },
+      select: { id: true, name: true, email: true, handle: true, avatarUrl: true, isPlatformAdmin: true },
     });
     if (user) return user;
   }
@@ -50,13 +51,24 @@ export async function getCurrentUser(): Promise<SessionUser | null> {
   // Development fallback: act as the first seeded user.
   return prisma.user.findFirst({
     orderBy: { createdAt: 'asc' },
-    select: { id: true, name: true, email: true, handle: true, avatarUrl: true },
+    select: { id: true, name: true, email: true, handle: true, avatarUrl: true, isPlatformAdmin: true },
   });
 }
 
 export async function requireUser(): Promise<SessionUser> {
   const user = await getCurrentUser();
   if (!user) throw new Error('UNAUTHENTICATED');
+  return user;
+}
+
+/**
+ * Gate for actions that reach beyond a single league — ingestion publishes
+ * events that rescore every league on a season, so league membership is not a
+ * sufficient credential.
+ */
+export async function requirePlatformAdmin(): Promise<SessionUser> {
+  const user = await requireUser();
+  if (!user.isPlatformAdmin) throw new Error('FORBIDDEN');
   return user;
 }
 

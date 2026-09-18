@@ -29,6 +29,10 @@ model User {
   name      String?
   avatarUrl String?
   handle    String?  @unique
+  /// Grants access to ingestion review, which rewrites scores across every
+  /// league on a season — deliberately separate from per-league commissioner
+  /// rights, which only ever affect one league.
+  isPlatformAdmin Boolean @default(false)
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
 
@@ -37,6 +41,7 @@ model User {
   teams          Team[]
   auditedActions ScoreAudit[]
   recordedEvents ScoredEvent[]  @relation("EventRecorder")
+  reviewedCandidates IngestedEventCandidate[] @relation("CandidateReviewer")
 
   @@map("users")
 }
@@ -84,6 +89,7 @@ model Season {
   contestants Contestant[]
   cycles      Cycle[]
   leagues     League[]
+  candidates  IngestedEventCandidate[]
 
   @@unique([showId, name])
   @@map("seasons")
@@ -111,9 +117,31 @@ model Contestant {
   rosterSlots  RosterSlot[]
   scoredEvents ScoredEvent[]
   draftPicks   DraftPick[]
+  externalRefs ContestantExternalRef[]
+  candidates   IngestedEventCandidate[]
 
   @@index([seasonId])
   @@map("contestants")
+}
+
+/// Maps a contestant to their identifier on an external data source.
+///
+/// Ingestion matches on this rather than display names: sources routinely use
+/// nicknames ("The Lip" for Vince Panaro) and inconsistent legal names, so a
+/// stable source-side slug is the only identity worth trusting.
+model ContestantExternalRef {
+  id           String     @id @default(cuid())
+  contestantId String
+  contestant   Contestant @relation(fields: [contestantId], references: [id], onDelete: Cascade)
+  /// e.g. "big-brother-junkies"
+  sourceSlug   String
+  /// the source's own id for this player, e.g. "ashley-hollis"
+  externalId   String
+  createdAt    DateTime   @default(now())
+
+  @@unique([sourceSlug, externalId])
+  @@unique([contestantId, sourceSlug])
+  @@map("contestant_external_refs")
 }
 
 /// A weekly or episode-based bounding box used to lock rosters and window
@@ -134,6 +162,7 @@ model Cycle {
   rosterSlots       RosterSlot[]
   scoredEvents      ScoredEvent[]
   teamCycleScores   TeamCycleScore[]
+  candidates        IngestedEventCandidate[]
   eliminatedInCycle Contestant[]     @relation("EliminationCycle")
 
   @@unique([seasonId, sequence])
@@ -420,6 +449,102 @@ enum AuditAction {
 // ---------------------------------------------------------------------------
 // Derived leaderboard state — written only by the recalculation job
 // ---------------------------------------------------------------------------
+
+// ---------------------------------------------------------------------------
+// Ingestion: automated event capture from external data sources
+// ---------------------------------------------------------------------------
+
+/// A proposed ScoredEvent parsed from an external source, held here before it
+/// becomes real.
+///
+/// Scrapers misread pages and sites redesign without warning, so parsed results
+/// never write straight to the ledger. High-confidence candidates auto-publish
+/// immediately; anything ambiguous waits for a human. Either way the candidate
+/// row survives as the provenance record for its ScoredEvent.
+model IngestedEventCandidate {
+  id                String          @id @default(cuid())
+  sourceSlug        String
+  /// Stable per-source identity for this exact fact, e.g.
+  /// "big-brother-27:w3:HOH_WIN:morgan-pope". Re-syncing the same page must not
+  /// create duplicates, so this is the upsert key.
+  sourceRef         String
+  sourceUrl         String?
+  seasonId          String
+  season            Season          @relation(fields: [seasonId], references: [id], onDelete: Cascade)
+  /// Null when the source's week could not be matched to a Cycle.
+  cycleId           String?
+  cycle             Cycle?          @relation(fields: [cycleId], references: [id])
+  /// Null when the source's player could not be matched to a Contestant.
+  contestantId      String?
+  contestant        Contestant?     @relation(fields: [contestantId], references: [id])
+  /// EventDefinition.code this maps to, resolved at publish time.
+  eventCode         String
+  /// What the source actually said, kept verbatim so a reviewer can judge a
+  /// bad parse without re-fetching the page.
+  rawPlayerName     String
+  rawPlayerRef      String
+  rawWeekLabel      String
+  confidence        Confidence
+  /// Why confidence was downgraded; empty for clean HIGH matches.
+  confidenceReasons String[]
+  status            CandidateStatus @default(PENDING)
+  scoredEventId     String?
+  reviewedById      String?
+  reviewedBy        User?           @relation("CandidateReviewer", fields: [reviewedById], references: [id])
+  reviewedAt        DateTime?
+  rejectedReason    String?
+  createdAt         DateTime        @default(now())
+  updatedAt         DateTime        @updatedAt
+
+  @@unique([sourceSlug, sourceRef])
+  @@index([seasonId, status])
+  @@map("ingested_event_candidates")
+}
+
+enum Confidence {
+  HIGH
+  MEDIUM
+  LOW
+}
+
+enum CandidateStatus {
+  /// Awaiting human review
+  PENDING
+  /// Published automatically on a HIGH-confidence match
+  AUTO_PUBLISHED
+  /// Published by a reviewer
+  PUBLISHED
+  REJECTED
+}
+
+/// One execution of an ingestion sync.
+///
+/// Exists so silent breakage is detectable: a run that parses zero weeks off a
+/// page that should have them is a failure even though nothing threw.
+model IngestionRun {
+  id             String    @id @default(cuid())
+  sourceSlug     String
+  seasonId       String?
+  status         RunStatus @default(RUNNING)
+  weeksParsed    Int       @default(0)
+  candidatesNew  Int       @default(0)
+  autoPublished  Int       @default(0)
+  pendingReview  Int       @default(0)
+  error          String?
+  startedAt      DateTime  @default(now())
+  finishedAt     DateTime?
+
+  @@index([sourceSlug, startedAt])
+  @@map("ingestion_runs")
+}
+
+enum RunStatus {
+  RUNNING
+  SUCCESS
+  /// Completed but produced nothing usable — treat as a parser health alarm.
+  EMPTY
+  FAILED
+}
 
 model TeamCycleScore {
   id               String   @id @default(cuid())
