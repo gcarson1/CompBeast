@@ -31,8 +31,12 @@ export interface RawWeekResult {
 }
 
 export interface RawEvictionEntry {
-  /** 1 = winner, counting down the finish order. */
-  order: number;
+  /**
+   * The source's row number, which is NOT a finish position — a completed
+   * season lists the winner first, an in-progress one lists the most recent
+   * eviction first. Use `placeLabel` for placement; never infer from this.
+   */
+  order: number | null;
   player: RawPlayerRef;
   dateLabel: string;
   dayLabel: string;
@@ -49,10 +53,22 @@ export interface RawSeasonFacts {
   sourceSlug: string;
   sourceUrl: string;
   seasonLabel: string;
+  premiereDate: Date | null;
+  finaleDate: Date | null;
   weeks: RawWeekResult[];
   evictionOrder: RawEvictionEntry[];
   cast: RawCastMember[];
   fetchedAt: Date;
+}
+
+/** True when a week's grid is entirely empty — a scheduled week that has not aired. */
+export function isEmptyWeek(week: RawWeekResult): boolean {
+  return (
+    week.hoh.length === 0 &&
+    week.veto.length === 0 &&
+    week.nominees.length === 0 &&
+    week.evicted.length === 0
+  );
 }
 
 export interface SeasonSourceAdapter {

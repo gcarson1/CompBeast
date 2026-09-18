@@ -1,3 +1,4 @@
+import { isEmptyWeek } from '../types';
 import type { CandidateEvent, Confidence, RawPlayerRef, RawSeasonFacts } from '../types';
 
 /**
@@ -10,9 +11,14 @@ import type { CandidateEvent, Confidence, RawPlayerRef, RawSeasonFacts } from '.
  * scoreboards.
  */
 
-interface MapOptions {
-  /** Place labels at or above this finish are treated as having made jury. */
-  jurySize?: number;
+/** "Winner" → 1, "Runner-Up" → 2, "9th Place" → 9. Null when unplaced. */
+function placementFromLabel(label: string): number | null {
+  const value = label.trim().toLowerCase();
+  if (!value) return null;
+  if (value === 'winner') return 1;
+  if (value.startsWith('runner')) return 2;
+  const match = /^(\d+)(st|nd|rd|th)/.exec(value);
+  return match ? Number(match[1]) : null;
 }
 
 const PLACEMENT_BY_LABEL: Record<string, string> = {
@@ -35,10 +41,13 @@ function ref(
 export function mapBigBrotherSeason(
   facts: RawSeasonFacts,
   seasonExternalId: string,
-  options: MapOptions = {},
 ): CandidateEvent[] {
-  const { jurySize = 9 } = options;
   const candidates: CandidateEvent[] = [];
+
+  // A live season's grid includes scheduled weeks that have not aired. They
+  // parse as entirely empty rows, and scoring them would hand out survival
+  // points for a week nobody has played yet.
+  const airedWeeks = facts.weeks.filter((week) => !isEmptyWeek(week));
 
   const push = (
     code: string,
@@ -61,12 +70,7 @@ export function mapBigBrotherSeason(
 
   // Everyone who appears anywhere in the season, so "survived the week" can be
   // derived without assuming the cast list is complete.
-  const evictedByWeek = new Map<number, Set<string>>();
-  for (const week of facts.weeks) {
-    evictedByWeek.set(week.weekNumber, new Set(week.evicted.map((p) => p.externalId)));
-  }
-
-  for (const week of facts.weeks) {
+  for (const week of airedWeeks) {
     const { weekNumber, weekLabel } = week;
 
     // A week with two HOHs is usually a double eviction or a parsing artifact.
@@ -134,14 +138,14 @@ export function mapBigBrotherSeason(
   // "Survived the week" for everyone still in the house at the end of a week.
   const allPlayers = new Map<string, RawPlayerRef>();
   for (const member of facts.cast) allPlayers.set(member.externalId, member);
-  for (const week of facts.weeks) {
+  for (const week of airedWeeks) {
     for (const column of [week.hoh, week.veto, week.nominees, week.evicted]) {
       for (const player of column) if (!allPlayers.has(player.externalId)) allPlayers.set(player.externalId, player);
     }
   }
 
   const gone = new Set<string>();
-  for (const week of [...facts.weeks].sort((a, b) => a.weekNumber - b.weekNumber)) {
+  for (const week of [...airedWeeks].sort((a, b) => a.weekNumber - b.weekNumber)) {
     for (const player of week.evicted) gone.add(player.externalId);
     for (const [externalId, player] of allPlayers) {
       if (gone.has(externalId)) continue;
@@ -150,20 +154,44 @@ export function mapBigBrotherSeason(
   }
 
   // Final placements, from the eviction order table.
-  const finalWeek = facts.weeks.at(-1);
+  const finalWeek = airedWeeks.at(-1);
   const finalWeekLabel = finalWeek?.weekLabel ?? 'season';
   const finalWeekNumber = finalWeek?.weekNumber ?? null;
 
   for (const entry of facts.evictionOrder) {
     const code = PLACEMENT_BY_LABEL[entry.placeLabel.trim().toLowerCase()];
-    if (code) {
-      push(code, entry.player, finalWeekNumber, finalWeekLabel);
-    }
+    if (code) push(code, entry.player, finalWeekNumber, finalWeekLabel);
+  }
 
-    if (entry.order <= jurySize) {
-      push('REACHED_JURY', entry.player, finalWeekNumber, finalWeekLabel, 'MEDIUM', [
-        `Inferred from finishing ${entry.order} of ${facts.evictionOrder.length}; jury size assumed to be ${jurySize}`,
-      ]);
+  // Jury membership, derived rather than assumed.
+  //
+  // Neither obvious signal works alone. The eviction table's row numbers count
+  // from the winner on a finished season but from the latest eviction on a live
+  // one, so a threshold over them means different things at different times.
+  // The cast's status tag is a display label that prefers the more notable one
+  // — an America's Favorite Player who also sat on the jury is tagged "AFP" —
+  // so filtering on it drops real jury members.
+  //
+  // Instead: take the worst finish among houseguests the source does tag as
+  // jury, and treat that as the boundary. The cohort comes out of the data
+  // rather than a hardcoded jury size that varies by season.
+  const placementByPlayer = new Map<string, number>();
+  for (const entry of facts.evictionOrder) {
+    const placement = placementFromLabel(entry.placeLabel);
+    if (placement !== null) placementByPlayer.set(entry.player.externalId, placement);
+  }
+
+  const taggedJuryPlacements = facts.cast
+    .filter((member) => member.statusLabel?.trim().toLowerCase() === 'jury')
+    .map((member) => placementByPlayer.get(member.externalId))
+    .filter((placement): placement is number => placement !== undefined);
+
+  if (taggedJuryPlacements.length > 0) {
+    const juryBoundary = Math.max(...taggedJuryPlacements);
+    for (const [externalId, placement] of placementByPlayer) {
+      if (placement > juryBoundary) continue;
+      const player = allPlayers.get(externalId);
+      if (player) push('REACHED_JURY', player, finalWeekNumber, finalWeekLabel);
     }
   }
 

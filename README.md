@@ -160,9 +160,12 @@ form's season list.
 Results are captured from external sources instead of typed in by hand.
 
 ```bash
-npx tsx scripts/ingest.ts bootstrap big-brother-27 2025   # season, cast, cycles
-npx tsx scripts/ingest.ts sync      big-brother-27        # weekly results
+npx tsx scripts/ingest.ts bootstrap big-brother-28 2026   # season, cast, cycles
+npx tsx scripts/ingest.ts sync      big-brother-28        # weekly results
 ```
+
+Re-run `sync` as episodes air to pull in the new week. Bootstrap is only needed
+once per season, though re-running it refreshes the cycle schedule.
 
 Or use the **Sync** button at `/admin/ingestion`. Both are safe to re-run —
 candidates are upserted on `(sourceSlug, sourceRef)`, so re-syncing an unchanged
@@ -203,6 +206,29 @@ Guessing at them would put fabricated points on real scoreboards.
 `IngestionRun` records every sync. A run that parses zero weeks off a page that
 should have them is recorded as `EMPTY` rather than a success — that is the
 signal that a parser has silently broken.
+
+### Live seasons
+
+An in-progress season is not just a shorter finished one, and three things only
+break there:
+
+- **Unaired weeks** appear in the results grid as empty rows. They are skipped,
+  not scored — otherwise everyone collects survival points for a week nobody has
+  played. They still become `UPCOMING` cycles so there is a real lock deadline.
+- **The eviction table's row order reverses.** A finished season lists the winner
+  first; a live one lists the most recent eviction first. Nothing semantic is
+  derived from that column — placement comes from the label ("9th Place").
+- **Jury membership is derived, not assumed.** The cast's status tag is a display
+  label that prefers the more notable one, so a houseguest who was both on the
+  jury and America's Favorite is tagged `AFP` and would be missed. The cohort is
+  instead everyone finishing at or above the worst finish among jury-tagged
+  houseguests, which comes out of the data rather than a hardcoded jury size.
+
+Cycle air dates come from eviction dates where known and are interpolated a week
+apart elsewhere, anchored to the premiere and finale dates on the page.
+
+Each sync also reconciles who is still in the house, when they left, and where
+they placed — scored events alone do not carry that.
 
 ### Sources
 

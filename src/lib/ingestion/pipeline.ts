@@ -3,7 +3,13 @@ import { prisma } from '../db';
 import { recalculateLeaguesForCycle } from '../scoring/repository';
 import { bigBrotherJunkiesAdapter } from './sources/big-brother-junkies';
 import { mapBigBrotherSeason } from './mappers/big-brother';
-import { IngestionError, type CandidateEvent, type RawSeasonFacts, type SeasonSourceAdapter } from './types';
+import {
+  IngestionError,
+  isEmptyWeek,
+  type CandidateEvent,
+  type RawSeasonFacts,
+  type SeasonSourceAdapter,
+} from './types';
 
 const ADAPTERS: Record<string, SeasonSourceAdapter> = {
   [bigBrotherJunkiesAdapter.slug]: bigBrotherJunkiesAdapter,
@@ -63,24 +69,36 @@ export async function bootstrapSeasonFromSource(input: {
   // Cycles: one per week the source reports, plus a finale label on the last.
   const existingCycles = await prisma.cycle.findMany({
     where: { seasonId: season.id },
-    select: { sequence: true },
+    select: { id: true, sequence: true },
   });
-  const knownSequences = new Set(existingCycles.map((c) => c.sequence));
+  const cycleBySequence = new Map(existingCycles.map((c) => [c.sequence, c.id]));
+  const schedule = buildCycleSchedule(facts);
 
   let cyclesCreated = 0;
   for (const week of facts.weeks) {
-    if (knownSequences.has(week.weekNumber)) continue;
     const isFinale = week.weekNumber === facts.weeks.at(-1)?.weekNumber;
-    // Real air dates are not in the results grid, so cycles start unscheduled;
-    // a commissioner sets lock times, or a later sync fills them in.
+    const aired = !isEmptyWeek(week);
+    const airsAt = schedule.get(week.weekNumber) ?? null;
+    // Rosters lock 30 minutes before the episode airs.
+    const locksAt = airsAt ? new Date(airsAt.getTime() - 30 * 60 * 1000) : new Date();
+
+    const data = {
+      label: isFinale ? 'Finale' : `Week ${week.weekNumber}`,
+      airsAt,
+      locksAt,
+      // An unaired week must stay UPCOMING or its roster lock is meaningless
+      // and the app will present a future week as already settled.
+      status: aired ? ('SCORED' as const) : ('UPCOMING' as const),
+    };
+
+    const existingId = cycleBySequence.get(week.weekNumber);
+    if (existingId) {
+      await prisma.cycle.update({ where: { id: existingId }, data });
+      continue;
+    }
+
     await prisma.cycle.create({
-      data: {
-        seasonId: season.id,
-        sequence: week.weekNumber,
-        label: isFinale ? 'Finale' : `Week ${week.weekNumber}`,
-        locksAt: new Date(),
-        status: 'SCORED',
-      },
+      data: { seasonId: season.id, sequence: week.weekNumber, ...data },
     });
     cyclesCreated += 1;
   }
@@ -119,6 +137,65 @@ export async function bootstrapSeasonFromSource(input: {
   }
 
   return { seasonId: season.id, contestantsCreated, contestantsLinked, cyclesCreated };
+}
+
+/**
+ * Works out when each week aired.
+ *
+ * Eviction dates are the only real dates the results page carries, so weeks
+ * with an eviction are pinned to theirs and everything else is interpolated a
+ * week apart from the premiere. Without this every cycle would lock at import
+ * time and a live season would have no future deadline to play against.
+ */
+function buildCycleSchedule(facts: RawSeasonFacts): Map<number, Date> {
+  const schedule = new Map<number, Date>();
+  const year = facts.premiereDate?.getFullYear() ?? new Date().getFullYear();
+
+  const evictionDateByPlayer = new Map<string, string>();
+  for (const entry of facts.evictionOrder) {
+    if (entry.dateLabel) evictionDateByPlayer.set(entry.player.externalId, entry.dateLabel);
+  }
+
+  for (const week of facts.weeks) {
+    for (const evicted of week.evicted) {
+      const label = evictionDateByPlayer.get(evicted.externalId);
+      if (!label) continue;
+      // Labels read "Sep 17" with no year; the season supplies it.
+      const parsed = new Date(`${label} ${year}`);
+      if (!Number.isNaN(parsed.getTime())) {
+        schedule.set(week.weekNumber, parsed);
+        break;
+      }
+    }
+  }
+
+  // Fill gaps by walking a week at a time from the nearest known anchor.
+  const sorted = [...facts.weeks].sort((a, b) => a.weekNumber - b.weekNumber);
+  for (const week of sorted) {
+    if (schedule.has(week.weekNumber)) continue;
+
+    const anchor = [...schedule.entries()].sort(
+      (a, b) => Math.abs(a[0] - week.weekNumber) - Math.abs(b[0] - week.weekNumber),
+    )[0];
+
+    if (anchor) {
+      const [anchorWeek, anchorDate] = anchor;
+      const offsetDays = (week.weekNumber - anchorWeek) * 7;
+      schedule.set(week.weekNumber, new Date(anchorDate.getTime() + offsetDays * 86_400_000));
+    } else if (facts.premiereDate) {
+      schedule.set(
+        week.weekNumber,
+        new Date(facts.premiereDate.getTime() + (week.weekNumber - 1) * 7 * 86_400_000),
+      );
+    }
+  }
+
+  if (facts.finaleDate) {
+    const finale = sorted.at(-1);
+    if (finale) schedule.set(finale.weekNumber, facts.finaleDate);
+  }
+
+  return schedule;
 }
 
 // ---------------------------------------------------------------------------
@@ -254,6 +331,8 @@ export async function ingestSeason(input: {
       void scoredEventId;
     }
 
+    await reconcileContestantState(facts, season.id, cycleBySequence);
+
     for (const cycleId of touchedCycleIds) {
       await recalculateLeaguesForCycle(cycleId);
     }
@@ -295,6 +374,54 @@ export async function ingestSeason(input: {
       pendingReview: 0,
       error: message,
     };
+  }
+}
+
+/**
+ * Syncs who is still in the house, when they left, and where they finished.
+ *
+ * Scored events alone do not carry this: a contestant row created at bootstrap
+ * stays `isActive` forever otherwise, and a live season would show evicted
+ * houseguests as still playing.
+ */
+async function reconcileContestantState(
+  facts: RawSeasonFacts,
+  seasonId: string,
+  cycleBySequence: Map<number, string>,
+): Promise<void> {
+  const links = await prisma.contestantExternalRef.findMany({
+    where: { sourceSlug: facts.sourceSlug, contestant: { seasonId } },
+    select: { externalId: true, contestantId: true },
+  });
+  const contestantByExternalId = new Map(links.map((l) => [l.externalId, l.contestantId]));
+
+  // The cycle each houseguest was evicted in, from the weekly grid.
+  const evictionCycleByPlayer = new Map<string, string>();
+  for (const week of facts.weeks) {
+    const cycleId = cycleBySequence.get(week.weekNumber);
+    if (!cycleId) continue;
+    for (const player of week.evicted) evictionCycleByPlayer.set(player.externalId, cycleId);
+  }
+
+  const placementByPlayer = new Map<string, number>();
+  for (const entry of facts.evictionOrder) {
+    const value = entry.placeLabel.trim().toLowerCase();
+    if (!value) continue;
+    const placement =
+      value === 'winner' ? 1 : value.startsWith('runner') ? 2 : Number(/^(\d+)/.exec(value)?.[1]);
+    if (Number.isFinite(placement)) placementByPlayer.set(entry.player.externalId, placement);
+  }
+
+  for (const [externalId, contestantId] of contestantByExternalId) {
+    const eliminatedCycleId = evictionCycleByPlayer.get(externalId) ?? null;
+    await prisma.contestant.update({
+      where: { id: contestantId },
+      data: {
+        isActive: eliminatedCycleId === null,
+        eliminatedCycleId,
+        placement: placementByPlayer.get(externalId) ?? null,
+      },
+    });
   }
 }
 

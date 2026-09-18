@@ -65,6 +65,70 @@ describe('bigBrotherJunkiesAdapter.parseSeason', () => {
   });
 });
 
+/**
+ * BB28 was mid-season when captured. A live season exercises paths a finished
+ * one never reaches: unaired weeks, houseguests with no finish position, and an
+ * eviction table ordered from the most recent eviction instead of the winner.
+ */
+const liveFixture = readFileSync(join(__dirname, '__fixtures__', 'bbj-season-28.html'), 'utf8');
+const liveFacts = bigBrotherJunkiesAdapter.parseSeason(liveFixture, 'https://example.test/bb28');
+
+describe('in-progress season', () => {
+  it('parses premiere and finale dates', () => {
+    expect(liveFacts.premiereDate?.getFullYear()).toBe(2026);
+    expect(liveFacts.finaleDate?.getMonth()).toBe(9); // October
+  });
+
+  it('has no winner while the season is running', () => {
+    expect(liveFacts.evictionOrder.some((e) => /winner/i.test(e.placeLabel))).toBe(false);
+  });
+
+  it('records a null order for houseguests still in the house', () => {
+    const active = liveFacts.evictionOrder.filter((e) => e.order === null);
+    expect(active).toHaveLength(5);
+    expect(active.every((e) => Number.isNaN(e.order as unknown as number))).toBe(false);
+  });
+
+  it('does not score weeks that have not aired', () => {
+    const scheduled = liveFacts.weeks.at(-1)!;
+    expect(scheduled.hoh).toEqual([]);
+    expect(scheduled.evicted).toEqual([]);
+
+    const candidates = mapBigBrotherSeason(liveFacts, 'big-brother-28');
+    expect(candidates.some((c) => c.weekNumber === scheduled.weekNumber)).toBe(false);
+  });
+
+  it('counts only houseguests who have actually reached jury so far', () => {
+    const candidates = mapBigBrotherSeason(liveFacts, 'big-brother-28');
+    const jury = candidates.filter((c) => c.eventCode === 'REACHED_JURY');
+
+    // Four have been jury-evicted; nobody else has placed yet.
+    expect(jury).toHaveLength(4);
+    expect(jury.every((c) => c.confidence === 'HIGH')).toBe(true);
+
+    // Houseguests still in the house have no placement, so they cannot yet
+    // qualify — a row-order threshold would have swept them in.
+    const activeIds = liveFacts.cast
+      .filter((c) => c.statusLabel?.toLowerCase() === 'active')
+      .map((c) => c.externalId);
+    expect(jury.some((c) => activeIds.includes(c.player.externalId))).toBe(false);
+  });
+
+  it('awards no placement points before anyone has placed', () => {
+    const candidates = mapBigBrotherSeason(liveFacts, 'big-brother-28');
+    expect(candidates.some((c) => c.eventCode.startsWith('PLACEMENT_'))).toBe(false);
+  });
+
+  it('still credits survival only through the last aired week', () => {
+    const candidates = mapBigBrotherSeason(liveFacts, 'big-brother-28');
+    const weeks = new Set(
+      candidates.filter((c) => c.eventCode === 'WEEK_SURVIVED').map((c) => c.weekNumber),
+    );
+    expect(weeks.has(12)).toBe(true);
+    expect(weeks.has(13)).toBe(false);
+  });
+});
+
 describe('mapBigBrotherSeason', () => {
   const candidates = mapBigBrotherSeason(facts, 'big-brother-27');
 
@@ -105,11 +169,18 @@ describe('mapBigBrotherSeason', () => {
     expect(candidates.filter((c) => c.eventCode === 'PLACEMENT_THIRD')).toHaveLength(1);
   });
 
-  it('flags inferred jury placement as needing review', () => {
+  it('derives the full jury cohort from the boundary, not the status tag', () => {
     const jury = candidates.filter((c) => c.eventCode === 'REACHED_JURY');
+    const names = jury.map((c) => c.player.name);
+
+    // Nine made jury: the final three plus the six tagged as jury.
     expect(jury).toHaveLength(9);
-    expect(jury.every((c) => c.confidence === 'MEDIUM')).toBe(true);
-    expect(jury[0].reasons[0]).toMatch(/jury size assumed/i);
+    expect(names).toContain('Ashley Hollis'); // winner, tagged "Winner"
+    expect(names).toContain('Rachel Reilly'); // 9th, the jury boundary
+    // Tagged "AFP" rather than "Jury", but finished 5th and was on the jury.
+    expect(names).toContain('Keanu Soto');
+    // Evicted pre-jury.
+    expect(names).not.toContain('Mickey Lee');
   });
 
   it('never infers events the source cannot support', () => {
