@@ -5,8 +5,8 @@ export function AppHeader({ isPlatformAdmin = false }: { isPlatformAdmin?: boole
   return (
     <header className="sticky top-0 z-20 bg-canvas/90 px-5 pb-2 pt-4 backdrop-blur">
       <div className="mx-auto flex max-w-md items-center justify-between">
-        <Link href="/leagues" className="flex items-center gap-2" aria-label="Comp Beast home">
-          <LogoMark />
+        <Link href="/leagues" aria-label="Comp Beast home">
+          <CompBeastLogo />
         </Link>
         <div className="flex items-center gap-3">
           {isPlatformAdmin && (
@@ -28,7 +28,7 @@ export function AppHeader({ isPlatformAdmin = false }: { isPlatformAdmin?: boole
           </button>
           <SignedOut>
             <SignInButton mode="modal">
-              <button type="button" className="pill bg-ink px-4 py-2 text-[13px] text-white">
+              <button type="button" className="pill bg-surface px-4 py-2 text-[13px] text-ink shadow-card">
                 Sign in
               </button>
             </SignInButton>
@@ -42,12 +42,28 @@ export function AppHeader({ isPlatformAdmin = false }: { isPlatformAdmin?: boole
   );
 }
 
-function LogoMark() {
+/**
+ * The Ascending Tally: bars climbing from early-game slate to gold "Comp Beast
+ * peak," capped with a red clutch-veto pip. Mark and wordmark are separate
+ * elements (not one flattened SVG) so the wordmark stays real, selectable
+ * DOM text in the display typeface rather than a font baked into an asset.
+ */
+function CompBeastLogo({ className = 'h-8' }: { className?: string }) {
   return (
-    <svg width="30" height="30" viewBox="0 0 32 32" fill="none" aria-hidden>
-      <path d="M16 3 28 11l-12 5.5L4 11 16 3Z" fill="#8fa9f5" />
-      <path d="M16 18.5 28 13v8l-12 8-12-8v-8l12 5.5Z" fill="#5b7ce8" />
-    </svg>
+    <div className={`flex items-center gap-3 ${className}`}>
+      <svg viewBox="0 0 64 64" className="h-full w-auto overflow-visible" fill="none" aria-hidden>
+        <g transform="translate(4, 10)">
+          <polygon points="7,24 14,24 7,44 0,44" className="fill-slate-500" />
+          <polygon points="22,12 29,12 21,44 14,44" className="fill-brand-gold" />
+          <polygon points="37,0 45,0 35,44 27,44" className="fill-brand-gold" />
+          <circle cx="53" cy="7" r="4.5" className="fill-danger" />
+        </g>
+      </svg>
+      <div className="flex items-baseline font-display tracking-wider text-2xl">
+        <span className="text-ink">COMP</span>
+        <span className="ml-1 text-brand-gold">BEAST</span>
+      </div>
+    </div>
   );
 }
 

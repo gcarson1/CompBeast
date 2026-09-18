@@ -1,9 +1,10 @@
 import Link from 'next/link';
 import { notFound } from 'next/navigation';
-import { Avatar } from '@/components/Avatar';
+import { Leaderboard } from '@/components/Leaderboard';
 import { getCurrentUser } from '@/lib/auth';
-import { formatPoints, pointsTone, relativeTime } from '@/lib/ui';
-import { getCurrentCycle, getLeagueLeaderboard, getLeagueOverview } from '@/server/queries';
+import { atRiskMessage, isAtRiskCode, nearMissMessage } from '@/lib/engagement';
+import { relativeTime } from '@/lib/ui';
+import { getCurrentCycle, getLeagueLeaderboard, getLeagueOverview, getTeamDetail } from '@/server/queries';
 
 export const dynamic = 'force-dynamic';
 
@@ -17,11 +18,25 @@ export default async function LeaguePage({ params }: { params: { leagueId: strin
   ]);
 
   const myTeam = league.teams.find((t) => t.owner.id === user?.id);
+  const myTeamDetail = myTeam ? await getTeamDetail(myTeam.id) : null;
   const isCommissioner = user?.id === league.commissionerId;
   const drafting = league.draftStatus !== 'COMPLETED';
   const cycleLocked =
     currentCycle !== null &&
     (currentCycle.status !== 'UPCOMING' || Date.now() >= currentCycle.locksAt.getTime());
+
+  const nearMiss = myTeam ? nearMissMessage(rows, myTeam.id) : null;
+  const myRosterNames = new Map((myTeamDetail?.roster ?? []).map((p) => [p.contestantId, p.name]));
+  const latestLines = myTeamDetail?.score?.cycles.at(-1)?.lines ?? [];
+  const atRiskNames = [
+    ...new Set(
+      latestLines
+        .filter((line) => isAtRiskCode(line.code))
+        .map((line) => myRosterNames.get(line.contestantId))
+        .filter((name): name is string => Boolean(name)),
+    ),
+  ];
+  const atRisk = atRiskMessage(atRiskNames);
 
   return (
     <div className="pt-2">
@@ -37,18 +52,18 @@ export default async function LeaguePage({ params }: { params: { leagueId: strin
       {drafting && (
         <Link
           href={`/leagues/${league.id}/draft`}
-          className="mt-4 flex items-center justify-between rounded-card bg-ink p-4 text-white transition active:scale-[0.99]"
+          className="mt-4 flex items-center justify-between rounded-card border border-brand-gold/30 bg-surface p-4 text-ink transition active:scale-[0.99]"
         >
           <span>
             <span className="block text-[15px] font-semibold">
               {league.draftStatus === 'NOT_STARTED' ? 'Draft has not started' : 'Draft in progress'}
             </span>
-            <span className="mt-0.5 block text-[13px] text-white/60">
+            <span className="mt-0.5 block text-[13px] text-muted">
               {league.teams.length} {league.teams.length === 1 ? 'team' : 'teams'} ·{' '}
               {league.rosterSize} picks each
             </span>
           </span>
-          <span className="pill bg-lime text-ink">
+          <span className="pill bg-brand-gold text-ink">
             {league.draftStatus === 'NOT_STARTED' && isCommissioner ? 'Start' : 'Open'}
           </span>
         </Link>
@@ -66,7 +81,7 @@ export default async function LeaguePage({ params }: { params: { leagueId: strin
           </span>
           <span
             className={`pill text-[12px] ${
-              cycleLocked ? 'bg-canvas text-muted' : 'bg-lime-soft text-lime-deep'
+              cycleLocked ? 'bg-canvas text-muted' : 'bg-brand-gold-soft text-brand-gold-deep'
             }`}
           >
             {cycleLocked ? 'Locked' : 'Open'}
@@ -74,57 +89,24 @@ export default async function LeaguePage({ params }: { params: { leagueId: strin
         </div>
       )}
 
+      {(nearMiss || atRisk) && (
+        <div className="mt-4 space-y-2 rounded-card border border-hairline p-4">
+          {nearMiss && <p className="text-[13px] font-medium text-brand-gold-deep">{nearMiss}</p>}
+          {atRisk && <p className="text-[13px] font-medium text-danger">{atRisk}</p>}
+        </div>
+      )}
+
       <section className="mt-6">
         <div className="mb-2 flex items-baseline justify-between">
           <h2 className="text-[17px] font-semibold">Leaderboard</h2>
           {myTeam && (
-            <Link href={`/teams/${myTeam.id}`} className="text-[13px] text-lime-deep">
+            <Link href={`/teams/${myTeam.id}`} className="text-[13px] text-brand-gold-deep">
               My team
             </Link>
           )}
         </div>
 
-        {rows.length === 0 ? (
-          <p className="card p-4 text-[13px] text-muted">
-            No teams yet. Share the invite code to get your league going.
-          </p>
-        ) : (
-          <ul className="card divide-y divide-hairline overflow-hidden">
-            {rows.map((row) => {
-              const isMine = row.teamId === myTeam?.id;
-              return (
-                <li key={row.teamId}>
-                  <Link
-                    href={`/teams/${row.teamId}`}
-                    className={`flex items-center gap-3 p-4 transition ${isMine ? 'bg-lime-soft/40' : ''}`}
-                  >
-                    <span className="w-6 text-[15px] font-semibold tabular-nums text-muted">
-                      {row.rank}
-                    </span>
-                    <Avatar name={row.ownerName ?? row.teamName} size={38} />
-                    <span className="min-w-0 flex-1">
-                      <span className="block truncate text-[15px] font-semibold">
-                        {row.teamName}
-                        {isMine && <span className="ml-1.5 text-[11px] text-lime-deep">you</span>}
-                      </span>
-                      <span className="mt-0.5 block text-[12px] text-muted">
-                        {row.ownerName} · {row.activeCount}/{row.rosterCount} still in
-                      </span>
-                    </span>
-                    <span className="text-right">
-                      <span className="block text-[17px] font-semibold tabular-nums">
-                        {row.totalPoints}
-                      </span>
-                      <span className={`block text-[12px] tabular-nums ${pointsTone(row.lastCyclePoints)}`}>
-                        {formatPoints(row.lastCyclePoints)}
-                      </span>
-                    </span>
-                  </Link>
-                </li>
-              );
-            })}
-          </ul>
-        )}
+        <Leaderboard rows={rows} myTeamId={myTeam?.id ?? null} />
       </section>
 
       <section className="mt-6">

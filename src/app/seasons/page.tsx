@@ -4,8 +4,8 @@ import { getSeasonsByStatus } from '@/server/queries';
 export const dynamic = 'force-dynamic';
 
 const STATUS_TONE: Record<string, string> = {
-  ACTIVE: 'bg-lime-soft text-lime-deep',
-  UPCOMING: 'bg-[#e8eefd] text-[#3d6be8]',
+  ACTIVE: 'bg-brand-gold-soft text-brand-gold-deep',
+  UPCOMING: 'bg-brand-velvet/20 text-violet-300',
   COMPLETED: 'bg-canvas text-muted',
 };
 
@@ -51,7 +51,7 @@ export default async function SeasonsPage() {
                     <span className="text-[12px] text-muted">
                       {season._count.leagues} {season._count.leagues === 1 ? 'league' : 'leagues'}
                     </span>
-                    <span className="text-[12px] font-medium text-lime-deep">View season →</span>
+                    <span className="text-[12px] font-medium text-brand-gold-deep">View season →</span>
                   </div>
                 </Link>
               </li>
@@ -95,7 +95,7 @@ export default async function SeasonsPage() {
 
 function ChevronIcon() {
   return (
-    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#8a8a94" strokeWidth="2">
+    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#94A3B8" strokeWidth="2">
       <path d="m9 6 6 6-6 6" strokeLinecap="round" strokeLinejoin="round" />
     </svg>
   );

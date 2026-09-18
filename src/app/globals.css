@@ -23,7 +23,7 @@
   }
 
   .btn-primary {
-    @apply pill bg-lime text-ink transition active:scale-[0.97];
+    @apply pill bg-brand-gold text-ink uppercase tracking-wide transition active:scale-[0.97];
   }
 
   .btn-ghost {
@@ -31,7 +31,7 @@
   }
 
   .tab-active {
-    @apply pill bg-ink text-white;
+    @apply pill bg-brand-gold text-ink;
   }
 
   .tab-idle {
@@ -39,7 +39,7 @@
   }
 
   .field {
-    @apply w-full rounded-2xl border border-hairline bg-canvas px-4 py-3 text-[15px] outline-none transition placeholder:text-muted focus:border-lime-deep focus:bg-surface;
+    @apply w-full rounded-2xl border border-hairline bg-canvas px-4 py-3 text-[15px] outline-none transition placeholder:text-muted focus:border-brand-gold-deep focus:bg-surface;
   }
 
   .label {

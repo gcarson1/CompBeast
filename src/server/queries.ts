@@ -1,4 +1,5 @@
 import { prisma } from '../lib/db';
+import { isAtRiskCode } from '../lib/engagement';
 import { computeLeagueSnapshot, computeTeamSnapshot } from '../lib/scoring/repository';
 import type { LeagueScoreSnapshot, TeamScore } from '../lib/scoring/types';
 
@@ -498,4 +499,89 @@ export async function getRuleBook(showSlug: string) {
       },
     },
   });
+}
+
+export interface UserTeamSummary {
+  teamId: string;
+  teamName: string;
+  leagueId: string;
+  leagueName: string;
+  showName: string;
+  seasonName: string;
+  rank: number;
+  totalPoints: number;
+  lastCyclePoints: number;
+  rows: LeaderboardRow[];
+  currentCycleLabel: string | null;
+  locksAt: Date | null;
+  cycleLocked: boolean;
+  atRiskNames: string[];
+}
+
+/**
+ * Everything the home dashboard needs for every team a user owns, composed
+ * from the same query functions the league and team pages already use, so
+ * the dashboard can never drift out of sync with what those pages show.
+ */
+export async function getUserTeams(userId: string): Promise<UserTeamSummary[]> {
+  const teams = await prisma.team.findMany({
+    where: { ownerId: userId },
+    select: {
+      id: true,
+      league: {
+        select: {
+          id: true,
+          name: true,
+          season: { select: { id: true, name: true, show: { select: { name: true } } } },
+        },
+      },
+    },
+    orderBy: { createdAt: 'desc' },
+  });
+
+  return Promise.all(
+    teams.map(async (team): Promise<UserTeamSummary> => {
+      const [{ rows }, detail, currentCycle] = await Promise.all([
+        getLeagueLeaderboard(team.league.id),
+        getTeamDetail(team.id),
+        getCurrentCycle(team.league.season.id),
+      ]);
+
+      const mine = rows.find((r) => r.teamId === team.id);
+      const cycleLocked =
+        currentCycle !== null &&
+        (currentCycle.status !== 'UPCOMING' || Date.now() >= currentCycle.locksAt.getTime());
+
+      // "At risk" reads the latest cycle that has any recorded lines at all —
+      // nominations land mid-week, before that cycle's own status flips to
+      // SCORED, so this still catches a nomination the moment it's recorded.
+      const rosterNameById = new Map((detail?.roster ?? []).map((p) => [p.contestantId, p.name]));
+      const latestLines = detail?.score?.cycles.at(-1)?.lines ?? [];
+      const atRiskNames = [
+        ...new Set(
+          latestLines
+            .filter((line) => isAtRiskCode(line.code))
+            .map((line) => rosterNameById.get(line.contestantId))
+            .filter((name): name is string => Boolean(name)),
+        ),
+      ];
+
+      return {
+        teamId: team.id,
+        teamName: detail?.team.name ?? '',
+        leagueId: team.league.id,
+        leagueName: team.league.name,
+        showName: team.league.season.show.name,
+        seasonName: team.league.season.name,
+        rank: mine?.rank ?? 0,
+        totalPoints: mine?.totalPoints ?? 0,
+        lastCyclePoints: mine?.lastCyclePoints ?? 0,
+        rows,
+        currentCycleLabel: currentCycle?.label ?? null,
+        locksAt: currentCycle?.locksAt ?? null,
+        cycleLocked,
+        atRiskNames,
+      };
+    }),
+  );
 }

@@ -14,7 +14,7 @@ export function Avatar({
   return (
     <span
       className={cn(
-        'inline-flex shrink-0 items-center justify-center rounded-full font-semibold text-white ring-2 ring-white',
+        'inline-flex shrink-0 items-center justify-center rounded-full font-semibold text-white ring-2 ring-surface',
         avatarColor(name),
         dimmed && 'opacity-40 grayscale',
         className,

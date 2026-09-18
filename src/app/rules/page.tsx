@@ -37,7 +37,7 @@ export default async function RulesPage() {
                   <span className="flex items-center gap-2">
                     <span className="text-[16px] font-semibold">{ruleset.name}</span>
                     {ruleset.isDefault && (
-                      <span className="pill bg-lime-soft px-2 py-0.5 text-[10px] text-lime-deep">
+                      <span className="pill bg-brand-gold-soft px-2 py-0.5 text-[10px] text-brand-gold-deep">
                         default
                       </span>
                     )}

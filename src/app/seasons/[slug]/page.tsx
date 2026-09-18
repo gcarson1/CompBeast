@@ -37,15 +37,13 @@ export default async function SeasonPage({ params }: { params: { slug: string } 
       ) : (
         <Link
           href="/leagues/new"
-          className="mt-4 flex items-center justify-between rounded-card bg-ink p-4 text-white transition active:scale-[0.99]"
+          className="mt-4 flex items-center justify-between rounded-card border border-brand-gold/30 bg-surface p-4 text-ink transition active:scale-[0.99]"
         >
           <span>
             <span className="block text-[15px] font-semibold">Start a league</span>
-            <span className="mt-0.5 block text-[13px] text-white/60">
-              This season is still in play
-            </span>
+            <span className="mt-0.5 block text-[13px] text-muted">This season is still in play</span>
           </span>
-          <span className="pill bg-lime text-ink">Create</span>
+          <span className="pill bg-brand-gold text-ink">Create</span>
         </Link>
       )}
 

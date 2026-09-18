@@ -7,10 +7,10 @@ import { relativeTime } from '@/lib/ui';
 export const dynamic = 'force-dynamic';
 
 const RUN_TONE: Record<string, string> = {
-  SUCCESS: 'bg-lime-soft text-lime-deep',
+  SUCCESS: 'bg-brand-gold-soft text-brand-gold-deep',
   RUNNING: 'bg-canvas text-muted',
-  EMPTY: 'bg-[#fdf1d6] text-[#a06a00]',
-  FAILED: 'bg-[#fde8e8] text-danger',
+  EMPTY: 'bg-warn/15 text-warn',
+  FAILED: 'bg-danger/15 text-danger',
 };
 
 export default async function IngestionPage() {

@@ -13,7 +13,7 @@ export function formatPoints(points: number): string {
 }
 
 export function pointsTone(points: number): string {
-  if (points > 0) return 'text-lime-deep';
+  if (points > 0) return 'text-brand-gold-deep';
   if (points < 0) return 'text-danger';
   return 'text-muted';
 }

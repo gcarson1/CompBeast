@@ -1,6 +1,7 @@
 'use client';
 
 import { useState } from 'react';
+import { AnimatePresence, motion } from 'framer-motion';
 import { cn, formatPoints, pointsTone } from '@/lib/ui';
 
 export interface PlayerEvent {
@@ -48,11 +49,20 @@ export function PlayerTabs({
         ))}
       </div>
 
-      <div className="mt-3">
-        {tab === 'Summary' && <SummaryTab events={events} />}
-        {tab === 'Game log' && <GameLogTab gameLog={gameLog} events={events} />}
-        {tab === 'Leagues' && <LeaguesTab leagues={leagues} />}
-      </div>
+      <AnimatePresence mode="wait" initial={false}>
+        <motion.div
+          key={tab}
+          initial={{ opacity: 0, y: 6 }}
+          animate={{ opacity: 1, y: 0 }}
+          exit={{ opacity: 0, y: -6 }}
+          transition={{ duration: 0.15 }}
+          className="mt-3"
+        >
+          {tab === 'Summary' && <SummaryTab events={events} />}
+          {tab === 'Game log' && <GameLogTab gameLog={gameLog} events={events} />}
+          {tab === 'Leagues' && <LeaguesTab leagues={leagues} />}
+        </motion.div>
+      </AnimatePresence>
     </div>
   );
 }

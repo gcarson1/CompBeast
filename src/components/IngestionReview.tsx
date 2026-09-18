@@ -41,7 +41,7 @@ export function SyncButton({
         <span className="block truncate text-[14px] font-semibold">{seasonName}</span>
         <span className="mt-0.5 block truncate text-[12px] text-muted">{sourceSlug}</span>
         {state.message && (
-          <span className="mt-1 block text-[12px] text-lime-deep">{state.message}</span>
+          <span className="mt-1 block text-[12px] text-brand-gold-deep">{state.message}</span>
         )}
         {state.error && <span className="mt-1 block text-[12px] text-danger">{state.error}</span>}
       </span>
@@ -79,8 +79,8 @@ export function CandidateCard({ candidate }: { candidate: PendingCandidate }) {
         <span
           className={`pill shrink-0 text-[11px] ${
             candidate.confidence === 'MEDIUM'
-              ? 'bg-[#fdf1d6] text-[#a06a00]'
-              : 'bg-[#fde8e8] text-danger'
+              ? 'bg-brand-gold-soft text-brand-gold-deep'
+              : 'bg-danger/15 text-danger'
           }`}
         >
           {candidate.confidence.toLowerCase()}

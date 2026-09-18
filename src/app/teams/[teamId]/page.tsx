@@ -104,7 +104,7 @@ function ChevronIcon() {
       height="16"
       viewBox="0 0 24 24"
       fill="none"
-      stroke="#8a8a94"
+      stroke="#94A3B8"
       strokeWidth="2"
       className="transition group-open:rotate-180"
     >

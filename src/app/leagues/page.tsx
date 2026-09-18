@@ -68,7 +68,7 @@ export default async function LeaguesPage() {
         })}
       </ul>
 
-      <div className="mt-3 rounded-card border border-dashed border-lime-deep/50 bg-lime-soft/30 p-4">
+      <div className="mt-3 rounded-card border border-dashed border-brand-gold-deep/50 bg-brand-gold-soft/30 p-4">
         <BoltIcon />
         <h3 className="mt-2 text-[15px] font-semibold">Add new or join a league</h3>
         <p className="mt-0.5 text-[13px] text-muted">
@@ -98,7 +98,7 @@ function EmptyState({ title, body }: { title: string; body: string }) {
 
 function BoltIcon() {
   return (
-    <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#8fd11a" strokeWidth="1.8">
+    <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#FBBF24" strokeWidth="1.8">
       <path d="M13 3 5 13.5h6L10 21l8-10.5h-6L13 3Z" strokeLinejoin="round" />
     </svg>
   );
