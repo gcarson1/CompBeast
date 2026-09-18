@@ -5,9 +5,10 @@ import { usePathname } from 'next/navigation';
 import { cn } from '@/lib/ui';
 
 const TABS = [
-  { href: '/leagues', label: 'Leagues', icon: HomeIcon },
-  { href: '/players', label: 'Players', icon: BoxIcon },
-  { href: '/rules', label: 'Rules', icon: BookIcon },
+  { href: '/leagues', label: 'Leagues', icon: HomeIcon, owns: ['/leagues', '/teams'] },
+  // Player pages are reached through a season, so they keep this tab lit.
+  { href: '/seasons', label: 'Seasons', icon: BoxIcon, owns: ['/seasons', '/players'] },
+  { href: '/rules', label: 'Rules', icon: BookIcon, owns: ['/rules'] },
 ];
 
 export function BottomNav() {
@@ -17,7 +18,9 @@ export function BottomNav() {
     <nav className="sticky bottom-0 z-20 border-t border-hairline bg-surface/95 px-4 pb-[env(safe-area-inset-bottom)] pt-2 backdrop-blur">
       <ul className="mx-auto flex max-w-md items-center justify-around">
         {TABS.map((tab) => {
-          const active = pathname === tab.href || pathname.startsWith(`${tab.href}/`);
+          const active = tab.owns.some(
+            (prefix) => pathname === prefix || pathname.startsWith(`${prefix}/`),
+          );
           const Icon = tab.icon;
           return (
             <li key={tab.href}>

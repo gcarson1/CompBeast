@@ -133,6 +133,28 @@ curl -X POST localhost:3000/api/admin/events \
   -d '{"cycleId":"<id>","events":[{"contestantId":"<id>","eventCode":"HOH_WIN"}]}'
 ```
 
+## Season lifecycle
+
+`Season.status` is `UPCOMING`, `ACTIVE`, or `COMPLETED`, and it gates what players
+can do:
+
+| Status | Leagues | Browsing |
+| --- | --- | --- |
+| `UPCOMING` / `ACTIVE` | Create and join | Yes |
+| `COMPLETED` | Blocked | Archive at `/seasons/<slug>` |
+
+Drafting a cast whose season already aired is not a game — the results are
+already known — so finished seasons are read-only. The archive still shows every
+player's fantasy score for that season, ranked by points and labelled with how
+they actually placed, which are not the same thing.
+
+Status is explicit rather than derived from dates: ingested seasons routinely
+arrive with no reliable air dates, but a finished season always has a winner, so
+bootstrap infers `COMPLETED` from the presence of one.
+
+Enforcement is server-side in `createLeague` and `joinLeague`, not only in the
+form's season list.
+
 ## Automated data ingestion
 
 Results are captured from external sources instead of typed in by hand.

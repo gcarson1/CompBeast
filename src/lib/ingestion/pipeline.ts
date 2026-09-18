@@ -49,10 +49,15 @@ export async function bootstrapSeasonFromSource(input: {
 
   const name = input.seasonName ?? facts.seasonLabel;
 
+  // A season with a crowned winner is over; anything else is still in play.
+  // Air dates would be a flimsier signal — sources often omit them entirely.
+  const hasWinner = facts.evictionOrder.some((e) => /winner/i.test(e.placeLabel));
+  const status = hasWinner ? 'COMPLETED' : 'ACTIVE';
+
   const season = await prisma.season.upsert({
     where: { slug: input.seasonExternalId },
-    update: { name },
-    create: { showId: show.id, slug: input.seasonExternalId, name, year: input.year },
+    update: { name, status },
+    create: { showId: show.id, slug: input.seasonExternalId, name, year: input.year, status },
   });
 
   // Cycles: one per week the source reports, plus a finale label on the last.

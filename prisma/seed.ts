@@ -153,6 +153,7 @@ async function main() {
       slug: 'demo-big-brother',
       name: 'Demo Season',
       year: 2026,
+      status: 'ACTIVE',
       startDate: SEASON_START,
     },
   });
