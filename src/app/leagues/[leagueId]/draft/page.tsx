@@ -60,6 +60,7 @@ export default async function DraftPage({ params }: { params: { leagueId: string
           .map((c) => ({
             id: c.id,
             name: c.name,
+            photoUrl: c.photoUrl,
             occupation: (c.metadata as { occupation?: string } | null)?.occupation ?? null,
           }))}
       />

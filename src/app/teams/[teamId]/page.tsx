@@ -38,7 +38,7 @@ export default async function TeamPage({ params }: { params: { teamId: string } 
           {roster.map((player) => (
             <li key={player.contestantId}>
               <Link href={`/players/${player.contestantId}`} className="flex items-center gap-3 p-4">
-                <Avatar name={player.name} size={42} dimmed={!player.isActive} />
+                <Avatar name={player.name} photoUrl={player.photoUrl} size={42} dimmed={!player.isActive} />
                 <span className="min-w-0 flex-1">
                   <span className="block truncate text-[15px] font-semibold">{player.name}</span>
                   <span className="mt-0.5 block text-[12px] text-muted">

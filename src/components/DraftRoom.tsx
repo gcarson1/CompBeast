@@ -18,7 +18,7 @@ export interface DraftRoomProps {
   totalPicks: number;
   teams: Array<{ id: string; name: string; ownerName: string | null; position: number | null }>;
   picks: Array<{ pickNumber: number; round: number; teamName: string; contestantName: string }>;
-  available: Array<{ id: string; name: string; occupation: string | null }>;
+  available: Array<{ id: string; name: string; photoUrl: string | null; occupation: string | null }>;
 }
 
 const TAB_TRANSITION = { duration: 0.15 };
@@ -103,7 +103,7 @@ export function DraftRoom(props: DraftRoomProps) {
               <ul className="card divide-y divide-hairline">
                 {filtered.map((contestant) => (
                   <li key={contestant.id} className="flex items-center gap-3 p-3.5">
-                    <Avatar name={contestant.name} size={40} />
+                    <Avatar name={contestant.name} photoUrl={contestant.photoUrl} size={40} />
                     <span className="min-w-0 flex-1">
                       <span className="block truncate text-[15px] font-semibold">{contestant.name}</span>
                       <span className="mt-0.5 block truncate text-[12px] text-muted">

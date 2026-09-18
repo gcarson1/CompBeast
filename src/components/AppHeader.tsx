@@ -48,7 +48,7 @@ export function AppHeader({ isPlatformAdmin = false }: { isPlatformAdmin?: boole
  * elements (not one flattened SVG) so the wordmark stays real, selectable
  * DOM text in the display typeface rather than a font baked into an asset.
  */
-function CompBeastLogo({ className = 'h-8' }: { className?: string }) {
+export function CompBeastLogo({ className = 'h-8' }: { className?: string }) {
   return (
     <div className={`flex items-center gap-3 ${className}`}>
       <svg viewBox="0 0 64 64" className="h-full w-auto overflow-visible" fill="none" aria-hidden>
