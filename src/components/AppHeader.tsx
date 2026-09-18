@@ -1,13 +1,7 @@
 import Link from 'next/link';
-import { Avatar } from './Avatar';
+import { SignedIn, SignedOut, SignInButton, UserButton } from '@clerk/nextjs';
 
-export function AppHeader({
-  userName,
-  isPlatformAdmin = false,
-}: {
-  userName: string | null;
-  isPlatformAdmin?: boolean;
-}) {
+export function AppHeader({ isPlatformAdmin = false }: { isPlatformAdmin?: boolean }) {
   return (
     <header className="sticky top-0 z-20 bg-canvas/90 px-5 pb-2 pt-4 backdrop-blur">
       <div className="mx-auto flex max-w-md items-center justify-between">
@@ -32,7 +26,16 @@ export function AppHeader({
             <BellIcon />
             <span className="absolute right-2 top-2 h-2 w-2 rounded-full bg-danger ring-2 ring-surface" />
           </button>
-          {userName && <Avatar name={userName} size={36} />}
+          <SignedOut>
+            <SignInButton mode="modal">
+              <button type="button" className="pill bg-ink px-4 py-2 text-[13px] text-white">
+                Sign in
+              </button>
+            </SignInButton>
+          </SignedOut>
+          <SignedIn>
+            <UserButton appearance={{ elements: { avatarBox: 'h-9 w-9' } }} />
+          </SignedIn>
         </div>
       </div>
     </header>

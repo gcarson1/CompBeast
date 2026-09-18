@@ -1,6 +1,6 @@
 import type { Prisma } from '@prisma/client';
 import { prisma } from '../db';
-import { recalculateLeaguesForCycle } from '../scoring/repository';
+import { recalculateLeaguesForCycle, recalculateSeasonLeagues } from '../scoring/repository';
 import { bigBrotherJunkiesAdapter } from './sources/big-brother-junkies';
 import { mapBigBrotherSeason } from './mappers/big-brother';
 import {
@@ -273,6 +273,18 @@ export async function ingestSeason(input: {
     let pendingReview = 0;
     const touchedCycleIds = new Set<string>();
 
+    // One query for every candidate's dedupe check rather than one per
+    // candidate: a full-season sync proposes hundreds, and the per-row lookup
+    // made the round trips, not the work, the bottleneck.
+    const knownRefs = new Set(
+      (
+        await prisma.ingestedEventCandidate.findMany({
+          where: { sourceSlug, sourceRef: { in: candidates.map((c) => c.sourceRef) } },
+          select: { sourceRef: true },
+        })
+      ).map((row) => row.sourceRef),
+    );
+
     for (const candidate of candidates) {
       const resolved = resolveCandidate(candidate, {
         contestantByExternalId,
@@ -280,13 +292,8 @@ export async function ingestSeason(input: {
         hasDefinition: definitionByCode.has(candidate.eventCode),
       });
 
-      const existing = await prisma.ingestedEventCandidate.findUnique({
-        where: { sourceSlug_sourceRef: { sourceSlug, sourceRef: candidate.sourceRef } },
-        select: { id: true, status: true },
-      });
-
       // Already handled — never re-publish or re-open a reviewed decision.
-      if (existing) continue;
+      if (knownRefs.has(candidate.sourceRef)) continue;
 
       const canAutoPublish =
         resolved.confidence === 'HIGH' &&
@@ -333,8 +340,11 @@ export async function ingestSeason(input: {
 
     await reconcileContestantState(facts, season.id, cycleBySequence);
 
-    for (const cycleId of touchedCycleIds) {
-      await recalculateLeaguesForCycle(cycleId);
+    // One pass per season, not per cycle: a league recompute already spans the
+    // whole season, so looping the touched cycles repeated the same work for
+    // every week the sync happened to publish into.
+    if (touchedCycleIds.size > 0) {
+      await recalculateSeasonLeagues(season.id);
     }
 
     const status = facts.weeks.length === 0 ? 'EMPTY' : 'SUCCESS';
@@ -391,9 +401,14 @@ async function reconcileContestantState(
 ): Promise<void> {
   const links = await prisma.contestantExternalRef.findMany({
     where: { sourceSlug: facts.sourceSlug, contestant: { seasonId } },
-    select: { externalId: true, contestantId: true },
+    select: {
+      externalId: true,
+      contestantId: true,
+      contestant: { select: { isActive: true, placement: true, eliminatedCycleId: true } },
+    },
   });
   const contestantByExternalId = new Map(links.map((l) => [l.externalId, l.contestantId]));
+  const currentState = new Map(links.map((l) => [l.contestantId, l.contestant]));
 
   // The cycle each houseguest was evicted in, from the weekly grid.
   const evictionCycleByPlayer = new Map<string, string>();
@@ -412,17 +427,34 @@ async function reconcileContestantState(
     if (Number.isFinite(placement)) placementByPlayer.set(entry.player.externalId, placement);
   }
 
+  // Only write rows that actually changed, in one batch. A re-sync of an
+  // unchanged page is the common case and should cost nothing.
+  const updates: Prisma.PrismaPromise<unknown>[] = [];
+
   for (const [externalId, contestantId] of contestantByExternalId) {
     const eliminatedCycleId = evictionCycleByPlayer.get(externalId) ?? null;
-    await prisma.contestant.update({
-      where: { id: contestantId },
-      data: {
-        isActive: eliminatedCycleId === null,
-        eliminatedCycleId,
-        placement: placementByPlayer.get(externalId) ?? null,
-      },
-    });
+    const placement = placementByPlayer.get(externalId) ?? null;
+    const isActive = eliminatedCycleId === null;
+
+    const current = currentState.get(contestantId);
+    if (
+      current &&
+      current.isActive === isActive &&
+      current.eliminatedCycleId === eliminatedCycleId &&
+      current.placement === placement
+    ) {
+      continue;
+    }
+
+    updates.push(
+      prisma.contestant.update({
+        where: { id: contestantId },
+        data: { isActive, eliminatedCycleId, placement },
+      }),
+    );
   }
+
+  if (updates.length > 0) await prisma.$transaction(updates);
 }
 
 function resolveCandidate(

@@ -252,6 +252,9 @@ model LeagueMember {
   joinedAt DateTime         @default(now())
 
   @@unique([leagueId, userId])
+  // "Which leagues am I in" is the app's landing query, and the unique above
+  // leads with leagueId so it cannot serve a userId lookup.
+  @@index([userId, status])
   @@map("league_members")
 }
 
@@ -284,6 +287,7 @@ model Team {
 
   @@unique([leagueId, ownerId])
   @@unique([leagueId, draftOrderPosition])
+  @@index([ownerId])
   @@map("teams")
 }
 

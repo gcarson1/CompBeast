@@ -99,6 +99,74 @@ export async function computeLeagueSnapshot(
 }
 
 /**
+ * Scores a single team, with the per-event line items the team page shows.
+ *
+ * The materialized table only holds per-cycle totals, so a breakdown still
+ * needs the ledger — but only this team's share of it. Scoping the event query
+ * to the contestants this team actually rosters keeps the cost flat as a
+ * league adds teams, instead of replaying every rival's roster to render one
+ * page.
+ */
+export async function computeTeamSnapshot(
+  teamId: string,
+  options: AggregateOptions = {},
+): Promise<LeagueScoreSnapshot> {
+  const team = await prisma.team.findUniqueOrThrow({
+    where: { id: teamId },
+    select: {
+      id: true,
+      name: true,
+      owner: { select: { name: true } },
+      league: { select: { seasonId: true, scoringRulesetId: true } },
+    },
+  });
+
+  const [ruleset, cycleRows, rosterRows] = await Promise.all([
+    loadResolvedRuleset(team.league.scoringRulesetId),
+    prisma.cycle.findMany({
+      where: { seasonId: team.league.seasonId },
+      select: { id: true, label: true, sequence: true },
+      orderBy: { sequence: 'asc' },
+    }),
+    prisma.rosterSlot.findMany({
+      where: { teamId },
+      select: { teamId: true, contestantId: true, cycleId: true },
+    }),
+  ]);
+
+  const contestantIds = [...new Set(rosterRows.map((r) => r.contestantId))];
+  const eventRows = await prisma.scoredEvent.findMany({
+    where: { contestantId: { in: contestantIds }, cycle: { seasonId: team.league.seasonId } },
+    select: {
+      id: true,
+      contestantId: true,
+      eventDefinitionId: true,
+      cycleId: true,
+      pointsAwarded: true,
+      isVoided: true,
+      occurredAt: true,
+    },
+  });
+
+  return aggregateTeamScores({
+    teams: [{ id: team.id, name: team.name, ownerName: team.owner?.name ?? null }],
+    cycles: cycleRows,
+    roster: rosterRows,
+    events: eventRows.map((e) => ({
+      id: e.id,
+      contestantId: e.contestantId,
+      eventDefinitionId: e.eventDefinitionId,
+      cycleId: e.cycleId,
+      pointsAwarded: toNumber(e.pointsAwarded),
+      isVoided: e.isVoided,
+      occurredAt: e.occurredAt,
+    })),
+    ruleset,
+    options,
+  });
+}
+
+/**
  * The score-distribution job.
  *
  * Recomputes the whole league from the ledger and rewrites the materialized
@@ -169,19 +237,33 @@ export async function recalculateLeague(
   return snapshot;
 }
 
+/**
+ * Recalculates every league on a season.
+ *
+ * A league's recompute already covers the whole season, so this is the unit
+ * callers should reach for when several cycles changed at once — running it
+ * per-cycle repeats identical work for every cycle touched.
+ */
+export async function recalculateSeasonLeagues(seasonId: string): Promise<string[]> {
+  const leagues = await prisma.league.findMany({
+    where: { seasonId },
+    select: { id: true },
+  });
+
+  // Sequential on purpose: each recompute ends in a transaction, and a season
+  // with many leagues would otherwise open them all against the connection
+  // pool at once.
+  for (const league of leagues) {
+    await recalculateLeague(league.id);
+  }
+  return leagues.map((l) => l.id);
+}
+
 /** Recalculates every league playing the season a cycle belongs to. */
 export async function recalculateLeaguesForCycle(cycleId: string): Promise<string[]> {
   const cycle = await prisma.cycle.findUniqueOrThrow({
     where: { id: cycleId },
     select: { seasonId: true },
   });
-  const leagues = await prisma.league.findMany({
-    where: { seasonId: cycle.seasonId },
-    select: { id: true },
-  });
-
-  for (const league of leagues) {
-    await recalculateLeague(league.id);
-  }
-  return leagues.map((l) => l.id);
+  return recalculateSeasonLeagues(cycle.seasonId);
 }

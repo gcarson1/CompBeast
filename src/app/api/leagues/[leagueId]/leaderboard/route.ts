@@ -17,6 +17,7 @@ export async function GET(
     select: {
       isPublic: true,
       name: true,
+      scoringRuleset: { select: { id: true, name: true } },
       members: { where: { userId: user.id, status: 'ACTIVE' }, select: { id: true } },
     },
   });
@@ -25,12 +26,11 @@ export async function GET(
     return NextResponse.json({ error: 'Forbidden' }, { status: 403 });
   }
 
-  const { snapshot, rows } = await getLeagueLeaderboard(params.leagueId);
+  const { rows } = await getLeagueLeaderboard(params.leagueId);
 
   return NextResponse.json({
     league: { id: params.leagueId, name: league.name },
-    ruleset: { id: snapshot.rulesetId, name: snapshot.rulesetName },
-    computedAt: snapshot.computedAt,
+    ruleset: league.scoringRuleset,
     standings: rows,
   });
 }

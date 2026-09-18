@@ -1,5 +1,5 @@
 import { prisma } from '../lib/db';
-import { computeLeagueSnapshot } from '../lib/scoring/repository';
+import { computeLeagueSnapshot, computeTeamSnapshot } from '../lib/scoring/repository';
 import type { LeagueScoreSnapshot, TeamScore } from '../lib/scoring/types';
 
 export async function getLeaguesForUser(userId: string) {
@@ -90,39 +90,107 @@ export interface LeaderboardRow {
   activeCount: number;
 }
 
+/**
+ * Reads standings from the materialized TeamCycleScore rows.
+ *
+ * The recalculation job already writes these on every scoring change, so a
+ * page view has no reason to replay the season's whole ledger. Returns null
+ * when a league has never been scored (pre-draft, or before the first sync),
+ * which is the one case that still needs a live computation.
+ */
+async function readMaterializedStandings(leagueId: string) {
+  const rows = await prisma.teamCycleScore.findMany({
+    where: { team: { leagueId } },
+    select: {
+      teamId: true,
+      cyclePoints: true,
+      cumulativePoints: true,
+      rank: true,
+      cycle: { select: { sequence: true } },
+    },
+    orderBy: { cycle: { sequence: 'desc' } },
+  });
+  if (rows.length === 0) return null;
+
+  // Rows are ordered newest cycle first. A team's running total comes from its
+  // newest row, but "last cycle" means the most recent cycle that actually
+  // scored — every future cycle also has a row, all of them zero, and reading
+  // those would report a flat 0 all season.
+  const standings = new Map<string, { cumulativePoints: number; lastCyclePoints: number; rank: number }>();
+
+  for (const row of rows) {
+    const existing = standings.get(row.teamId);
+    const cyclePoints = Number(row.cyclePoints);
+
+    if (!existing) {
+      standings.set(row.teamId, {
+        cumulativePoints: Number(row.cumulativePoints),
+        lastCyclePoints: cyclePoints,
+        rank: row.rank ?? 0,
+      });
+      continue;
+    }
+
+    if (existing.lastCyclePoints === 0 && cyclePoints !== 0) {
+      existing.lastCyclePoints = cyclePoints;
+    }
+  }
+
+  return standings;
+}
+
 export async function getLeagueLeaderboard(leagueId: string): Promise<{
-  snapshot: LeagueScoreSnapshot;
   rows: LeaderboardRow[];
 }> {
-  const [snapshot, teams] = await Promise.all([
-    computeLeagueSnapshot(leagueId),
+  const [standings, teams] = await Promise.all([
+    readMaterializedStandings(leagueId),
     prisma.team.findMany({
       where: { leagueId },
       select: {
         id: true,
+        name: true,
         owner: { select: { name: true } },
         draftPicks: { select: { contestant: { select: { isActive: true } } } },
       },
     }),
   ]);
 
-  const meta = new Map(teams.map((t) => [t.id, t]));
+  const rosterOf = (teamId: string) => {
+    const picks = teams.find((t) => t.id === teamId)?.draftPicks ?? [];
+    return { rosterCount: picks.length, activeCount: picks.filter((p) => p.contestant.isActive).length };
+  };
 
-  const rows = snapshot.teams.map((team) => {
-    const picks = meta.get(team.teamId)?.draftPicks ?? [];
-    return {
-      teamId: team.teamId,
-      teamName: team.teamName,
-      ownerName: meta.get(team.teamId)?.owner?.name ?? null,
-      rank: team.rank,
-      totalPoints: team.totalPoints,
-      lastCyclePoints: team.lastCyclePoints,
-      rosterCount: picks.length,
-      activeCount: picks.filter((p) => p.contestant.isActive).length,
-    };
-  });
+  if (standings) {
+    const rows = teams
+      .map((team) => {
+        const row = standings.get(team.id);
+        return {
+          teamId: team.id,
+          teamName: team.name,
+          ownerName: team.owner?.name ?? null,
+          rank: row?.rank ?? 0,
+          totalPoints: row?.cumulativePoints ?? 0,
+          lastCyclePoints: row?.lastCyclePoints ?? 0,
+          ...rosterOf(team.id),
+        };
+      })
+      .sort((a, b) => a.rank - b.rank || b.totalPoints - a.totalPoints);
+    return { rows };
+  }
 
-  return { snapshot, rows };
+  // Never scored yet — fall back to a live pass so a new league still renders.
+  const snapshot = await computeLeagueSnapshot(leagueId);
+  const rows = snapshot.teams.map((team) => ({
+    teamId: team.teamId,
+    teamName: team.teamName,
+    ownerName: teams.find((t) => t.id === team.teamId)?.owner?.name ?? null,
+    rank: team.rank,
+    totalPoints: team.totalPoints,
+    lastCyclePoints: team.lastCyclePoints,
+    ...rosterOf(team.teamId),
+  }));
+
+  return { rows };
 }
 
 export interface TeamDetail {
@@ -166,8 +234,8 @@ export async function getTeamDetail(teamId: string): Promise<TeamDetail | null> 
   });
   if (!team) return null;
 
-  const snapshot = await computeLeagueSnapshot(team.leagueId);
-  const score = snapshot.teams.find((t) => t.teamId === teamId) ?? null;
+  const snapshot = await computeTeamSnapshot(teamId);
+  const score = snapshot.teams[0] ?? null;
   const pointsByContestant = new Map(
     (score?.contestants ?? []).map((c) => [c.contestantId, c.points]),
   );

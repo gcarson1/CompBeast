@@ -1,38 +1,13 @@
-import { cookies } from 'next/headers';
+import { currentUser } from '@clerk/nextjs/server';
 import { prisma } from './db';
 
 /**
  * Auth boundary.
  *
  * Every caller in the app goes through `getCurrentUser()` / `requireUser()` and
- * never touches a provider SDK directly. Wiring up Clerk, Auth.js, or Supabase
- * means replacing the body of `resolveAuthId()` with that provider's session
- * lookup — no call site changes, because `User.authId` is already provider-
- * neutral.
- *
- * Until a provider is configured, a signed-out visitor is transparently bound
- * to the first seeded user so the app is fully explorable in development.
+ * never touches Clerk directly. `User.authId` holds Clerk's user id — swapping
+ * providers later means changing only this file.
  */
-
-const DEV_SESSION_COOKIE = 'cb_dev_user';
-
-async function resolveAuthId(): Promise<string | null> {
-  // ── Swap point ──────────────────────────────────────────────────────────
-  // Clerk:     const { userId } = auth(); return userId;
-  // Auth.js:   const session = await auth(); return session?.user?.id ?? null;
-  // Supabase:  const { data } = await supabase.auth.getUser(); return data.user?.id ?? null;
-  // ────────────────────────────────────────────────────────────────────────
-
-  // The dev cookie is a stand-in for a real session and must never be honored
-  // in production: seeded authIds (e.g. "seed_alicorak") are visible in this
-  // public repo, so trusting this cookie in prod would let anyone set it
-  // themselves and sign in as whichever seeded user they choose — including
-  // the platform admin.
-  if (process.env.NODE_ENV === 'production') return null;
-
-  const devUser = cookies().get(DEV_SESSION_COOKIE)?.value;
-  return devUser ?? null;
-}
 
 export type SessionUser = {
   id: string;
@@ -43,23 +18,56 @@ export type SessionUser = {
   isPlatformAdmin: boolean;
 };
 
+const SELECT = {
+  id: true,
+  name: true,
+  email: true,
+  handle: true,
+  avatarUrl: true,
+  isPlatformAdmin: true,
+} as const;
+
+/**
+ * Resolves the signed-in user, provisioning our `User` row on first sign-in.
+ *
+ * Clerk owns the identity; we only mirror the fields the app actually reads.
+ * There's no webhook — the row is created lazily, the first time a signed-in
+ * visitor hits a page that asks who they are, which is simpler than standing
+ * up webhook signature verification for an app this size.
+ */
 export async function getCurrentUser(): Promise<SessionUser | null> {
-  const authId = await resolveAuthId();
+  const clerkUser = await currentUser();
+  if (!clerkUser) return null;
 
-  if (authId) {
-    const user = await prisma.user.findUnique({
-      where: { authId },
-      select: { id: true, name: true, email: true, handle: true, avatarUrl: true, isPlatformAdmin: true },
-    });
-    if (user) return user;
-  }
+  const existing = await prisma.user.findUnique({ where: { authId: clerkUser.id }, select: SELECT });
+  if (existing) return existing;
 
-  if (process.env.NODE_ENV === 'production') return null;
+  const email =
+    clerkUser.emailAddresses.find((e) => e.id === clerkUser.primaryEmailAddressId)?.emailAddress ??
+    clerkUser.emailAddresses[0]?.emailAddress;
+  if (!email) return null; // Clerk allows email-less accounts (e.g. phone-only); unsupported here.
 
-  // Development fallback: act as the first seeded user.
-  return prisma.user.findFirst({
-    orderBy: { createdAt: 'asc' },
-    select: { id: true, name: true, email: true, handle: true, avatarUrl: true, isPlatformAdmin: true },
+  const name = [clerkUser.firstName, clerkUser.lastName].filter(Boolean).join(' ') || null;
+
+  // Bootstrap admin by email. Platform admin can only be granted by another
+  // admin, so without this the first real account after any database reset has
+  // no way to reach ingestion review — the flag previously survived only as a
+  // manual SQL update.
+  const adminEmails = (process.env.PLATFORM_ADMIN_EMAILS ?? '')
+    .split(',')
+    .map((e) => e.trim().toLowerCase())
+    .filter(Boolean);
+
+  return prisma.user.create({
+    data: {
+      authId: clerkUser.id,
+      email,
+      name,
+      avatarUrl: clerkUser.imageUrl || null,
+      handle: clerkUser.username,
+      isPlatformAdmin: adminEmails.includes(email.toLowerCase()),
+    },
+    select: SELECT,
   });
 }
 
