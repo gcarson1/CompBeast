@@ -325,6 +325,29 @@ marks it read via a `keepalive` fetch rather than a server action, because the
 click navigates at the same time and a server action's POST races that
 navigation.
 
+## Roster locks
+
+Each cycle carries a season-wide `locksAt` (ingestion writes it 30 minutes before
+airtime). A league may override that with `lockOffsetMinutes`, counted back from
+**airtime** rather than from the season's own lock, so the two never compound.
+`0` is a real value — lock exactly at airtime — and is deliberately distinguished
+from `null`, which means "use the season's deadline".
+
+The rule lives in `src/lib/cycles.ts`: pure, no Prisma, with `now` injectable.
+That is what makes it testable, and it means a page that already loaded the cycle
+and the league can call it during render instead of re-querying. Any cycle past
+`UPCOMING` is locked outright regardless of the clock — results are already being
+recorded against it, and no per-league offset should reopen it. A cycle with no
+airtime falls back to the season lock, because ingested seasons routinely arrive
+without reliable air dates and an offset counted back from `null` is a crash
+rather than a deadline.
+
+Nothing *enforces* this yet: rosters are fixed at draft time and the only
+`RosterSlot` write is the draft fan-out. What the offset currently controls is
+the displayed deadline and the Locked/Open badge on the league page and the home
+rail. The rule is centralised and tested so in-season roster changes can gate on
+it when they land.
+
 ## League settings
 
 Commissioners can edit a league at `/leagues/[id]/settings`, or delete it. Three

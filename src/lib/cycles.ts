@@ -55,6 +55,37 @@ export function isCycleLocked(
   return now.getTime() >= effectiveLockAt(cycle, lockOffsetMinutes).getTime();
 }
 
+export interface LockState {
+  locked: boolean;
+  /** This league's actual deadline for the cycle. */
+  lockAt: Date;
+  /**
+   * Whether `lockAt` is worth showing to someone.
+   *
+   * A cycle shut by its *status* can still have a deadline in the future — a
+   * finale marked LOCKED weeks ahead, for instance. Rendering that as
+   * "Locked ..." next to a relative time produced "Locked in 11 days", which
+   * is a straight contradiction. False here means the UI should say the
+   * rosters are closed and leave the clock out of it.
+   */
+  showLockAt: boolean;
+}
+
+/** Everything the UI needs to phrase the lock without contradicting itself. */
+export function describeLockState(
+  cycle: LockableCycle,
+  lockOffsetMinutes: number | null | undefined,
+  now: Date = new Date(),
+): LockState {
+  const lockAt = effectiveLockAt(cycle, lockOffsetMinutes);
+  const deadlinePassed = now.getTime() >= lockAt.getTime();
+  return {
+    locked: cycle.status !== 'UPCOMING' || deadlinePassed,
+    lockAt,
+    showLockAt: deadlinePassed || cycle.status === 'UPCOMING',
+  };
+}
+
 /** Offsets offered in league settings, longest lead time last. */
 export const LOCK_OFFSET_CHOICES = [
   { value: 0, label: 'At airtime' },

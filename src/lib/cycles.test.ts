@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { effectiveLockAt, isCycleLocked, type LockableCycle } from './cycles';
+import { describeLockState, effectiveLockAt, isCycleLocked, type LockableCycle } from './cycles';
 
 /**
  * These are the tests the old `async isCycleLocked` could not have: it took
@@ -85,5 +85,48 @@ describe('isCycleLocked', () => {
 
   it('stays open early for an UPCOMING cycle', () => {
     expect(isCycleLocked(cycle(), null, new Date('2026-01-01T00:00:00Z'))).toBe(false);
+  });
+});
+
+describe('describeLockState', () => {
+  const beforeLock = new Date('2026-03-10T18:00:00Z');
+  const afterLock = new Date('2026-03-10T21:00:00Z');
+
+  it('shows the countdown while a cycle is still open', () => {
+    const state = describeLockState(cycle(), null, beforeLock);
+    expect(state).toMatchObject({ locked: false, showLockAt: true });
+    expect(state.lockAt).toEqual(SEASON_LOCK);
+  });
+
+  it('shows when it locked, once it has', () => {
+    expect(describeLockState(cycle(), null, afterLock)).toMatchObject({
+      locked: true,
+      showLockAt: true,
+    });
+  });
+
+  it('hides a future deadline on a cycle already closed by status', () => {
+    // Production showed "Finale | Locked in 11 days | Locked" — a finale
+    // marked LOCKED weeks out, rendered next to a relative time that had not
+    // happened yet. Locked and "in 11 days" cannot both be true, so the UI
+    // has to drop the clock rather than contradict its own badge.
+    const state = describeLockState(cycle({ status: 'LOCKED' }), null, beforeLock);
+    expect(state.locked).toBe(true);
+    expect(state.showLockAt).toBe(false);
+  });
+
+  it('still shows the time when a closed cycle is also past its deadline', () => {
+    // Nothing contradictory here — "Locked 1 hour ago" is accurate and more
+    // useful than hiding it.
+    expect(describeLockState(cycle({ status: 'SCORED' }), null, afterLock)).toMatchObject({
+      locked: true,
+      showLockAt: true,
+    });
+  });
+
+  it('reports the league deadline, not the season one', () => {
+    expect(describeLockState(cycle(), 1440, beforeLock).lockAt).toEqual(
+      new Date('2026-03-09T20:00:00Z'),
+    );
   });
 });
