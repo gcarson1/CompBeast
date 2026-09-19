@@ -38,13 +38,20 @@ export function PointHistoryChart({
   // the line it crossed rather than against its own worst week.
   const rawMax = Math.max(0, ...values);
   const rawMin = Math.min(0, ...values);
-  // A flat series (everyone on 0 in week 1) would otherwise divide by zero.
-  const span = rawMax - rawMin || 1;
+  // A season nobody has scored in yet is every new league's first chart, and
+  // it is entirely flat. Dividing by a zero span is the obvious hazard, but
+  // the subtler one is that any fallback scale pins that flat line to the
+  // bottom edge, where it reads as a rendering failure rather than as "no
+  // points yet". Centring it makes the empty case look deliberate.
+  const flat = rawMax === rawMin;
+  const span = flat ? 1 : rawMax - rawMin;
 
   const x = (index: number) =>
     history.length === 1 ? VIEW_W / 2 : (index / (history.length - 1)) * VIEW_W;
   const y = (value: number) =>
-    VIEW_H - PAD_Y - ((value - rawMin) / span) * (VIEW_H - PAD_Y * 2);
+    flat
+      ? VIEW_H / 2
+      : VIEW_H - PAD_Y - ((value - rawMin) / span) * (VIEW_H - PAD_Y * 2);
 
   const points = history.map((point, index) => ({
     cx: x(index),
