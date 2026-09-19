@@ -1,4 +1,5 @@
 import { prisma } from '../lib/db';
+import { effectiveLockAt, isCycleLocked } from '../lib/cycles';
 import { atRiskMessage, isAtRiskCode, nearMissMessage } from '../lib/engagement';
 import { computeLeagueSnapshot, computeTeamSnapshot } from '../lib/scoring/repository';
 import type { LeagueScoreSnapshot, TeamScore } from '../lib/scoring/types';
@@ -13,6 +14,7 @@ export async function getLeaguesForUser(userId: string) {
       rosterSize: true,
       maxTeams: true,
       inviteCode: true,
+      lockOffsetMinutes: true,
       season: { select: { id: true, name: true, show: { select: { name: true, slug: true } } } },
       scoringRuleset: { select: { name: true, slug: true } },
       // Filtered relation count: `members` below is capped at 4 for avatars,
@@ -44,6 +46,7 @@ export async function getLeagueOverview(leagueId: string) {
       draftType: true,
       draftStatus: true,
       isPublic: true,
+      lockOffsetMinutes: true,
       commissionerId: true,
       season: {
         select: {
@@ -648,9 +651,11 @@ export async function getHomeLeagues(userId: string): Promise<HomeLeagueCard[]> 
       ]);
 
       const mine = myTeam ? rows.find((r) => r.teamId === myTeam.id) : undefined;
+      // Both the flag and the timestamp go through the league's own offset —
+      // showing a locked badge next to the *season's* deadline would be a
+      // worse bug than not honouring the offset at all.
       const cycleLocked =
-        currentCycle !== null &&
-        (currentCycle.status !== 'UPCOMING' || Date.now() >= currentCycle.locksAt.getTime());
+        currentCycle !== null && isCycleLocked(currentCycle, league.lockOffsetMinutes);
 
       // "At risk" reads the latest cycle that has any recorded lines at all —
       // nominations land mid-week, before that cycle's own status flips to
@@ -686,7 +691,7 @@ export async function getHomeLeagues(userId: string): Promise<HomeLeagueCard[]> 
         nearMiss: myTeam ? nearMissMessage(rows, myTeam.id) : null,
         atRisk: atRiskMessage(atRiskNames),
         currentCycleLabel: currentCycle?.label ?? null,
-        locksAt: currentCycle?.locksAt ?? null,
+        locksAt: currentCycle ? effectiveLockAt(currentCycle, league.lockOffsetMinutes) : null,
         cycleLocked,
       };
     }),

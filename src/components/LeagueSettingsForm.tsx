@@ -3,6 +3,10 @@
 import { useEffect, useState } from 'react';
 import { useFormState, useFormStatus } from 'react-dom';
 import { toast } from 'sonner';
+import {
+  DEFAULT_LOCK_OFFSET_MINUTES,
+  LOCK_OFFSET_CHOICES,
+} from '@/lib/cycles';
 import { deleteLeagueAction, updateLeagueAction, type ActionState } from '@/server/actions';
 
 export interface LeagueSettingsValues {
@@ -12,6 +16,8 @@ export interface LeagueSettingsValues {
   rosterSize: number;
   maxTeams: number;
   isPublic: boolean;
+  /** Null means "use the season's own deadline". */
+  lockOffsetMinutes: number | null;
   /** Drives which fields are frozen; the server enforces the same rule. */
   draftStarted: boolean;
   teamCount: number;
@@ -123,6 +129,34 @@ export function LeagueSettingsForm({
           {values.draftStarted
             ? 'Locked — everyone drafted against these rules.'
             : 'Changeable until the draft starts.'}
+        </p>
+      </div>
+
+      <div>
+        <label className="label" htmlFor="lockOffsetMinutes">
+          Roster lock
+        </label>
+        <select
+          id="lockOffsetMinutes"
+          name="lockOffsetMinutes"
+          className="field"
+          // '' is the season-default option and must stay '' all the way to
+          // the schema — see the preprocess note in src/lib/validation.ts.
+          defaultValue={values.lockOffsetMinutes === null ? '' : String(values.lockOffsetMinutes)}
+          aria-describedby="lock-help"
+        >
+          <option value="">
+            Season default ({DEFAULT_LOCK_OFFSET_MINUTES} minutes before airtime)
+          </option>
+          {LOCK_OFFSET_CHOICES.map((choice) => (
+            <option key={choice.value} value={choice.value}>
+              {choice.label}
+            </option>
+          ))}
+        </select>
+        <p id="lock-help" className="mt-1.5 text-2xs leading-relaxed text-muted">
+          When this league&apos;s rosters close each week, counted back from when the episode
+          airs. Weeks with no known airtime fall back to the season schedule.
         </p>
       </div>
 

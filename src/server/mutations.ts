@@ -2,6 +2,7 @@ import { z } from 'zod';
 import { Prisma } from '@prisma/client';
 import { prisma } from '../lib/db';
 import { assertLeagueRole } from '../lib/auth';
+import { describeLockOffset, isCycleLocked } from '../lib/cycles';
 import { buildDraftOrder, validatePick } from '../lib/draft/snake';
 import { recalculateLeague, recalculateLeaguesForCycle } from '../lib/scoring/repository';
 import { createLeagueSchema, updateLeagueSchema } from '../lib/validation';
@@ -244,6 +245,7 @@ export async function updateLeague(
       isPublic: true,
       draftStatus: true,
       scoringRulesetId: true,
+      lockOffsetMinutes: true,
       season: { select: { showId: true } },
       _count: { select: { teams: true } },
     },
@@ -291,6 +293,7 @@ export async function updateLeague(
       rosterSize: data.rosterSize,
       maxTeams: data.maxTeams,
       isPublic: data.isPublic,
+      lockOffsetMinutes: data.lockOffsetMinutes,
     },
     select: { id: true, name: true },
   });
@@ -302,6 +305,15 @@ export async function updateLeague(
     notable.push(`rosters are now ${data.rosterSize} picks`);
   }
   if (data.scoringRulesetId !== league.scoringRulesetId) notable.push('the scoring rules changed');
+  if (data.lockOffsetMinutes !== league.lockOffsetMinutes) {
+    // A moved deadline is exactly the kind of change someone needs to hear
+    // about — it is the difference between setting a roster in time and not.
+    notable.push(
+      data.lockOffsetMinutes === null
+        ? 'rosters now lock on the season schedule'
+        : `rosters now lock ${describeLockOffset(data.lockOffsetMinutes)}`,
+    );
+  }
   if (data.maxTeams !== league.maxTeams) notable.push(`the league now caps at ${data.maxTeams} teams`);
 
   if (notable.length > 0) {
@@ -519,28 +531,32 @@ export async function makeDraftPick(input: {
 // ---------------------------------------------------------------------------
 
 /**
- * A cycle is locked once its lock timestamp has passed or its status says so.
- * Centralized here so the draft UI, the roster editor, and the API all agree on
- * what "locked" means rather than each re-deriving it.
+ * Whether rosters are shut for a cycle, by id.
+ *
+ * The rule itself lives in `src/lib/cycles.ts`, pure and unit tested. This is
+ * only the loader for callers that hold ids rather than rows — a page that
+ * already has the cycle and the league should call `isCycleLocked` from there
+ * directly instead of paying for these two queries.
+ *
+ * The previous version of this function *was* the rule, and took ids, which
+ * meant every caller that already had the data would have re-fetched it. None
+ * of them did: it went unused, and the per-league `lockOffsetMinutes` it was
+ * the sole reader of silently did nothing for as long as it existed.
  */
-export async function isCycleLocked(cycleId: string, leagueId?: string): Promise<boolean> {
-  const cycle = await prisma.cycle.findUniqueOrThrow({
-    where: { id: cycleId },
-    select: { locksAt: true, airsAt: true, status: true },
-  });
-  if (cycle.status !== 'UPCOMING') return true;
-
-  let lockAt = cycle.locksAt;
-  if (leagueId) {
-    const league = await prisma.league.findUnique({
-      where: { id: leagueId },
-      select: { lockOffsetMinutes: true },
-    });
-    if (league?.lockOffsetMinutes != null && cycle.airsAt) {
-      lockAt = new Date(cycle.airsAt.getTime() - league.lockOffsetMinutes * 60 * 1000);
-    }
-  }
-  return Date.now() >= lockAt.getTime();
+export async function isCycleLockedById(cycleId: string, leagueId?: string): Promise<boolean> {
+  const [cycle, league] = await Promise.all([
+    prisma.cycle.findUniqueOrThrow({
+      where: { id: cycleId },
+      select: { locksAt: true, airsAt: true, status: true },
+    }),
+    leagueId
+      ? prisma.league.findUnique({
+          where: { id: leagueId },
+          select: { lockOffsetMinutes: true },
+        })
+      : Promise.resolve(null),
+  ]);
+  return isCycleLocked(cycle, league?.lockOffsetMinutes);
 }
 
 // ---------------------------------------------------------------------------
