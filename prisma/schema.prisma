@@ -21,31 +21,131 @@ datasource db {
 // ---------------------------------------------------------------------------
 
 model User {
-  id        String   @id @default(cuid())
+  id              String   @id @default(cuid())
   // Opaque subject id from whichever auth provider is wired up (Clerk, Auth.js,
   // Supabase). Kept provider-neutral so swapping providers is a config change.
-  authId    String   @unique
-  email     String   @unique
-  name      String?
-  avatarUrl String?
-  handle    String?  @unique
+  authId          String   @unique
+  email           String   @unique
+  name            String?
+  avatarUrl       String?
+  handle          String?  @unique
   /// Grants access to ingestion review, which rewrites scores across every
   /// league on a season — deliberately separate from per-league commissioner
   /// rights, which only ever affect one league.
-  isPlatformAdmin Boolean @default(false)
-  createdAt DateTime @default(now())
-  updatedAt DateTime @updatedAt
+  isPlatformAdmin Boolean  @default(false)
+  createdAt       DateTime @default(now())
+  updatedAt       DateTime @updatedAt
 
-  leaguesOwned   League[]       @relation("LeagueCommissioner")
-  memberships    LeagueMember[]
-  teams          Team[]
-  auditedActions ScoreAudit[]
-  recordedEvents ScoredEvent[]  @relation("EventRecorder")
-  reviewedCandidates IngestedEventCandidate[] @relation("CandidateReviewer")
-  messages       LeagueMessage[]
-  reactions      LeagueMessageReaction[]
+  leaguesOwned        League[]                 @relation("LeagueCommissioner")
+  memberships         LeagueMember[]
+  teams               Team[]
+  auditedActions      ScoreAudit[]
+  recordedEvents      ScoredEvent[]            @relation("EventRecorder")
+  reviewedCandidates  IngestedEventCandidate[] @relation("CandidateReviewer")
+  messages            LeagueMessage[]
+  reactions           LeagueMessageReaction[]
+  friendshipsSent     Friendship[]             @relation("FriendshipRequester")
+  friendshipsReceived Friendship[]             @relation("FriendshipAddressee")
+  notifications       Notification[]           @relation("NotificationRecipient")
+  notificationsCaused Notification[]           @relation("NotificationActor")
 
   @@map("users")
+}
+
+// ---------------------------------------------------------------------------
+// Social graph
+// ---------------------------------------------------------------------------
+
+/// A friendship, stored as one directed row even though the relationship it
+/// represents is symmetric.
+///
+/// The direction is kept because a *request* genuinely has a sender and a
+/// receiver, and the UI has to tell "you asked them" apart from "they asked
+/// you". Once ACCEPTED the direction stops meaning anything, so every read of
+/// the friend list has to match on either column — see `friendIdsFor` in
+/// src/server/social.ts, which is the single place that OR is written.
+///
+/// The unique constraint stops A asking B twice, but cannot stop A→B and B→A
+/// existing at once. `sendFriendRequest` resolves that case by accepting the
+/// pending row instead of creating a mirror of it: two people who each asked
+/// are two people who both agreed.
+model Friendship {
+  id          String           @id @default(cuid())
+  requesterId String
+  requester   User             @relation("FriendshipRequester", fields: [requesterId], references: [id], onDelete: Cascade)
+  addresseeId String
+  addressee   User             @relation("FriendshipAddressee", fields: [addresseeId], references: [id], onDelete: Cascade)
+  status      FriendshipStatus @default(PENDING)
+  createdAt   DateTime         @default(now())
+  respondedAt DateTime?
+
+  @@unique([requesterId, addresseeId])
+  // "Requests waiting on me" and "my friends" are both addressee-side reads;
+  // the unique above leads with requesterId so it cannot serve either.
+  @@index([addresseeId, status])
+  @@index([requesterId, status])
+  @@map("friendships")
+}
+
+/// BLOCKED is deliberately absent. Blocking needs its own semantics (hiding
+/// content both ways, surviving an unfriend) and bolting it onto this enum
+/// would make every friend query silently wrong until all of them were
+/// updated. It belongs in its own model when it is actually built.
+enum FriendshipStatus {
+  PENDING
+  ACCEPTED
+  DECLINED
+}
+
+// ---------------------------------------------------------------------------
+// Notifications
+// ---------------------------------------------------------------------------
+
+/// One delivered alert for one person.
+///
+/// `title`/`body` are written at creation time rather than derived when the
+/// list renders. That is the whole point: a notification has to survive the
+/// thing it describes. "Your league was deleted" cannot join back to the
+/// league, and a league renamed after the fact should still read the way it
+/// read when it happened. Denormalising also keeps the list one query instead
+/// of one join per row per type.
+///
+/// `data` is the escape hatch that keeps new notification kinds from needing a
+/// migration — only the enum grows.
+model Notification {
+  id        String           @id @default(cuid())
+  userId    String
+  user      User             @relation("NotificationRecipient", fields: [userId], references: [id], onDelete: Cascade)
+  type      NotificationType
+  title     String
+  body      String?
+  /// In-app destination. Null for notifications with nowhere useful to go.
+  href      String?
+  /// The person who caused it, for the avatar. SetNull rather than Cascade —
+  /// deleting an account should not silently retract the notifications its
+  /// actions produced for other people.
+  actorId   String?
+  actor     User?            @relation("NotificationActor", fields: [actorId], references: [id], onDelete: SetNull)
+  /// Type-specific context (leagueId, inviteCode, friendshipId, ...).
+  data      Json?
+  readAt    DateTime?
+  createdAt DateTime         @default(now())
+
+  @@index([userId, createdAt])
+  // The header badge counts unread on every page load, which is the single
+  // most frequent read in this table.
+  @@index([userId, readAt])
+  @@map("notifications")
+}
+
+enum NotificationType {
+  FRIEND_REQUEST
+  FRIEND_ACCEPTED
+  LEAGUE_INVITE
+  LEAGUE_MEMBER_JOINED
+  LEAGUE_DRAFT_STARTED
+  LEAGUE_UPDATED
+  LEAGUE_DELETED
 }
 
 // ---------------------------------------------------------------------------
@@ -114,20 +214,20 @@ enum SeasonStatus {
 /// attributes (hometown, occupation, tribe, ...) live in `metadata` so the
 /// column set never has to change per show.
 model Contestant {
-  id                String     @id @default(cuid())
+  id                String   @id @default(cuid())
   seasonId          String
-  season            Season     @relation(fields: [seasonId], references: [id], onDelete: Cascade)
+  season            Season   @relation(fields: [seasonId], references: [id], onDelete: Cascade)
   name              String
   photoUrl          String?
   /// e.g. { hometown, occupation, age, tribe }
   metadata          Json?
   /// false once evicted / voted out / eliminated
-  isActive          Boolean    @default(true)
+  isActive          Boolean  @default(true)
   /// Final placement once the season resolves (1 = winner)
   placement         Int?
   eliminatedCycleId String?
-  eliminatedCycle   Cycle?     @relation("EliminationCycle", fields: [eliminatedCycleId], references: [id])
-  createdAt         DateTime   @default(now())
+  eliminatedCycle   Cycle?   @relation("EliminationCycle", fields: [eliminatedCycleId], references: [id])
+  createdAt         DateTime @default(now())
 
   rosterSlots  RosterSlot[]
   scoredEvents ScoredEvent[]
@@ -178,7 +278,7 @@ model Cycle {
   scoredEvents      ScoredEvent[]
   teamCycleScores   TeamCycleScore[]
   candidates        IngestedEventCandidate[]
-  eliminatedInCycle Contestant[]     @relation("EliminationCycle")
+  eliminatedInCycle Contestant[]             @relation("EliminationCycle")
 
   @@unique([seasonId, sequence])
   @@index([seasonId])
@@ -200,27 +300,27 @@ enum CycleStatus {
 // ---------------------------------------------------------------------------
 
 model League {
-  id               String         @id @default(cuid())
-  seasonId         String
-  season           Season         @relation(fields: [seasonId], references: [id])
-  name             String
-  inviteCode       String         @unique
-  commissionerId   String
-  commissioner     User           @relation("LeagueCommissioner", fields: [commissionerId], references: [id])
-  isPublic         Boolean        @default(false)
-  rosterSize       Int            @default(5)
-  maxTeams         Int            @default(12)
-  draftType        DraftType      @default(SNAKE)
-  scoringRulesetId String
-  scoringRuleset   ScoringRuleset @relation(fields: [scoringRulesetId], references: [id])
-  draftStatus      DraftStatus    @default(NOT_STARTED)
-  draftStartsAt    DateTime?
-  draftCompletedAt DateTime?
+  id                String         @id @default(cuid())
+  seasonId          String
+  season            Season         @relation(fields: [seasonId], references: [id])
+  name              String
+  inviteCode        String         @unique
+  commissionerId    String
+  commissioner      User           @relation("LeagueCommissioner", fields: [commissionerId], references: [id])
+  isPublic          Boolean        @default(false)
+  rosterSize        Int            @default(5)
+  maxTeams          Int            @default(12)
+  draftType         DraftType      @default(SNAKE)
+  scoringRulesetId  String
+  scoringRuleset    ScoringRuleset @relation(fields: [scoringRulesetId], references: [id])
+  draftStatus       DraftStatus    @default(NOT_STARTED)
+  draftStartsAt     DateTime?
+  draftCompletedAt  DateTime?
   /// Minutes before Cycle.airsAt that this league's rosters hard-lock. Null
   /// falls back to the season-wide Cycle.locksAt.
   lockOffsetMinutes Int?
-  createdAt        DateTime       @default(now())
-  updatedAt        DateTime       @updatedAt
+  createdAt         DateTime       @default(now())
+  updatedAt         DateTime       @updatedAt
 
   members    LeagueMember[]
   teams      Team[]
@@ -237,17 +337,17 @@ model League {
 /// league is the specific group of people in it, and a shared room across
 /// leagues would need moderation tooling this app has no business owning yet.
 model LeagueMessage {
-  id        String   @id @default(cuid())
+  id        String    @id @default(cuid())
   leagueId  String
-  league    League   @relation(fields: [leagueId], references: [id], onDelete: Cascade)
+  league    League    @relation(fields: [leagueId], references: [id], onDelete: Cascade)
   authorId  String
-  author    User     @relation(fields: [authorId], references: [id])
+  author    User      @relation(fields: [authorId], references: [id])
   body      String
   /// Soft delete: an author removing a message should not orphan the replies
   /// and reactions hanging off it, and a commissioner needs to see that
   /// something was removed rather than have it vanish mid-argument.
   deletedAt DateTime?
-  createdAt DateTime @default(now())
+  createdAt DateTime  @default(now())
 
   reactions LeagueMessageReaction[]
 
@@ -590,17 +690,17 @@ enum CandidateStatus {
 /// Exists so silent breakage is detectable: a run that parses zero weeks off a
 /// page that should have them is a failure even though nothing threw.
 model IngestionRun {
-  id             String    @id @default(cuid())
-  sourceSlug     String
-  seasonId       String?
-  status         RunStatus @default(RUNNING)
-  weeksParsed    Int       @default(0)
-  candidatesNew  Int       @default(0)
-  autoPublished  Int       @default(0)
-  pendingReview  Int       @default(0)
-  error          String?
-  startedAt      DateTime  @default(now())
-  finishedAt     DateTime?
+  id            String    @id @default(cuid())
+  sourceSlug    String
+  seasonId      String?
+  status        RunStatus @default(RUNNING)
+  weeksParsed   Int       @default(0)
+  candidatesNew Int       @default(0)
+  autoPublished Int       @default(0)
+  pendingReview Int       @default(0)
+  error         String?
+  startedAt     DateTime  @default(now())
+  finishedAt    DateTime?
 
   @@index([sourceSlug, startedAt])
   @@map("ingestion_runs")
