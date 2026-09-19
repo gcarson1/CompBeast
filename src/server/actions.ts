@@ -18,7 +18,7 @@ import {
   updateLeague,
   updateLeagueSchema,
 } from './mutations';
-import { markAllNotificationsRead, markNotificationRead } from './notifications';
+import { markAllNotificationsRead } from './notifications';
 import {
   inviteFriendToLeague,
   removeFriend,
@@ -254,20 +254,6 @@ export async function inviteFriendAction(
 // ---------------------------------------------------------------------------
 // Notifications
 // ---------------------------------------------------------------------------
-
-export async function markNotificationReadAction(
-  _prev: ActionState,
-  formData: FormData,
-): Promise<ActionState> {
-  try {
-    const user = await requireUser();
-    await markNotificationRead(String(formData.get('notificationId') ?? ''), user.id);
-  } catch (error) {
-    return { error: messageFor(error) };
-  }
-  revalidatePath('/notifications');
-  return { ok: true };
-}
 
 export async function markAllNotificationsReadAction(
   _prev: ActionState,

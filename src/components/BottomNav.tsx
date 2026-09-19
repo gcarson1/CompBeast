@@ -9,6 +9,9 @@ const TABS = [
   // Player pages are reached through a season, so they keep this tab lit.
   { href: '/seasons', label: 'Seasons', icon: BoxIcon, owns: ['/seasons', '/players'] },
   { href: '/rules', label: 'Rules', icon: BookIcon, owns: ['/rules'] },
+  // Notifications live in the header bell; this is the profile, friends and
+  // career-stats surface, which is where the bell's alerts mostly lead.
+  { href: '/account', label: 'You', icon: PersonIcon, owns: ['/account', '/notifications'] },
 ];
 
 export function BottomNav() {
@@ -28,7 +31,7 @@ export function BottomNav() {
                 href={tab.href}
                 aria-current={active ? 'page' : undefined}
                 className={cn(
-                  'flex w-20 flex-col items-center gap-1 rounded-card py-2 transition',
+                  'flex w-16 flex-col items-center gap-1 rounded-btn py-2 transition sm:w-20',
                   active ? 'bg-canvas text-ink' : 'text-muted',
                 )}
               >
@@ -57,6 +60,15 @@ function BoxIcon() {
     <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8">
       <path d="M12 3l8 4.5v9L12 21l-8-4.5v-9L12 3Z" strokeLinejoin="round" />
       <path d="M4 7.5 12 12l8-4.5M12 12v9" strokeLinejoin="round" />
+    </svg>
+  );
+}
+
+function PersonIcon() {
+  return (
+    <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8">
+      <circle cx="12" cy="8" r="3.4" />
+      <path d="M5 20c0-3.7 3.1-6.4 7-6.4s7 2.7 7 6.4" strokeLinecap="round" />
     </svg>
   );
 }

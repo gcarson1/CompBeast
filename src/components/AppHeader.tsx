@@ -1,14 +1,25 @@
 import Link from 'next/link';
 import { SignedIn, SignedOut, SignInButton, UserButton } from '@clerk/nextjs';
+import { NotificationBell } from '@/components/NotificationBell';
 
-export function AppHeader({ isPlatformAdmin = false }: { isPlatformAdmin?: boolean }) {
+export function AppHeader({
+  isPlatformAdmin = false,
+  signedIn = false,
+  unreadCount = 0,
+}: {
+  isPlatformAdmin?: boolean;
+  /** From our own session lookup, not Clerk's — the bell needs a user row. */
+  signedIn?: boolean;
+  unreadCount?: number;
+}) {
   return (
     <header className="sticky top-0 z-20 bg-canvas/90 px-5 pb-2 pt-4 backdrop-blur">
       <div className="mx-auto flex max-w-md items-center sm:max-w-lg lg:max-w-3xl justify-between">
         <Link href="/leagues" aria-label="Comp Beast home">
           <CompBeastLogo />
         </Link>
-        <div className="flex items-center gap-3">
+        <div className="flex items-center gap-2 sm:gap-3">
+          {signedIn && <NotificationBell initialCount={unreadCount} />}
           {isPlatformAdmin && (
             <Link
               href="/admin/ingestion"
