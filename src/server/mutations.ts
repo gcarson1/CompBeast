@@ -76,13 +76,29 @@ export async function createLeague(userId: string, input: z.infer<typeof createL
   });
 }
 
+/**
+ * Joins a league by invite code, giving the joiner an ACTIVE membership and a
+ * team in one step.
+ *
+ * There used to be an approval gate here, and it was broken in a way that
+ * silently swallowed people: `League.requiresApproval` defaults to true and
+ * `createLeague` never set it, so every league built through the UI required
+ * approval; joining created a PENDING member and *no team*; and no approval
+ * mutation existed anywhere, so PENDING was a terminal state. The joiner got
+ * no team, was invisible on the league page, and `getLeaguesForUser` filters
+ * on ACTIVE so the league disappeared from their own list too.
+ *
+ * The gate is gone rather than completed. The invite code is already the
+ * access control — asking a commissioner to re-approve someone who had to be
+ * given the secret code is friction that buys nothing, and a half-built gate
+ * that eats members is strictly worse than no gate.
+ */
 export async function joinLeague(userId: string, inviteCode: string, teamName: string) {
   const league = await prisma.league.findUnique({
     where: { inviteCode: inviteCode.trim().toUpperCase() },
     select: {
       id: true,
       maxTeams: true,
-      requiresApproval: true,
       draftStatus: true,
       season: { select: { status: true, name: true } },
       _count: { select: { teams: true } },
@@ -102,7 +118,35 @@ export async function joinLeague(userId: string, inviteCode: string, teamName: s
 
   const existing = await prisma.leagueMember.findUnique({
     where: { leagueId_userId: { leagueId: league.id, userId } },
+    select: { id: true, status: true },
   });
+
+  // A PENDING membership can only be wreckage from the old approval gate --
+  // nothing could ever move it to ACTIVE. Re-entering the invite code repairs
+  // it in place, so anyone already stranded can recover without an admin or a
+  // manual database edit.
+  if (existing?.status === 'PENDING') {
+    return prisma.$transaction(async (tx) => {
+      await tx.leagueMember.update({ where: { id: existing.id }, data: { status: 'ACTIVE' } });
+      const team = await tx.team.findUnique({
+        where: { leagueId_ownerId: { leagueId: league.id, ownerId: userId } },
+        select: { id: true },
+      });
+      if (!team) {
+        const seatsTaken = await tx.team.count({ where: { leagueId: league.id } });
+        await tx.team.create({
+          data: {
+            leagueId: league.id,
+            ownerId: userId,
+            name: teamName,
+            draftOrderPosition: seatsTaken + 1,
+          },
+        });
+      }
+      return league.id;
+    });
+  }
+
   if (existing) throw new DomainError('You are already in this league.', 'ALREADY_MEMBER', 409);
 
   // The capacity check and the seat number are re-derived *inside* the
@@ -121,23 +165,16 @@ export async function joinLeague(userId: string, inviteCode: string, teamName: s
       }
 
       await tx.leagueMember.create({
+        data: { leagueId: league.id, userId, role: 'MEMBER', status: 'ACTIVE' },
+      });
+      await tx.team.create({
         data: {
           leagueId: league.id,
-          userId,
-          role: 'MEMBER',
-          status: league.requiresApproval ? 'PENDING' : 'ACTIVE',
+          ownerId: userId,
+          name: teamName,
+          draftOrderPosition: seatsTaken + 1,
         },
       });
-      if (!league.requiresApproval) {
-        await tx.team.create({
-          data: {
-            leagueId: league.id,
-            ownerId: userId,
-            name: teamName,
-            draftOrderPosition: seatsTaken + 1,
-          },
-        });
-      }
       return league.id;
     });
   } catch (error) {
@@ -443,4 +480,91 @@ export async function voidEvent(userId: string, scoredEventId: string, reason: s
 
 export async function refreshLeagueScores(leagueId: string) {
   return recalculateLeague(leagueId);
+}
+
+// ---------------------------------------------------------------------------
+// League feed
+// ---------------------------------------------------------------------------
+
+export const postMessageSchema = z.object({
+  body: z
+    .string()
+    .trim()
+    .min(1, 'Say something first')
+    .max(500, 'Keep it under 500 characters'),
+});
+
+/**
+ * Posts to a league's feed. Membership is the gate — `assertLeagueRole` covers
+ * all three roles, so any active member can talk, but someone who merely knows
+ * the league's id cannot.
+ */
+export async function postLeagueMessage(leagueId: string, userId: string, body: string) {
+  await assertLeagueRole(leagueId, userId, ['COMMISSIONER', 'ADMIN', 'MEMBER']);
+  const data = postMessageSchema.parse({ body });
+
+  return prisma.leagueMessage.create({
+    data: { leagueId, authorId: userId, body: data.body },
+    select: { id: true },
+  });
+}
+
+/**
+ * Toggles one reaction. Re-running it removes the reaction, so a double-tap
+ * undoes rather than erroring, and the unique constraint keeps that honest if
+ * two taps land at once.
+ */
+export async function toggleMessageReaction(
+  messageId: string,
+  userId: string,
+  kind: 'HYPE' | 'SHADE',
+) {
+  const message = await prisma.leagueMessage.findUnique({
+    where: { id: messageId },
+    select: { leagueId: true, deletedAt: true },
+  });
+  if (!message) throw new DomainError('That message is gone.', 'MESSAGE_NOT_FOUND', 404);
+  if (message.deletedAt) throw new DomainError('That message was deleted.', 'MESSAGE_DELETED', 409);
+
+  await assertLeagueRole(message.leagueId, userId, ['COMMISSIONER', 'ADMIN', 'MEMBER']);
+
+  const existing = await prisma.leagueMessageReaction.findUnique({
+    where: { messageId_userId_kind: { messageId, userId, kind } },
+    select: { id: true },
+  });
+
+  if (existing) {
+    await prisma.leagueMessageReaction.delete({ where: { id: existing.id } });
+    return { reacted: false, leagueId: message.leagueId };
+  }
+
+  try {
+    await prisma.leagueMessageReaction.create({ data: { messageId, userId, kind } });
+  } catch (error) {
+    // Lost a race with the same person's second tap — the end state they
+    // wanted is already there, so this is a success, not a failure.
+    if (!(error instanceof Prisma.PrismaClientKnownRequestError && error.code === 'P2002')) throw error;
+  }
+  return { reacted: true, leagueId: message.leagueId };
+}
+
+/** Authors can retract their own posts; commissioners can remove anyone's. */
+export async function deleteLeagueMessage(messageId: string, userId: string) {
+  const message = await prisma.leagueMessage.findUnique({
+    where: { id: messageId },
+    select: { authorId: true, leagueId: true, league: { select: { commissionerId: true } } },
+  });
+  if (!message) throw new DomainError('That message is gone.', 'MESSAGE_NOT_FOUND', 404);
+
+  const isAuthor = message.authorId === userId;
+  const isCommissioner = message.league.commissionerId === userId;
+  if (!isAuthor && !isCommissioner) {
+    throw new DomainError('You can only delete your own posts.', 'NOT_MESSAGE_AUTHOR', 403);
+  }
+
+  await prisma.leagueMessage.update({
+    where: { id: messageId },
+    data: { deletedAt: new Date() },
+  });
+  return { leagueId: message.leagueId };
 }

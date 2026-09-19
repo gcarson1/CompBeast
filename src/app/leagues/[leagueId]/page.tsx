@@ -1,10 +1,18 @@
 import Link from 'next/link';
 import { notFound } from 'next/navigation';
+import { Avatar } from '@/components/Avatar';
 import { Leaderboard } from '@/components/Leaderboard';
+import { LeagueFeed } from '@/components/LeagueFeed';
 import { getCurrentUser } from '@/lib/auth';
 import { atRiskMessage, isAtRiskCode, nearMissMessage } from '@/lib/engagement';
 import { relativeTime } from '@/lib/ui';
-import { getCurrentCycle, getLeagueLeaderboard, getLeagueOverview, getTeamDetail } from '@/server/queries';
+import {
+  getCurrentCycle,
+  getLeagueLeaderboard,
+  getLeagueMessages,
+  getLeagueOverview,
+  getTeamDetail,
+} from '@/server/queries';
 
 export const dynamic = 'force-dynamic';
 
@@ -12,9 +20,10 @@ export default async function LeaguePage({ params }: { params: { leagueId: strin
   const [user, league] = await Promise.all([getCurrentUser(), getLeagueOverview(params.leagueId)]);
   if (!league) notFound();
 
-  const [{ rows }, currentCycle] = await Promise.all([
+  const [{ rows }, currentCycle, messages] = await Promise.all([
     getLeagueLeaderboard(league.id),
     getCurrentCycle(league.season.id),
+    getLeagueMessages(league.id, user?.id ?? null),
   ]);
 
   const myTeam = league.teams.find((t) => t.owner.id === user?.id);
@@ -119,6 +128,53 @@ export default async function LeaguePage({ params }: { params: { leagueId: strin
 
         <Leaderboard rows={rows} myTeamId={myTeam?.id ?? null} />
       </section>
+
+      <section className="mt-6">
+        <div className="mb-2 flex items-baseline justify-between">
+          <h2 className="text-lg font-semibold">
+            Managers <span className="text-sm font-normal text-muted">{league.members.length}</span>
+          </h2>
+          <span className="text-2xs text-muted">
+            {league.teams.length} of {league.maxTeams} seats filled
+          </span>
+        </div>
+        <ul className="card divide-y divide-hairline">
+          {league.members.map((member) => {
+            const team = league.teams.find((t) => t.owner?.id === member.user.id);
+            const isYou = member.user.id === user?.id;
+            return (
+              <li key={member.user.id} className="flex items-center gap-3 p-4">
+                <Avatar name={member.user.name ?? member.user.handle ?? '?'} photoUrl={member.user.avatarUrl} size={38} />
+                <span className="min-w-0 flex-1">
+                  <span className="block truncate text-base font-semibold">
+                    {team?.name ?? 'No team yet'}
+                    {isYou && <span className="ml-1.5 text-2xs text-brand-gold-deep">you</span>}
+                  </span>
+                  <span className="mt-0.5 block truncate text-2xs text-muted">
+                    {member.user.name ?? member.user.handle ?? 'Unknown manager'}
+                  </span>
+                </span>
+                {member.role === 'COMMISSIONER' && (
+                  <span className="pill shrink-0 bg-brand-velvet-soft text-2xs text-brand-velvet-deep">
+                    Commish
+                  </span>
+                )}
+              </li>
+            );
+          })}
+        </ul>
+        <p className="mt-2 px-1 text-2xs leading-relaxed text-muted">
+          Share the invite code below to fill the remaining{' '}
+          {Math.max(0, league.maxTeams - league.teams.length)} seats.
+        </p>
+      </section>
+
+      <LeagueFeed
+        leagueId={league.id}
+        messages={messages}
+        canPost={Boolean(user && league.members.some((m) => m.user.id === user.id))}
+        isCommissioner={isCommissioner}
+      />
 
       <section className="mt-6">
         <h2 className="mb-2 text-lg font-semibold">League</h2>
