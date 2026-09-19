@@ -14,9 +14,16 @@ import { getCurrentUser } from '@/lib/auth';
  * Clerk's own components directly.
  */
 
+// `display: 'swap'` and a named fallback on both faces: next/font fetches
+// from Google at *build* time and, if that fetch fails, silently substitutes a
+// metric-matched fallback and lets the build pass. Naming the fallback family
+// means that degradation lands somewhere chosen rather than on whatever the
+// host OS offers first.
 const displayFont = Anton({
   subsets: ['latin'],
   weight: '400',
+  display: 'swap',
+  fallback: ['Impact', 'Haettenschweiler', 'sans-serif'],
   variable: '--font-display',
 });
 
@@ -31,6 +38,8 @@ const displayFont = Anton({
 const textFont = Archivo({
   subsets: ['latin'],
   weight: ['400', '500', '600', '700'],
+  display: 'swap',
+  fallback: ['-apple-system', 'Segoe UI', 'Roboto', 'sans-serif'],
   variable: '--font-text',
 });
 
