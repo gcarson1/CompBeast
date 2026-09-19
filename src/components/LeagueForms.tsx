@@ -50,7 +50,7 @@ export function CreateLeagueForm({
           League name
         </label>
         <input id="name" className="field" placeholder="First Eviction Club" {...register('name')} />
-        {errors.name && <p className="mt-1.5 text-[12px] text-danger">{errors.name.message}</p>}
+        {errors.name && <p className="mt-1.5 text-2xs text-danger-deep">{errors.name.message}</p>}
       </div>
 
       <div>
@@ -58,7 +58,7 @@ export function CreateLeagueForm({
           Your team name
         </label>
         <input id="teamName" className="field" placeholder="Block Party" {...register('teamName')} />
-        {errors.teamName && <p className="mt-1.5 text-[12px] text-danger">{errors.teamName.message}</p>}
+        {errors.teamName && <p className="mt-1.5 text-2xs text-danger-deep">{errors.teamName.message}</p>}
       </div>
 
       <div>
@@ -86,7 +86,7 @@ export function CreateLeagueForm({
           ))}
         </select>
         {defaultRuleset?.description && (
-          <p className="mt-1.5 text-[12px] leading-relaxed text-muted">{defaultRuleset.description}</p>
+          <p className="mt-1.5 text-2xs leading-relaxed text-muted">{defaultRuleset.description}</p>
         )}
       </div>
 
@@ -97,7 +97,7 @@ export function CreateLeagueForm({
           </label>
           <input id="rosterSize" type="number" min={1} max={12} className="field" {...register('rosterSize')} />
           {errors.rosterSize && (
-            <p className="mt-1.5 text-[12px] text-danger">{errors.rosterSize.message}</p>
+            <p className="mt-1.5 text-2xs text-danger-deep">{errors.rosterSize.message}</p>
           )}
         </div>
         <div>
@@ -105,19 +105,19 @@ export function CreateLeagueForm({
             Max teams
           </label>
           <input id="maxTeams" type="number" min={2} max={24} className="field" {...register('maxTeams')} />
-          {errors.maxTeams && <p className="mt-1.5 text-[12px] text-danger">{errors.maxTeams.message}</p>}
+          {errors.maxTeams && <p className="mt-1.5 text-2xs text-danger-deep">{errors.maxTeams.message}</p>}
         </div>
       </div>
 
       <label className="flex items-center gap-3 rounded-2xl bg-surface p-4">
         <input type="checkbox" className="h-5 w-5 accent-brand-gold" {...register('isPublic')} />
         <span>
-          <span className="block text-[14px] font-medium">Public league</span>
-          <span className="mt-0.5 block text-[12px] text-muted">Anyone with the code joins instantly.</span>
+          <span className="block text-sm font-medium">Public league</span>
+          <span className="mt-0.5 block text-2xs text-muted">Anyone with the code joins instantly.</span>
         </span>
       </label>
 
-      {state.error && <p className="text-[13px] text-danger">{state.error}</p>}
+      {state.error && <p className="text-xs text-danger-deep">{state.error}</p>}
       <SubmitButton label="Create league" />
     </form>
   );
@@ -155,16 +155,16 @@ export function JoinLeagueForm() {
           autoCapitalize="characters"
           {...register('inviteCode')}
         />
-        {errors.inviteCode && <p className="mt-1.5 text-[12px] text-danger">{errors.inviteCode.message}</p>}
+        {errors.inviteCode && <p className="mt-1.5 text-2xs text-danger-deep">{errors.inviteCode.message}</p>}
       </div>
       <div>
         <label className="label" htmlFor="teamName">
           Your team name
         </label>
         <input id="teamName" className="field" placeholder="Veto Villains" {...register('teamName')} />
-        {errors.teamName && <p className="mt-1.5 text-[12px] text-danger">{errors.teamName.message}</p>}
+        {errors.teamName && <p className="mt-1.5 text-2xs text-danger-deep">{errors.teamName.message}</p>}
       </div>
-      {state.error && <p className="text-[13px] text-danger">{state.error}</p>}
+      {state.error && <p className="text-xs text-danger-deep">{state.error}</p>}
       <SubmitButton label="Enter the House" />
     </form>
   );
@@ -176,7 +176,7 @@ function SubmitButton({ label }: { label: string }) {
     <button
       type="submit"
       disabled={pending}
-      className="btn-primary w-full py-3 text-[15px] disabled:opacity-50"
+      className="btn-primary w-full py-3 text-base disabled:opacity-50"
     >
       {pending ? 'Working…' : label}
     </button>

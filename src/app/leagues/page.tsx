@@ -30,7 +30,7 @@ export default async function LeaguesPage() {
   return (
     <div className="pt-2">
       <div className="mb-1 flex items-center justify-between">
-        <h1 className="text-[28px] font-semibold tracking-tight">Leagues</h1>
+        <h1 className="text-4xl font-semibold tracking-tight">Leagues</h1>
         <div className="flex gap-2">
           <Link href="/leagues/join" className="btn-ghost">
             Join
@@ -40,7 +40,7 @@ export default async function LeaguesPage() {
           </Link>
         </div>
       </div>
-      <p className="mb-4 text-[13px] text-muted">
+      <p className="mb-4 text-xs text-muted">
         Total {leagues.length} {leagues.length === 1 ? 'league' : 'leagues'}
       </p>
 
@@ -51,22 +51,25 @@ export default async function LeaguesPage() {
             <li key={league.id}>
               <Link href={`/leagues/${league.id}`} className="card block p-4 transition active:scale-[0.99]">
                 <div className="flex items-start justify-between gap-3">
-                  <span className="grid h-9 w-9 place-items-center rounded-full bg-gradient-to-br from-[#f5a524] to-[#f0574e] text-sm font-bold text-white">
-                    {league.name.slice(0, 1)}
+                  <span
+                    aria-hidden
+                    className="grid h-9 w-9 place-items-center rounded-full border border-brand-gold/30 bg-brand-gold-soft font-display text-md leading-none text-brand-gold-deep"
+                  >
+                    {league.name.slice(0, 1).toUpperCase()}
                   </span>
-                  <span className="pill bg-canvas text-[12px] text-muted">
+                  <span className="pill bg-canvas text-2xs text-muted">
                     {DRAFT_LABEL[league.draftStatus] ?? league.draftStatus}
                   </span>
                 </div>
 
-                <h2 className="mt-3 text-[17px] font-semibold">{league.name}</h2>
-                <p className="mt-0.5 text-[13px] text-muted">
+                <h2 className="mt-3 text-lg font-semibold">{league.name}</h2>
+                <p className="mt-0.5 text-xs text-muted">
                   {league.season.show.name} · {league.season.name}
                 </p>
 
                 <div className="mt-4 flex items-center justify-between border-t border-hairline pt-3">
                   <AvatarStack names={memberNames} />
-                  <span className="text-[12px] text-muted">
+                  <span className="text-2xs text-muted">
                     {league._count.teams} teams · {league.scoringRuleset.name}
                   </span>
                 </div>
@@ -78,8 +81,8 @@ export default async function LeaguesPage() {
 
       <div className="mt-3 rounded-card border border-dashed border-brand-gold-deep/50 bg-brand-gold-soft/30 p-4">
         <BoltIcon className="text-brand-gold-deep" />
-        <h3 className="mt-2 text-[15px] font-semibold">Add new or join a league</h3>
-        <p className="mt-0.5 text-[13px] text-muted">
+        <h3 className="mt-2 text-base font-semibold">Add new or join a league</h3>
+        <p className="mt-0.5 text-xs text-muted">
           Start a league for any season, or jump into a friend&apos;s with an invite code.
         </p>
         <div className="mt-3 flex gap-2">

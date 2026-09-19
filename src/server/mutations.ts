@@ -99,36 +99,60 @@ export async function joinLeague(userId: string, inviteCode: string, teamName: s
   if (league.draftStatus !== 'NOT_STARTED') {
     throw new DomainError('This league has already started drafting.', 'DRAFT_STARTED', 409);
   }
-  if (league._count.teams >= league.maxTeams) {
-    throw new DomainError('This league is full.', 'LEAGUE_FULL', 409);
-  }
 
   const existing = await prisma.leagueMember.findUnique({
     where: { leagueId_userId: { leagueId: league.id, userId } },
   });
   if (existing) throw new DomainError('You are already in this league.', 'ALREADY_MEMBER', 409);
 
-  return prisma.$transaction(async (tx) => {
-    await tx.leagueMember.create({
-      data: {
-        leagueId: league.id,
-        userId,
-        role: 'MEMBER',
-        status: league.requiresApproval ? 'PENDING' : 'ACTIVE',
-      },
-    });
-    if (!league.requiresApproval) {
-      await tx.team.create({
+  // The capacity check and the seat number are re-derived *inside* the
+  // transaction. Reading `_count.teams` above and trusting it here is a
+  // time-of-check/time-of-use race: two people accepting the same invite at
+  // once both saw "5 of 6 taken", both passed, and both tried to claim
+  // draft position 6. The unique constraint on [leagueId, draftOrderPosition]
+  // stopped the database from being corrupted, but it surfaced as an
+  // unhandled P2002 — a generic "something went wrong" for what is really a
+  // normal, explainable outcome.
+  try {
+    return await prisma.$transaction(async (tx) => {
+      const seatsTaken = await tx.team.count({ where: { leagueId: league.id } });
+      if (seatsTaken >= league.maxTeams) {
+        throw new DomainError('This league is full.', 'LEAGUE_FULL', 409);
+      }
+
+      await tx.leagueMember.create({
         data: {
           leagueId: league.id,
-          ownerId: userId,
-          name: teamName,
-          draftOrderPosition: league._count.teams + 1,
+          userId,
+          role: 'MEMBER',
+          status: league.requiresApproval ? 'PENDING' : 'ACTIVE',
         },
       });
+      if (!league.requiresApproval) {
+        await tx.team.create({
+          data: {
+            leagueId: league.id,
+            ownerId: userId,
+            name: teamName,
+            draftOrderPosition: seatsTaken + 1,
+          },
+        });
+      }
+      return league.id;
+    });
+  } catch (error) {
+    // Two joins that interleave *between* the count and the insert still
+    // collide; the constraint is the real arbiter and this turns losing that
+    // race into something the person can act on.
+    if (error instanceof Prisma.PrismaClientKnownRequestError && error.code === 'P2002') {
+      throw new DomainError(
+        'Someone else just took the last spot. Ask the commissioner to make room.',
+        'LEAGUE_FULL',
+        409,
+      );
     }
-    return league.id;
-  });
+    throw error;
+  }
 }
 
 // ---------------------------------------------------------------------------
@@ -341,34 +365,43 @@ export async function recordEvents(
     throw new DomainError('One or more contestants are not in this season.', 'CONTESTANT_MISMATCH');
   }
 
+  // Two bulk writes instead of two round trips per event. At the schema's
+  // 200-event ceiling this path was issuing 400 sequential statements inside
+  // one transaction — slow enough to be a real transaction-timeout risk during
+  // a live episode, which is precisely when it runs.
+  //
+  // `createManyAndReturn` hands back the generated ids, so the audit rows can
+  // be built without pre-minting ids by hand and without giving up Prisma's
+  // own cuid generation for this table.
+  const occurredFallback = cycle.airsAt ?? new Date();
+  const rows = data.events.map((event) => {
+    const definition = byCode.get(event.eventCode)!;
+    return {
+      contestantId: event.contestantId,
+      eventDefinitionId: definition.id,
+      cycleId: cycle.id,
+      pointsAwarded: definition.points,
+      note: event.note,
+      metadata: event.metadata as Prisma.InputJsonValue | undefined,
+      occurredAt: event.occurredAt ?? occurredFallback,
+      recordedById: userId,
+    };
+  });
+
   const created = await prisma.$transaction(async (tx) => {
-    const rows = [];
-    for (const event of data.events) {
-      const definition = byCode.get(event.eventCode)!;
-      const row = await tx.scoredEvent.create({
-        data: {
-          contestantId: event.contestantId,
-          eventDefinitionId: definition.id,
-          cycleId: cycle.id,
-          pointsAwarded: definition.points,
-          note: event.note,
-          metadata: event.metadata as Prisma.InputJsonValue | undefined,
-          occurredAt: event.occurredAt ?? cycle.airsAt ?? new Date(),
-          recordedById: userId,
-        },
-        select: { id: true, pointsAwarded: true },
-      });
-      await tx.scoreAudit.create({
-        data: {
-          scoredEventId: row.id,
-          action: 'CREATED',
-          newPoints: row.pointsAwarded,
-          performedById: userId,
-        },
-      });
-      rows.push(row);
-    }
-    return rows;
+    const events = await tx.scoredEvent.createManyAndReturn({
+      data: rows,
+      select: { id: true, pointsAwarded: true },
+    });
+    await tx.scoreAudit.createMany({
+      data: events.map((event) => ({
+        scoredEventId: event.id,
+        action: 'CREATED' as const,
+        newPoints: event.pointsAwarded,
+        performedById: userId,
+      })),
+    });
+    return events;
   });
 
   const leagueIds = await recalculateLeaguesForCycle(cycle.id);

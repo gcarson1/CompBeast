@@ -56,14 +56,26 @@ export function AvatarStack({ names, max = 3 }: { names: string[]; max?: number 
   const shown = names.slice(0, max);
   const overflow = names.length - shown.length;
 
+  // The individual avatars are decorative (aria-hidden), so without this the
+  // whole roster is invisible to a screen reader — the names appear nowhere
+  // else in the markup. One label on the group reads better than N images.
+  const label =
+    names.length === 0
+      ? 'No members yet'
+      : `${names.length} ${names.length === 1 ? 'member' : 'members'}: ${names.join(', ')}`;
+
   return (
-    <span className="flex items-center">
+    <span className="flex items-center" role="img" aria-label={label}>
       <span className="flex -space-x-2">
         {shown.map((name) => (
           <Avatar key={name} name={name} size={26} />
         ))}
       </span>
-      {overflow > 0 && <span className="ml-2 text-[13px] text-muted">+{overflow}</span>}
+      {overflow > 0 && (
+        <span aria-hidden className="ml-2 text-xs text-muted">
+          +{overflow}
+        </span>
+      )}
     </span>
   );
 }

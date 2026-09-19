@@ -14,8 +14,8 @@ export const maxDuration = 60;
 const RUN_TONE: Record<string, string> = {
   SUCCESS: 'bg-brand-gold-soft text-brand-gold-deep',
   RUNNING: 'bg-canvas text-muted',
-  EMPTY: 'bg-warn/15 text-warn',
-  FAILED: 'bg-danger/15 text-danger',
+  EMPTY: 'bg-warn/20 text-warn',
+  FAILED: 'bg-danger-soft text-danger-deep',
 };
 
 export default async function IngestionPage() {
@@ -23,12 +23,12 @@ export default async function IngestionPage() {
   if (!user?.isPlatformAdmin) {
     return (
       <div className="pt-2">
-        <Link href="/leagues" className="text-[13px] text-muted">
+        <Link href="/leagues" className="text-xs text-muted">
           ← Leagues
         </Link>
         <div className="card mt-6 p-6 text-center">
-          <h1 className="text-[17px] font-semibold">Admins only</h1>
-          <p className="mt-1 text-[13px] text-muted">
+          <h1 className="text-lg font-semibold">Admins only</h1>
+          <p className="mt-1 text-xs text-muted">
             Ingestion review rewrites scores across every league on a season.
           </p>
         </div>
@@ -92,11 +92,11 @@ export default async function IngestionPage() {
 
   return (
     <div className="pt-2">
-      <Link href="/leagues" className="text-[13px] text-muted">
+      <Link href="/leagues" className="text-xs text-muted">
         ← Leagues
       </Link>
-      <h1 className="mt-2 text-[26px] font-semibold tracking-tight">Ingestion</h1>
-      <p className="mt-0.5 text-[13px] text-muted">
+      <h1 className="mt-2 text-3xl font-semibold tracking-tight">Ingestion</h1>
+      <p className="mt-0.5 text-xs text-muted">
         Automatically captured results. High-confidence events publish on their own; anything
         inferred waits here.
       </p>
@@ -108,11 +108,11 @@ export default async function IngestionPage() {
       </div>
 
       <section className="mt-6">
-        <h2 className="mb-2 text-[17px] font-semibold">Sources</h2>
+        <h2 className="mb-2 text-lg font-semibold">Sources</h2>
         {seasons.length === 0 ? (
-          <p className="card p-4 text-[13px] text-muted">
+          <p className="card p-4 text-xs text-muted">
             No season has been bootstrapped yet. Run{' '}
-            <code className="text-[12px]">npx tsx scripts/ingest.ts bootstrap &lt;slug&gt;</code>{' '}
+            <code className="text-2xs">npx tsx scripts/ingest.ts bootstrap &lt;slug&gt;</code>{' '}
             first.
           </p>
         ) : (
@@ -132,11 +132,11 @@ export default async function IngestionPage() {
       </section>
 
       <section className="mt-6">
-        <h2 className="mb-2 text-[17px] font-semibold">
+        <h2 className="mb-2 text-lg font-semibold">
           Needs review {candidates.length > 0 && `(${candidates.length})`}
         </h2>
         {candidates.length === 0 ? (
-          <p className="card p-4 text-[13px] text-muted">Nothing waiting. Everything parsed cleanly.</p>
+          <p className="card p-4 text-xs text-muted">Nothing waiting. Everything parsed cleanly.</p>
         ) : (
           <ul className="space-y-3">
             {candidates.map((candidate) => (
@@ -147,23 +147,23 @@ export default async function IngestionPage() {
       </section>
 
       <section className="mt-6">
-        <h2 className="mb-2 text-[17px] font-semibold">Recent runs</h2>
+        <h2 className="mb-2 text-lg font-semibold">Recent runs</h2>
         {runs.length === 0 ? (
-          <p className="card p-4 text-[13px] text-muted">No syncs have run yet.</p>
+          <p className="card p-4 text-xs text-muted">No syncs have run yet.</p>
         ) : (
           <ul className="card divide-y divide-hairline">
             {runs.map((run) => (
               <li key={run.id} className="flex items-center justify-between gap-3 p-4">
                 <span className="min-w-0">
-                  <span className="block truncate text-[14px] font-medium">
+                  <span className="block truncate text-sm font-medium">
                     {run.weeksParsed} weeks · {run.autoPublished} published
                   </span>
-                  <span className="mt-0.5 block truncate text-[12px] text-muted">
+                  <span className="mt-0.5 block truncate text-2xs text-muted">
                     {relativeTime(run.startedAt)}
                     {run.error && ` · ${run.error}`}
                   </span>
                 </span>
-                <span className={`pill shrink-0 text-[11px] ${RUN_TONE[run.status] ?? 'bg-canvas text-muted'}`}>
+                <span className={`pill shrink-0 text-2xs ${RUN_TONE[run.status] ?? 'bg-canvas text-muted'}`}>
                   {run.status.toLowerCase()}
                 </span>
               </li>
@@ -178,8 +178,8 @@ export default async function IngestionPage() {
 function Stat({ label, value }: { label: string; value: number }) {
   return (
     <div>
-      <div className="text-[20px] font-semibold tabular-nums">{value}</div>
-      <div className="mt-0.5 text-[11px] uppercase tracking-wide text-muted">{label}</div>
+      <div className="text-xl font-semibold tabular-nums">{value}</div>
+      <div className="mt-0.5 text-2xs uppercase tracking-wide text-muted">{label}</div>
     </div>
   );
 }

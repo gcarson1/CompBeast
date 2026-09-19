@@ -12,20 +12,39 @@ export function formatPoints(points: number): string {
   return rounded > 0 ? `+${rounded}` : `${rounded}`;
 }
 
+/**
+ * Tone for a point value. Both accents use their `deep` variant because these
+ * are *text* on a dark surface — the base #EF4444 measures 3.89:1 on
+ * `surface`, under the 4.5:1 floor, while #F87171 clears it at 5.3:1.
+ *
+ * Colour is never the only signal here: `formatPoints` always carries an
+ * explicit +/- sign, so the meaning survives for anyone who cannot separate
+ * red from gold.
+ */
 export function pointsTone(points: number): string {
   if (points > 0) return 'text-brand-gold-deep';
-  if (points < 0) return 'text-danger';
+  if (points < 0) return 'text-danger-deep';
   return 'text-muted';
 }
 
-/** Deterministic avatar color so the same person is the same color everywhere. */
+/**
+ * Deterministic avatar color so the same person is the same color everywhere.
+ *
+ * These are all ~700-level jewel tones rather than the bright primaries this
+ * list used to hold: those were left over from the light theme (one was the
+ * old `lime` the rebrand removed) and glowed against the dark canvas. Every
+ * one of these clears 4.5:1 against the white initials drawn on top, which the
+ * lighter originals did not.
+ */
 const AVATAR_COLORS = [
-  'bg-[#f5a524]',
-  'bg-[#8fd11a]',
-  'bg-[#3d8bf0]',
-  'bg-[#c14ef0]',
-  'bg-[#f0574e]',
-  'bg-[#14b8a6]',
+  'bg-[#B45309]', // bronze
+  'bg-[#0F766E]', // teal
+  'bg-[#4338CA]', // indigo
+  'bg-[#BE123C]', // rose
+  'bg-[#6D28D9]', // violet — echoes brand-velvet
+  'bg-[#1D4ED8]', // blue
+  'bg-[#047857]', // emerald
+  'bg-[#A21CAF]', // fuchsia
 ];
 
 export function avatarColor(seed: string): string {

@@ -83,7 +83,7 @@ function SummaryTab({ events }: { events: PlayerEvent[] }) {
   };
 
   if (events.length === 0) {
-    return <p className="card p-4 text-[13px] text-muted">No scoring events yet this season.</p>;
+    return <p className="card p-4 text-xs text-muted">No scoring events yet this season.</p>;
   }
 
   return (
@@ -91,12 +91,12 @@ function SummaryTab({ events }: { events: PlayerEvent[] }) {
       {[...byCategory.entries()].map(([category, value]) => (
         <div key={category} className="flex items-center justify-between p-4">
           <span>
-            <span className="block text-[14px] font-medium">{labels[category] ?? category}</span>
-            <span className="mt-0.5 block text-[12px] text-muted">
+            <span className="block text-sm font-medium">{labels[category] ?? category}</span>
+            <span className="mt-0.5 block text-2xs text-muted">
               {value.count} {value.count === 1 ? 'event' : 'events'}
             </span>
           </span>
-          <span className={`text-[16px] font-semibold tabular-nums ${pointsTone(value.points)}`}>
+          <span className={`text-md font-semibold tabular-nums ${pointsTone(value.points)}`}>
             {formatPoints(value.points)}
           </span>
         </div>
@@ -107,7 +107,7 @@ function SummaryTab({ events }: { events: PlayerEvent[] }) {
 
 function GameLogTab({ gameLog, events }: { gameLog: PlayerGameLogRow[]; events: PlayerEvent[] }) {
   if (gameLog.length === 0) {
-    return <p className="card p-4 text-[13px] text-muted">Nothing logged yet.</p>;
+    return <p className="card p-4 text-xs text-muted">Nothing logged yet.</p>;
   }
 
   return (
@@ -115,8 +115,8 @@ function GameLogTab({ gameLog, events }: { gameLog: PlayerGameLogRow[]; events: 
       {gameLog.map((row) => (
         <div key={row.sequence} className="card overflow-hidden">
           <div className="flex items-center justify-between border-b border-hairline px-4 py-3">
-            <span className="text-[14px] font-semibold">{row.label}</span>
-            <span className={`text-[15px] font-semibold tabular-nums ${pointsTone(row.points)}`}>
+            <span className="text-sm font-semibold">{row.label}</span>
+            <span className={`text-base font-semibold tabular-nums ${pointsTone(row.points)}`}>
               {formatPoints(row.points)}
             </span>
           </div>
@@ -126,12 +126,12 @@ function GameLogTab({ gameLog, events }: { gameLog: PlayerGameLogRow[]; events: 
               .map((event) => (
                 <li key={event.id} className="flex items-center justify-between gap-3 px-4 py-2.5">
                   <span className="min-w-0 flex-1">
-                    <span className="block truncate text-[13px]">{event.label}</span>
+                    <span className="block truncate text-xs">{event.label}</span>
                     {event.note && (
-                      <span className="mt-0.5 block truncate text-[11px] text-muted">{event.note}</span>
+                      <span className="mt-0.5 block truncate text-2xs text-muted">{event.note}</span>
                     )}
                   </span>
-                  <span className={`text-[13px] font-medium tabular-nums ${pointsTone(event.points)}`}>
+                  <span className={`text-xs font-medium tabular-nums ${pointsTone(event.points)}`}>
                     {formatPoints(event.points)}
                   </span>
                 </li>
@@ -149,7 +149,7 @@ function LeaguesTab({
   leagues: Array<{ leagueId: string; leagueName: string; teamName: string }>;
 }) {
   if (leagues.length === 0) {
-    return <p className="card p-4 text-[13px] text-muted">Undrafted in every league you&apos;re in.</p>;
+    return <p className="card p-4 text-xs text-muted">Undrafted in every league you&apos;re in.</p>;
   }
 
   return (
@@ -157,8 +157,8 @@ function LeaguesTab({
       {leagues.map((entry) => (
         <li key={entry.leagueId} className="flex items-center justify-between p-4">
           <span>
-            <span className="block text-[14px] font-medium">{entry.leagueName}</span>
-            <span className="mt-0.5 block text-[12px] text-muted">Rostered by {entry.teamName}</span>
+            <span className="block text-sm font-medium">{entry.leagueName}</span>
+            <span className="mt-0.5 block text-2xs text-muted">Rostered by {entry.teamName}</span>
           </span>
         </li>
       ))}

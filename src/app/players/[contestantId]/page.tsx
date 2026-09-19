@@ -23,20 +23,20 @@ export default async function PlayerPage({ params }: { params: { contestantId: s
 
   return (
     <div className="pt-2">
-      <Link href={`/seasons/${player.season.slug}`} className="text-[13px] text-muted">
+      <Link href={`/seasons/${player.season.slug}`} className="text-xs text-muted">
         ← {player.season.name}
       </Link>
 
       <div className="mt-4 flex flex-col items-center text-center">
         <Avatar name={player.name} photoUrl={player.photoUrl} size={84} dimmed={!player.isActive} />
-        <h1 className="mt-3 text-[22px] font-semibold tracking-tight">{player.name}</h1>
-        <p className="mt-0.5 text-[13px] text-muted">
+        <h1 className="mt-3 text-2xl font-semibold tracking-tight">{player.name}</h1>
+        <p className="mt-0.5 text-xs text-muted">
           {player.isActive ? 'In the house' : `Evicted · ${player.eliminatedCycle?.label ?? '—'}`}
         </p>
-        <p className={`mt-2 text-[28px] font-semibold tabular-nums ${pointsTone(player.totalPoints)}`}>
+        <p className={`mt-2 text-4xl font-semibold tabular-nums ${pointsTone(player.totalPoints)}`}>
           {formatPoints(player.totalPoints)}
         </p>
-        <p className="text-[11px] uppercase tracking-wide text-muted">Season points</p>
+        <p className="text-2xs uppercase tracking-wide text-muted">Season points</p>
       </div>
 
       <div className="card mt-4 grid grid-cols-3 divide-x divide-hairline p-3 text-center">
@@ -53,8 +53,8 @@ export default async function PlayerPage({ params }: { params: { contestantId: s
 function Fact({ label, value }: { label: string; value: string }) {
   return (
     <div className="px-1">
-      <div className="truncate text-[13px] font-semibold">{value}</div>
-      <div className="mt-0.5 text-[10px] uppercase tracking-wide text-muted">{label}</div>
+      <div className="truncate text-xs font-semibold">{value}</div>
+      <div className="mt-0.5 text-2xs uppercase tracking-wide text-muted">{label}</div>
     </div>
   );
 }

@@ -16,7 +16,7 @@ export function BottomNav() {
 
   return (
     <nav className="sticky bottom-0 z-20 border-t border-hairline bg-surface/95 px-4 pb-[env(safe-area-inset-bottom)] pt-2 backdrop-blur">
-      <ul className="mx-auto flex max-w-md items-center justify-around">
+      <ul className="mx-auto flex max-w-md sm:max-w-lg items-center justify-around">
         {TABS.map((tab) => {
           const active = tab.owns.some(
             (prefix) => pathname === prefix || pathname.startsWith(`${prefix}/`),
@@ -33,7 +33,7 @@ export function BottomNav() {
                 )}
               >
                 <Icon />
-                <span className="text-[11px] font-medium">{tab.label}</span>
+                <span className="text-2xs font-medium">{tab.label}</span>
               </Link>
             </li>
           );

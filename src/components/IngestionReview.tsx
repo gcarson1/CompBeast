@@ -59,8 +59,8 @@ export function SeasonSourceCard({
     <div className="card p-4">
       <div className="flex items-center justify-between gap-3">
         <span className="min-w-0">
-          <span className="block truncate text-[14px] font-semibold">{seasonName}</span>
-          <span className="mt-0.5 block truncate text-[12px] text-muted">{sourceSlug}</span>
+          <span className="block truncate text-sm font-semibold">{seasonName}</span>
+          <span className="mt-0.5 block truncate text-2xs text-muted">{sourceSlug}</span>
         </span>
         <div className="flex shrink-0 items-center gap-2">
           <form action={bootstrap}>
@@ -77,8 +77,8 @@ export function SeasonSourceCard({
           </form>
         </div>
       </div>
-      {message && <p className="mt-2 text-[12px] text-brand-gold-deep">{message}</p>}
-      {error && <p className="mt-2 text-[12px] text-danger">{error}</p>}
+      {message && <p className="mt-2 text-2xs text-brand-gold-deep">{message}</p>}
+      {error && <p className="mt-2 text-2xs text-danger-deep">{error}</p>}
     </div>
   );
 }
@@ -99,8 +99,8 @@ export function CandidateCard({ candidate }: { candidate: PendingCandidate }) {
     <li className="card p-4">
       <div className="flex items-start justify-between gap-3">
         <div className="min-w-0">
-          <p className="truncate text-[15px] font-semibold">{candidate.playerName}</p>
-          <p className="mt-0.5 text-[13px] text-muted">
+          <p className="truncate text-base font-semibold">{candidate.playerName}</p>
+          <p className="mt-0.5 text-xs text-muted">
             {candidate.eventLabel ?? candidate.eventCode} · {candidate.weekLabel}
             {candidate.points !== null && (
               <span className="ml-1 tabular-nums">
@@ -110,10 +110,10 @@ export function CandidateCard({ candidate }: { candidate: PendingCandidate }) {
           </p>
         </div>
         <span
-          className={`pill shrink-0 text-[11px] ${
+          className={`pill shrink-0 text-2xs ${
             candidate.confidence === 'MEDIUM'
               ? 'bg-brand-gold-soft text-brand-gold-deep'
-              : 'bg-danger/15 text-danger'
+              : 'bg-danger-soft text-danger-deep'
           }`}
         >
           {candidate.confidence.toLowerCase()}
@@ -123,7 +123,7 @@ export function CandidateCard({ candidate }: { candidate: PendingCandidate }) {
       {candidate.reasons.length > 0 && (
         <ul className="mt-3 space-y-1 rounded-2xl bg-canvas/70 p-3">
           {candidate.reasons.map((reason) => (
-            <li key={reason} className="text-[12px] leading-relaxed text-muted">
+            <li key={reason} className="text-2xs leading-relaxed text-muted">
               {reason}
             </li>
           ))}
@@ -131,7 +131,7 @@ export function CandidateCard({ candidate }: { candidate: PendingCandidate }) {
       )}
 
       {!candidate.resolvable && (
-        <p className="mt-3 text-[12px] text-danger">
+        <p className="mt-3 text-2xs text-danger-deep">
           Missing a matched houseguest or week — this cannot be published until the season is
           re-bootstrapped.
         </p>
@@ -149,14 +149,14 @@ export function CandidateCard({ candidate }: { candidate: PendingCandidate }) {
           <input
             name="reason"
             placeholder="Reason (optional)"
-            className="field flex-1 !py-2 text-[13px]"
+            className="field flex-1 !py-2 text-xs"
             aria-label="Rejection reason"
           />
           <RejectButton />
         </form>
       </div>
 
-      {error && <p className="mt-2 text-[12px] text-danger">{error}</p>}
+      {error && <p className="mt-2 text-2xs text-danger-deep">{error}</p>}
     </li>
   );
 }
@@ -164,7 +164,7 @@ export function CandidateCard({ candidate }: { candidate: PendingCandidate }) {
 function SubmitButton({ label, pendingLabel }: { label: string; pendingLabel: string }) {
   const { pending } = useFormStatus();
   return (
-    <button type="submit" disabled={pending} className="btn-primary text-[13px] disabled:opacity-50">
+    <button type="submit" disabled={pending} className="btn-primary text-xs disabled:opacity-50">
       {pending ? pendingLabel : label}
     </button>
   );
@@ -176,7 +176,7 @@ function GhostSubmitButton({ label, pendingLabel }: { label: string; pendingLabe
     <button
       type="submit"
       disabled={pending}
-      className="btn-ghost text-[13px] disabled:opacity-50"
+      className="btn-ghost text-xs disabled:opacity-50"
     >
       {pending ? pendingLabel : label}
     </button>
@@ -189,7 +189,7 @@ function RejectButton() {
     <button
       type="submit"
       disabled={pending}
-      className="pill shrink-0 bg-canvas text-[13px] text-danger disabled:opacity-50"
+      className="pill shrink-0 bg-canvas text-xs text-danger-deep disabled:opacity-50"
     >
       {pending ? '…' : 'Reject'}
     </button>

@@ -27,11 +27,11 @@ export default async function DraftPage({ params }: { params: { leagueId: string
 
   return (
     <div className="pt-2">
-      <Link href={`/leagues/${params.leagueId}`} className="text-[13px] text-muted">
+      <Link href={`/leagues/${params.leagueId}`} className="text-xs text-muted">
         ← {overview.name}
       </Link>
-      <h1 className="mt-2 text-[26px] font-semibold tracking-tight">Draft</h1>
-      <p className="mt-0.5 text-[13px] text-muted">
+      <h1 className="mt-2 text-3xl font-semibold tracking-tight">Draft</h1>
+      <p className="mt-0.5 text-xs text-muted">
         {league.draftType.toLowerCase()} · {league.rosterSize} rounds · {teams.length} teams
       </p>
 

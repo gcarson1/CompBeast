@@ -52,6 +52,21 @@ export function Leaderboard({
     setPull(Math.min(delta * 0.5, MAX_PULL));
   };
 
+  // A cancelled pointer (the OS taking over for a system gesture, a stray
+  // touch) means the gesture was abandoned, not completed — it should undo the
+  // pull, not commit it the way routing it through onPointerUp used to.
+  const onPointerCancel = () => {
+    startY.current = null;
+    setPull(0);
+  };
+
+  const runRefresh = async () => {
+    setRevealing(true);
+    setPull(PULL_THRESHOLD);
+    await new Promise((resolve) => setTimeout(resolve, REVEAL_DELAY_MS));
+    startTransition(() => router.refresh());
+  };
+
   const onPointerUp = async () => {
     if (startY.current === null) return;
     startY.current = null;
@@ -61,10 +76,7 @@ export function Leaderboard({
       return;
     }
 
-    setRevealing(true);
-    setPull(PULL_THRESHOLD);
-    await new Promise((resolve) => setTimeout(resolve, REVEAL_DELAY_MS));
-    startTransition(() => router.refresh());
+    await runRefresh();
   };
 
   return (
@@ -72,8 +84,30 @@ export function Leaderboard({
       onPointerDown={onPointerDown}
       onPointerMove={onPointerMove}
       onPointerUp={onPointerUp}
-      onPointerCancel={onPointerUp}
+      onPointerCancel={onPointerCancel}
     >
+      {/*
+        A pull gesture is invisible and undiscoverable, and it is unreachable
+        entirely by keyboard, switch control, or anyone who simply does not
+        know to try it. It stays as an enhancement for people who expect it,
+        but the button is the real control — same delay, same animation.
+      */}
+      <div className="mb-2 flex justify-end">
+        <button
+          type="button"
+          onClick={runRefresh}
+          disabled={revealing || isPending}
+          className="btn-ghost min-h-0 px-3 py-1.5 text-xs disabled:opacity-50"
+        >
+          {revealing || isPending ? 'Refreshing…' : 'Refresh'}
+        </button>
+      </div>
+
+      {/* Announces the result to a screen reader, which cannot see rows reorder. */}
+      <p aria-live="polite" className="sr-only">
+        {revealing || isPending ? 'Refreshing the leaderboard' : `Leaderboard: ${rows.length} teams`}
+      </p>
+
       <div
         className="flex items-center justify-center overflow-hidden text-brand-gold transition-[height]"
         style={{ height: pull }}
@@ -96,7 +130,7 @@ export function Leaderboard({
       </div>
 
       {rows.length === 0 ? (
-        <p className="card p-4 text-[13px] text-muted">
+        <p className="card p-4 text-xs text-muted">
           No teams yet. Share the invite code to get your league going.
         </p>
       ) : (
@@ -109,20 +143,20 @@ export function Leaderboard({
                   href={`/teams/${row.teamId}`}
                   className={`flex items-center gap-3 p-4 transition ${isMine ? 'bg-brand-gold-soft/40' : ''}`}
                 >
-                  <span className="w-6 text-[15px] font-semibold tabular-nums text-muted">{row.rank}</span>
+                  <span className="w-6 text-base font-semibold tabular-nums text-muted">{row.rank}</span>
                   <Avatar name={row.ownerName ?? row.teamName} size={38} />
                   <span className="min-w-0 flex-1">
-                    <span className="block truncate text-[15px] font-semibold">
+                    <span className="block truncate text-base font-semibold">
                       {row.teamName}
-                      {isMine && <span className="ml-1.5 text-[11px] text-brand-gold-deep">you</span>}
+                      {isMine && <span className="ml-1.5 text-2xs text-brand-gold-deep">you</span>}
                     </span>
-                    <span className="mt-0.5 block text-[12px] text-muted">
+                    <span className="mt-0.5 block text-2xs text-muted">
                       {row.ownerName} · {row.activeCount}/{row.rosterCount} still in
                     </span>
                   </span>
                   <span className="text-right">
-                    <span className="block text-[17px] font-semibold tabular-nums">{row.totalPoints}</span>
-                    <span className={`block text-[12px] tabular-nums ${pointsTone(row.lastCyclePoints)}`}>
+                    <span className="block text-lg font-semibold tabular-nums">{row.totalPoints}</span>
+                    <span className={`block text-2xs tabular-nums ${pointsTone(row.lastCyclePoints)}`}>
                       {formatPoints(row.lastCyclePoints)}
                     </span>
                   </span>
