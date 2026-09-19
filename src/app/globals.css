@@ -118,3 +118,66 @@
   -ms-overflow-style: none;
   scrollbar-width: none;
 }
+
+/*
+ * Infinite marquee.
+ *
+ * This was previously a Framer Motion `animate={{ x: ['0%','-50%'] }}`, which
+ * runs on the main thread — Motion cannot hand a percentage transform to the
+ * compositor, so `getAnimations()` on the track came back empty and every
+ * frame was a JS style write. Measured against production, the track sat at
+ * `transform: none` for the first ~10s on a phone and stepped ~31px at a time
+ * on desktop, because widgets.js and hydration were monopolising the main
+ * thread. A plain CSS transform animation is composited, so a busy main
+ * thread can no longer stall it.
+ *
+ * The track holds two identical halves and travels exactly -50%. The old
+ * version duplicated items into ONE flex row with a shared gap, which makes
+ * half the track one gap shorter than a full copy — an 8px jump at every loop
+ * point, which is the "cut back in" glitch.
+ */
+@keyframes marquee-x {
+  from {
+    transform: translate3d(0, 0, 0);
+  }
+  to {
+    transform: translate3d(-50%, 0, 0);
+  }
+}
+
+.marquee-track {
+  display: flex;
+  width: max-content;
+  will-change: transform;
+  animation: marquee-x var(--marquee-duration, 30s) linear infinite;
+}
+
+/* Let someone stop the carousel to actually read a name. */
+.marquee-viewport:hover .marquee-track,
+.marquee-viewport:focus-within .marquee-track {
+  animation-play-state: paused;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  /*
+   * `animation-name`, not `animation: none` — the global reduce-motion block
+   * in @layer base already forces `animation-duration`/`animation-iteration-count`
+   * with !important, and for !important declarations the cascade prefers the
+   * EARLIER layer, so this unlayered rule could not win those two properties.
+   * Killing the name instead sidesteps the conflict entirely, and parks the
+   * track at its start rather than at -50% (mid-list).
+   */
+  .marquee-track {
+    animation-name: none;
+  }
+
+  /* No auto-scroll means it has to be swipeable, and the second copy would
+     just be the same faces twice. */
+  .marquee-viewport {
+    overflow-x: auto;
+  }
+
+  .marquee-copy[aria-hidden='true'] {
+    display: none;
+  }
+}
