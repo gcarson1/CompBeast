@@ -57,7 +57,7 @@
    * young and dextrous.
    */
   .btn {
-    @apply inline-flex min-h-[44px] items-center justify-center gap-2 rounded-pill px-5
+    @apply inline-flex min-h-[44px] items-center justify-center gap-2 rounded-btn px-5
       text-sm font-semibold transition active:scale-[0.97]
       disabled:pointer-events-none disabled:opacity-50;
   }
@@ -106,12 +106,18 @@
     animation: btn-spin 600ms linear infinite;
   }
 
+  /*
+   * These are real <button> elements (a tab switcher), not status badges, so
+   * they get the tighter button radius even though they otherwise share
+   * `.pill`'s sizing — `rounded-btn` after `pill` wins on specificity order,
+   * not because `.pill`'s own rounding changed.
+   */
   .tab-active {
-    @apply pill bg-brand-gold text-on-gold;
+    @apply pill rounded-btn bg-brand-gold text-on-gold;
   }
 
   .tab-idle {
-    @apply pill text-muted;
+    @apply pill rounded-btn text-muted;
   }
 
   .field {
