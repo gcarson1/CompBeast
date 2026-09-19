@@ -52,17 +52,34 @@ export function Avatar({
   );
 }
 
-export function AvatarStack({ names, max = 3 }: { names: string[]; max?: number }) {
+export function AvatarStack({
+  names,
+  max = 3,
+  total,
+}: {
+  names: string[];
+  max?: number;
+  /**
+   * The real member count, when `names` is a capped sample of it. Callers
+   * that page the names (the home rail takes 4) would otherwise report the
+   * size of their own `take` as the size of the league — an eight-person
+   * league announcing itself as four.
+   */
+  total?: number;
+}) {
   const shown = names.slice(0, max);
-  const overflow = names.length - shown.length;
+  const count = total ?? names.length;
+  const overflow = count - shown.length;
 
   // The individual avatars are decorative (aria-hidden), so without this the
   // whole roster is invisible to a screen reader — the names appear nowhere
   // else in the markup. One label on the group reads better than N images.
   const label =
-    names.length === 0
+    count === 0
       ? 'No members yet'
-      : `${names.length} ${names.length === 1 ? 'member' : 'members'}: ${names.join(', ')}`;
+      : `${count} ${count === 1 ? 'member' : 'members'}: ${names.join(', ')}${
+          count > names.length ? ', and others' : ''
+        }`;
 
   return (
     <span className="flex items-center" role="img" aria-label={label}>

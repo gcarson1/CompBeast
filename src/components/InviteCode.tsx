@@ -4,6 +4,8 @@ import { useEffect, useRef, useState } from 'react';
 import dynamic from 'next/dynamic';
 import { toast } from 'sonner';
 
+const QR_SIZE = 220;
+
 /**
  * The QR encoder is ~8kB and most people never open the dialog, so it is a
  * separate chunk fetched on the first open rather than part of the league
@@ -12,8 +14,6 @@ import { toast } from 'sonner';
  * would render (and therefore load) immediately, which is the thing being
  * avoided.
  */
-const QR_SIZE = 220;
-
 const QRCodeSVG = dynamic(() => import('qrcode.react').then((m) => m.QRCodeSVG), {
   ssr: false,
   // Same footprint as the code it becomes, so the panel does not jump.
@@ -87,9 +87,12 @@ export function InviteCode({ code, leagueName }: { code: string; leagueName: str
     return () => clearTimeout(id);
   }, [copied]);
 
-  const handleCopy = async (text: string, label: string) => {
+  // `isCode` drives only the checkmark on the code button — copying the join
+  // link from the dialog should not tick the control next to the code, which
+  // is not what was copied.
+  const handleCopy = async (text: string, label: string, isCode = false) => {
     if (await copyText(text)) {
-      setCopied(true);
+      if (isCode) setCopied(true);
       toast.success(`${label} copied`);
     } else {
       toast.error('Could not copy — select the code and copy it manually.');
@@ -103,7 +106,7 @@ export function InviteCode({ code, leagueName }: { code: string; leagueName: str
       <div className="flex items-center gap-2">
         <button
           type="button"
-          onClick={() => handleCopy(code, 'Invite code')}
+          onClick={() => handleCopy(code, 'Invite code', true)}
           className="btn-ghost btn-sm font-mono tracking-widest"
         >
           {code}
@@ -132,7 +135,6 @@ export function InviteCode({ code, leagueName }: { code: string; leagueName: str
       <dialog
         ref={dialogRef}
         aria-label={`QR code to join ${leagueName}`}
-        onCancel={() => setCopied(false)}
         onKeyDown={(e) => {
           // Escape on a modal <dialog> is the platform's job, and in a normal
           // tab it is. It is cheap to not depend on that: this is the only

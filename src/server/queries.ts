@@ -15,7 +15,9 @@ export async function getLeaguesForUser(userId: string) {
       inviteCode: true,
       season: { select: { id: true, name: true, show: { select: { name: true, slug: true } } } },
       scoringRuleset: { select: { name: true, slug: true } },
-      _count: { select: { teams: true } },
+      // Filtered relation count: `members` below is capped at 4 for avatars,
+      // so the true size has to come from a count, not from that sample.
+      _count: { select: { teams: true, members: { where: { status: { not: 'REMOVED' } } } } },
       teams: {
         where: { ownerId: userId },
         select: { id: true, name: true },
@@ -604,6 +606,7 @@ export interface HomeLeagueCard {
   inviteCode: string;
   teamCount: number;
   maxTeams: number;
+  memberCount: number;
   memberNames: string[];
   /** Null when someone is a member of the league but owns no team in it. */
   teamId: string | null;
@@ -673,6 +676,7 @@ export async function getHomeLeagues(userId: string): Promise<HomeLeagueCard[]> 
         inviteCode: league.inviteCode,
         teamCount: league._count.teams,
         maxTeams: league.maxTeams,
+        memberCount: league._count.members,
         memberNames: league.members.map((m) => m.user.name ?? m.user.handle ?? '?'),
         teamId: myTeam?.id ?? null,
         teamName: myTeam?.name ?? null,

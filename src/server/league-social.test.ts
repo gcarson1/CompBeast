@@ -322,6 +322,24 @@ describe.skipIf(!dbReady)('the home league rail', () => {
     expect(card!.rank).toBe(0);
   });
 
+  it('counts every member, not just the four sampled for the avatars', async () => {
+    const league = await makeLeague(alice, 'Alice Squad', 8);
+    const code = await inviteCodeFor(league.id);
+    const extra = await makeUser(`extra-${Math.random().toString(36).slice(2, 7)}`);
+
+    await joinLeague(bob, code, 'Bob Squad');
+    await joinLeague(cara, code, 'Cara Squad');
+    await joinLeague(outsider, code, 'Outsider Squad');
+    await joinLeague(extra, code, 'Extra Squad');
+
+    const card = (await getHomeLeagues(alice)).find((l) => l.leagueId === league.id)!;
+
+    // The names are a capped sample for the avatar stack; the count is not,
+    // or an eight-person league introduces itself as a four-person one.
+    expect(card.memberNames.length).toBeLessThanOrEqual(4);
+    expect(card.memberCount).toBe(5);
+  });
+
   it('leaves out a league the viewer is not in', async () => {
     const league = await makeLeague(alice, 'Alice Squad');
 

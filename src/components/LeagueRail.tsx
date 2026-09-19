@@ -170,7 +170,7 @@ function LeagueCard({ league }: { league: HomeLeagueCard }) {
         )}
 
         <div className="flex items-center justify-between border-t border-hairline pt-3">
-          <AvatarStack names={league.memberNames} />
+          <AvatarStack names={league.memberNames} total={league.memberCount} />
           <span className="text-2xs text-muted">
             {league.teamCount}/{league.maxTeams} teams
           </span>
