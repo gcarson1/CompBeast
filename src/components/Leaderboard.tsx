@@ -97,7 +97,7 @@ export function Leaderboard({
           type="button"
           onClick={runRefresh}
           disabled={revealing || isPending}
-          className="btn-ghost min-h-0 px-3 py-1.5 text-xs disabled:opacity-50"
+          className="btn-ghost btn-sm disabled:opacity-50"
         >
           {revealing || isPending ? 'Refreshing…' : 'Refresh'}
         </button>

@@ -189,7 +189,7 @@ function RejectButton() {
     <button
       type="submit"
       disabled={pending}
-      className="pill shrink-0 bg-canvas text-xs text-danger-deep disabled:opacity-50"
+      className="btn-ghost shrink-0 text-xs text-danger-deep disabled:opacity-50"
     >
       {pending ? '…' : 'Reject'}
     </button>

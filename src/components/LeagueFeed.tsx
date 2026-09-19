@@ -172,7 +172,7 @@ function PostButton({ disabled }: { disabled: boolean }) {
     <button
       type="submit"
       disabled={disabled || pending}
-      className="btn-primary min-h-0 px-4 py-2 text-xs"
+      className="btn-primary btn-sm"
     >
       {pending ? 'Posting…' : 'Post'}
     </button>
@@ -208,9 +208,7 @@ function ReactionButton({
         // and the only other signal is a background tint.
         aria-pressed={active}
         aria-label={`${verb}${count > 0 ? ` (${count})` : ''}`}
-        className={`pill min-h-[32px] gap-1.5 px-2.5 py-1 text-2xs transition ${
-          active ? on : 'bg-canvas text-muted hover:text-ink'
-        }`}
+        className={`btn btn-sm ${active ? on : 'bg-canvas text-muted hover:text-ink'}`}
       >
         {kind === 'HYPE' ? <FlameIcon /> : <TargetIcon />}
         <span className="tabular-nums">{count > 0 ? count : verb}</span>
@@ -224,7 +222,7 @@ function DeleteMessageForm({ messageId }: { messageId: string }) {
   return (
     <form action={formAction} className="ml-auto">
       <input type="hidden" name="messageId" value={messageId} />
-      <button type="submit" className="pill min-h-[32px] px-2.5 py-1 text-2xs text-muted hover:text-danger-deep">
+      <button type="submit" className="btn btn-sm text-muted hover:text-danger-deep">
         Delete
       </button>
     </form>

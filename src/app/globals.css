@@ -62,6 +62,7 @@
       disabled:pointer-events-none disabled:opacity-50;
   }
 
+
   /*
    * Gold is a light fill, so its label must be dark. `text-ink` here was a
    * 2.05:1 contrast failure on the app's single most important control.
@@ -74,6 +75,21 @@
 
   .btn-ghost {
     @apply btn border border-hairline bg-surface text-ink hover:bg-surface-raised;
+  }
+
+  /*
+   * Dense inline control — a reaction chip, a row-level action, the header's
+   * sign-in. 36px still clears WCAG 2.5.8's 24px minimum comfortably; the
+   * 44px default is the AAA target, reserved for anything standalone where a
+   * control that is hard to hit actually costs someone the action.
+   *
+   * Declared *after* the variants on purpose. `.btn-primary` and `.btn-ghost`
+   * each @apply `btn`, so they carry their own `min-h-[44px]`; at equal
+   * specificity the later rule wins, and defining this earlier silently left
+   * every "small" button at 44px.
+   */
+  .btn-sm {
+    @apply min-h-[36px] gap-1.5 px-3 text-2xs;
   }
 
   .tab-active {
