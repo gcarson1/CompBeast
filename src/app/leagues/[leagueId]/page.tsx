@@ -46,6 +46,7 @@ export default async function LeaguePage({ params }: { params: { leagueId: strin
     ),
   ];
   const atRisk = atRiskMessage(atRiskNames);
+  const openSeats = Math.max(0, league.maxTeams - league.teams.length);
 
   return (
     <div className="pt-2">
@@ -164,8 +165,11 @@ export default async function LeaguePage({ params }: { params: { leagueId: strin
           })}
         </ul>
         <p className="mt-2 px-1 text-2xs leading-relaxed text-muted">
-          Share the invite code below to fill the remaining{' '}
-          {Math.max(0, league.maxTeams - league.teams.length)} seats.
+          {openSeats === 0
+            ? 'Every seat is taken — this league is full.'
+            : `Share the invite code below to fill the last ${openSeats} ${
+                openSeats === 1 ? 'seat' : 'seats'
+              }.`}
         </p>
       </section>
 
