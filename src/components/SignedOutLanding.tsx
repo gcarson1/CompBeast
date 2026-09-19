@@ -40,20 +40,20 @@ export function SignedOutLanding({
 }) {
   return (
     <motion.div variants={container} initial="hidden" animate="show" className="pt-6 text-center">
-      <motion.h1 variants={item} className="mt-4 font-display text-[42px] leading-[0.95] tracking-wide">
+      <motion.h1 variants={item} className="mt-4 font-display text-5xl leading-[0.95] tracking-wide">
         DRAFT THE HOUSE.
         <br />
         <span className="text-brand-gold">OWN THE LEADERBOARD.</span>
       </motion.h1>
 
-      <motion.p variants={item} className="mx-auto mt-4 max-w-xs text-[14px] leading-relaxed text-muted">
+      <motion.p variants={item} className="mx-auto mt-4 max-w-xs text-sm leading-relaxed text-muted">
         Fantasy leagues for reality TV. Draft real houseguests, score every HOH, veto, and
         blindside, and chase the board live as episodes air.
       </motion.p>
 
       <motion.div variants={item}>
         <SignInButton mode="modal">
-          <button type="button" className="btn-primary mt-6 w-full py-3.5 text-[16px]">
+          <button type="button" className="btn-primary mt-6 w-full py-3.5 text-md">
             Sign In
           </button>
         </SignInButton>
@@ -62,11 +62,11 @@ export function SignedOutLanding({
       {featured && (
         <motion.div variants={item} className="mt-10 text-left">
           <div className="flex items-center justify-between">
-            <span className="pill flex items-center gap-1.5 bg-brand-gold-soft text-[11px] text-brand-gold-deep">
+            <span className="pill flex items-center gap-1.5 bg-brand-gold-soft text-2xs text-brand-gold-deep">
               <span className="h-1.5 w-1.5 animate-pulse rounded-full bg-danger" />
               Airing now
             </span>
-            <Link href={`/seasons/${featured.seasonSlug}`} className="text-[12px] text-brand-gold-deep">
+            <Link href={`/seasons/${featured.seasonSlug}`} className="text-2xs text-brand-gold-deep">
               {featured.seasonName} →
             </Link>
           </div>
@@ -101,7 +101,7 @@ export function SignedOutLanding({
       <motion.div variants={item} className="mt-10 text-left">
         <div className="flex items-center gap-1.5">
           <span className="h-1.5 w-1.5 animate-pulse rounded-full bg-danger" />
-          <h2 className="text-[13px] font-semibold uppercase tracking-wide text-muted">
+          <h2 className="text-xs font-semibold uppercase tracking-wide text-muted">
             Live: #{LIVE_HASHTAG} on X
           </h2>
         </div>
@@ -110,7 +110,7 @@ export function SignedOutLanding({
         </div>
       </motion.div>
 
-      <motion.div variants={item} className="mt-8 flex items-center justify-center gap-3 text-[13px] text-brand-gold-deep">
+      <motion.div variants={item} className="mt-8 flex items-center justify-center gap-3 text-xs text-brand-gold-deep">
         <Link href="/seasons">Browse seasons</Link>
         <span className="text-muted">·</span>
         <Link href="/rules">See scoring rules</Link>
@@ -135,7 +135,7 @@ function CastTicker({ cast }: { cast: FeaturedCast['cast'] }) {
         {looped.map((c, i) => (
           <div key={`${c.name}-${i}`} className="flex w-16 shrink-0 flex-col items-center gap-1.5">
             <Avatar name={c.name} photoUrl={c.photoUrl} size={56} />
-            <span className="w-full truncate text-center text-[10px] text-muted">{c.name.split(' ')[0]}</span>
+            <span className="w-full truncate text-center text-2xs text-muted">{c.name.split(' ')[0]}</span>
           </div>
         ))}
       </motion.div>
@@ -157,7 +157,7 @@ function HeadlineTicker({ headlines }: { headlines: SeasonHeadline[] }) {
 
   return (
     <div className="card overflow-hidden p-4">
-      <div className="flex items-center gap-1.5 text-[11px] uppercase tracking-wide text-muted">
+      <div className="flex items-center gap-1.5 text-2xs uppercase tracking-wide text-muted">
         <span className="h-1.5 w-1.5 rounded-full bg-brand-gold" />
         Just happened
       </div>
@@ -170,10 +170,10 @@ function HeadlineTicker({ headlines }: { headlines: SeasonHeadline[] }) {
           transition={{ duration: 0.3 }}
           className="mt-2 flex items-center justify-between gap-3"
         >
-          <span className="min-w-0 truncate text-[14px] font-medium">
+          <span className="min-w-0 truncate text-sm font-medium">
             <span className="font-semibold">{headline.contestantName}</span> — {headline.eventLabel}
           </span>
-          <span className={`shrink-0 text-[13px] font-semibold tabular-nums ${pointsTone(headline.points)}`}>
+          <span className={`shrink-0 text-xs font-semibold tabular-nums ${pointsTone(headline.points)}`}>
             {formatPoints(headline.points)}
           </span>
         </motion.div>
@@ -189,8 +189,8 @@ function FeatureRow({ icon, title, body }: { icon: React.ReactNode; title: strin
         {icon}
       </span>
       <span>
-        <span className="block text-[14px] font-semibold">{title}</span>
-        <span className="mt-0.5 block text-[12px] leading-relaxed text-muted">{body}</span>
+        <span className="block text-sm font-semibold">{title}</span>
+        <span className="mt-0.5 block text-2xs leading-relaxed text-muted">{body}</span>
       </span>
     </div>
   );

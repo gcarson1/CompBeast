@@ -14,15 +14,15 @@ export default async function TeamPage({ params }: { params: { teamId: string } 
 
   return (
     <div className="pt-2">
-      <Link href={`/leagues/${team.leagueId}`} className="text-[13px] text-muted">
+      <Link href={`/leagues/${team.leagueId}`} className="text-xs text-muted">
         ← League
       </Link>
 
       <div className="mt-3 flex items-center gap-3">
         <Avatar name={team.ownerName ?? team.name} size={52} />
         <div className="min-w-0">
-          <h1 className="truncate text-[24px] font-semibold tracking-tight">{team.name}</h1>
-          <p className="text-[13px] text-muted">{team.ownerName}</p>
+          <h1 className="truncate text-2xl font-semibold tracking-tight">{team.name}</h1>
+          <p className="text-xs text-muted">{team.ownerName}</p>
         </div>
       </div>
 
@@ -33,19 +33,19 @@ export default async function TeamPage({ params }: { params: { teamId: string } 
       </div>
 
       <section className="mt-6">
-        <h2 className="mb-2 text-[17px] font-semibold">Roster</h2>
+        <h2 className="mb-2 text-lg font-semibold">Roster</h2>
         <ul className="card divide-y divide-hairline">
           {roster.map((player) => (
             <li key={player.contestantId}>
               <Link href={`/players/${player.contestantId}`} className="flex items-center gap-3 p-4">
                 <Avatar name={player.name} photoUrl={player.photoUrl} size={42} dimmed={!player.isActive} />
                 <span className="min-w-0 flex-1">
-                  <span className="block truncate text-[15px] font-semibold">{player.name}</span>
-                  <span className="mt-0.5 block text-[12px] text-muted">
+                  <span className="block truncate text-base font-semibold">{player.name}</span>
+                  <span className="mt-0.5 block text-2xs text-muted">
                     {player.isActive ? 'In the house' : `Evicted · ${player.eliminatedLabel ?? '—'}`}
                   </span>
                 </span>
-                <span className={`text-[16px] font-semibold tabular-nums ${pointsTone(player.points)}`}>
+                <span className={`text-md font-semibold tabular-nums ${pointsTone(player.points)}`}>
                   {formatPoints(player.points)}
                 </span>
               </Link>
@@ -56,14 +56,14 @@ export default async function TeamPage({ params }: { params: { teamId: string } 
 
       {score && score.cycles.length > 0 && (
         <section className="mt-6">
-          <h2 className="mb-2 text-[17px] font-semibold">Week by week</h2>
+          <h2 className="mb-2 text-lg font-semibold">Week by week</h2>
           <div className="card divide-y divide-hairline">
             {score.cycles.map((cycle) => (
               <details key={cycle.cycleId} className="group">
                 <summary className="flex cursor-pointer list-none items-center justify-between p-4">
-                  <span className="text-[15px] font-medium">{cycle.label}</span>
+                  <span className="text-base font-medium">{cycle.label}</span>
                   <span className="flex items-center gap-2">
-                    <span className={`text-[15px] font-semibold tabular-nums ${pointsTone(cycle.points)}`}>
+                    <span className={`text-base font-semibold tabular-nums ${pointsTone(cycle.points)}`}>
                       {formatPoints(cycle.points)}
                     </span>
                     <ChevronIcon />
@@ -72,8 +72,8 @@ export default async function TeamPage({ params }: { params: { teamId: string } 
                 <ul className="space-y-1.5 border-t border-hairline bg-canvas/60 px-4 py-3">
                   {cycle.lines.map((line) => (
                     <li key={line.scoredEventId} className="flex items-center justify-between gap-3">
-                      <span className="min-w-0 flex-1 truncate text-[13px] text-muted">{line.label}</span>
-                      <span className={`text-[13px] font-medium tabular-nums ${pointsTone(line.points)}`}>
+                      <span className="min-w-0 flex-1 truncate text-xs text-muted">{line.label}</span>
+                      <span className={`text-xs font-medium tabular-nums ${pointsTone(line.points)}`}>
                         {formatPoints(line.points)}
                       </span>
                     </li>
@@ -91,8 +91,8 @@ export default async function TeamPage({ params }: { params: { teamId: string } 
 function Stat({ label, value }: { label: string; value: string }) {
   return (
     <div>
-      <div className="text-[20px] font-semibold tabular-nums">{value}</div>
-      <div className="mt-0.5 text-[11px] uppercase tracking-wide text-muted">{label}</div>
+      <div className="text-xl font-semibold tabular-nums">{value}</div>
+      <div className="mt-0.5 text-2xs uppercase tracking-wide text-muted">{label}</div>
     </div>
   );
 }

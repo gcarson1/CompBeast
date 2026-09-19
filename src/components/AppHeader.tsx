@@ -4,7 +4,7 @@ import { SignedIn, SignedOut, SignInButton, UserButton } from '@clerk/nextjs';
 export function AppHeader({ isPlatformAdmin = false }: { isPlatformAdmin?: boolean }) {
   return (
     <header className="sticky top-0 z-20 bg-canvas/90 px-5 pb-2 pt-4 backdrop-blur">
-      <div className="mx-auto flex max-w-md items-center justify-between">
+      <div className="mx-auto flex max-w-md sm:max-w-lg items-center justify-between">
         <Link href="/leagues" aria-label="Comp Beast home">
           <CompBeastLogo />
         </Link>
@@ -20,7 +20,7 @@ export function AppHeader({ isPlatformAdmin = false }: { isPlatformAdmin?: boole
           )}
           <SignedOut>
             <SignInButton mode="modal">
-              <button type="button" className="pill bg-surface px-4 py-2 text-[13px] text-ink shadow-card">
+              <button type="button" className="pill bg-surface px-4 py-2 text-xs text-ink shadow-card">
                 Sign in
               </button>
             </SignInButton>
