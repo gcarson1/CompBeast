@@ -12,6 +12,11 @@ export function AppHeader({ isPlatformAdmin = false }: { isPlatformAdmin?: boole
           {isPlatformAdmin && (
             <Link
               href="/admin/ingestion"
+              // Clerk-protected. Next's default prefetch fires an RSC request
+              // that the middleware redirects to Clerk's own domain, where it
+              // dies on CORS — a failed request and a console error on every
+              // page carrying this link, for a payload that can never arrive.
+              prefetch={false}
               className="grid h-9 w-9 place-items-center rounded-full bg-surface shadow-card"
               aria-label="Ingestion review"
             >

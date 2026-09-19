@@ -32,10 +32,10 @@ export default async function LeaguesPage() {
       <div className="mb-1 flex items-center justify-between">
         <h1 className="text-4xl font-semibold tracking-tight">Leagues</h1>
         <div className="flex gap-2">
-          <Link href="/leagues/join" className="btn-ghost">
+          <Link href="/leagues/join" prefetch={false} className="btn-ghost">
             Join
           </Link>
-          <Link href="/leagues/new" className="btn-primary">
+          <Link href="/leagues/new" prefetch={false} className="btn-primary">
             Create
           </Link>
         </div>
@@ -86,10 +86,10 @@ export default async function LeaguesPage() {
           Start a league for any season, or jump into a friend&apos;s with an invite code.
         </p>
         <div className="mt-3 flex gap-2">
-          <Link href="/leagues/join" className="btn-ghost bg-surface">
+          <Link href="/leagues/join" prefetch={false} className="btn-ghost bg-surface">
             Join
           </Link>
-          <Link href="/leagues/new" className="btn-primary">
+          <Link href="/leagues/new" prefetch={false} className="btn-primary">
             Create
           </Link>
         </div>

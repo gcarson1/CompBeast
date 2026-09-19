@@ -73,6 +73,7 @@ export default async function LeaguePage({ params }: { params: { leagueId: strin
       {drafting && (
         <Link
           href={`/leagues/${league.id}/draft`}
+          prefetch={false}
           className="mt-4 flex items-center justify-between rounded-card border border-brand-gold/30 bg-surface p-4 text-ink transition active:scale-[0.99]"
         >
           <span>
