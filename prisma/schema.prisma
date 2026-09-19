@@ -42,6 +42,8 @@ model User {
   auditedActions ScoreAudit[]
   recordedEvents ScoredEvent[]  @relation("EventRecorder")
   reviewedCandidates IngestedEventCandidate[] @relation("CandidateReviewer")
+  messages       LeagueMessage[]
+  reactions      LeagueMessageReaction[]
 
   @@map("users")
 }
@@ -206,7 +208,6 @@ model League {
   commissionerId   String
   commissioner     User           @relation("LeagueCommissioner", fields: [commissionerId], references: [id])
   isPublic         Boolean        @default(false)
-  requiresApproval Boolean        @default(true)
   rosterSize       Int            @default(5)
   maxTeams         Int            @default(12)
   draftType        DraftType      @default(SNAKE)
@@ -224,9 +225,59 @@ model League {
   members    LeagueMember[]
   teams      Team[]
   draftPicks DraftPick[]
+  messages   LeagueMessage[]
 
   @@index([seasonId])
   @@map("leagues")
+}
+
+/// The league's trash-talk feed: draft coordination, gloating, condolences.
+///
+/// Deliberately league-scoped rather than global. The social pull of a fantasy
+/// league is the specific group of people in it, and a shared room across
+/// leagues would need moderation tooling this app has no business owning yet.
+model LeagueMessage {
+  id        String   @id @default(cuid())
+  leagueId  String
+  league    League   @relation(fields: [leagueId], references: [id], onDelete: Cascade)
+  authorId  String
+  author    User     @relation(fields: [authorId], references: [id])
+  body      String
+  /// Soft delete: an author removing a message should not orphan the replies
+  /// and reactions hanging off it, and a commissioner needs to see that
+  /// something was removed rather than have it vanish mid-argument.
+  deletedAt DateTime?
+  createdAt DateTime @default(now())
+
+  reactions LeagueMessageReaction[]
+
+  // The feed is always "newest in this league", so the index leads with
+  // leagueId and carries createdAt to serve the ordering too.
+  @@index([leagueId, createdAt])
+  @@map("league_messages")
+}
+
+/// Hype (gold) and Shade (red) — the two things anyone actually wants to say
+/// back to a trash-talk post, without opening a full reply thread.
+model LeagueMessageReaction {
+  id        String        @id @default(cuid())
+  messageId String
+  message   LeagueMessage @relation(fields: [messageId], references: [id], onDelete: Cascade)
+  userId    String
+  user      User          @relation(fields: [userId], references: [id])
+  kind      ReactionKind
+  createdAt DateTime      @default(now())
+
+  // One of each kind per person per message; the constraint is what makes the
+  // toggle idempotent under a double-tap.
+  @@unique([messageId, userId, kind])
+  @@index([messageId])
+  @@map("league_message_reactions")
+}
+
+enum ReactionKind {
+  HYPE
+  SHADE
 }
 
 enum DraftType {

@@ -221,7 +221,6 @@ async function main() {
       inviteCode: 'DEMO-BB27',
       commissionerId: users[0].id,
       isPublic: true,
-      requiresApproval: false,
       rosterSize,
       maxTeams: users.length,
       draftType: 'SNAKE',

@@ -36,6 +36,7 @@ export async function getLeagueOverview(leagueId: string) {
       name: true,
       inviteCode: true,
       rosterSize: true,
+      maxTeams: true,
       draftType: true,
       draftStatus: true,
       isPublic: true,
@@ -57,7 +58,94 @@ export async function getLeagueOverview(leagueId: string) {
         },
         orderBy: { draftOrderPosition: 'asc' },
       },
+      // Members were never selected here, so anyone without a team was
+      // invisible on the league page — which, until the join bug was fixed,
+      // was everyone who joined by invite code.
+      members: {
+        where: { status: { not: 'REMOVED' } },
+        select: {
+          role: true,
+          status: true,
+          joinedAt: true,
+          user: { select: { id: true, name: true, handle: true, avatarUrl: true } },
+        },
+        orderBy: { joinedAt: 'asc' },
+      },
     },
+  });
+}
+
+export interface LeagueMessageView {
+  id: string;
+  body: string;
+  createdAt: Date;
+  authorId: string;
+  authorName: string;
+  authorAvatarUrl: string | null;
+  isMine: boolean;
+  hype: number;
+  shade: number;
+  myHype: boolean;
+  myShade: boolean;
+}
+
+/**
+ * The league feed, newest first.
+ *
+ * Reaction counts and the viewer's own reactions are resolved here rather than
+ * in the component so the feed is one round trip: the counts come back grouped
+ * and the viewer's own rows come back as a single scoped query, instead of the
+ * per-message lookups a naive render would produce.
+ */
+export async function getLeagueMessages(
+  leagueId: string,
+  viewerId: string | null,
+  limit = 50,
+): Promise<LeagueMessageView[]> {
+  const messages = await prisma.leagueMessage.findMany({
+    where: { leagueId, deletedAt: null },
+    orderBy: { createdAt: 'desc' },
+    take: limit,
+    select: {
+      id: true,
+      body: true,
+      createdAt: true,
+      authorId: true,
+      author: { select: { name: true, handle: true, avatarUrl: true } },
+      reactions: { select: { kind: true, userId: true } },
+    },
+  });
+
+  return messages.map((message) => {
+    let hype = 0;
+    let shade = 0;
+    let myHype = false;
+    let myShade = false;
+
+    for (const reaction of message.reactions) {
+      const mine = viewerId !== null && reaction.userId === viewerId;
+      if (reaction.kind === 'HYPE') {
+        hype += 1;
+        if (mine) myHype = true;
+      } else {
+        shade += 1;
+        if (mine) myShade = true;
+      }
+    }
+
+    return {
+      id: message.id,
+      body: message.body,
+      createdAt: message.createdAt,
+      authorId: message.authorId,
+      authorName: message.author.name ?? message.author.handle ?? 'Unknown manager',
+      authorAvatarUrl: message.author.avatarUrl,
+      isMine: viewerId !== null && message.authorId === viewerId,
+      hype,
+      shade,
+      myHype,
+      myShade,
+    };
   });
 }
 

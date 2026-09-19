@@ -7,10 +7,13 @@ import {
   DomainError,
   createLeague,
   createLeagueSchema,
+  deleteLeagueMessage,
   joinLeague,
   makeDraftPick,
+  postLeagueMessage,
   refreshLeagueScores,
   startDraft,
+  toggleMessageReaction,
 } from './mutations';
 
 export type ActionState = { error?: string; ok?: boolean };
@@ -117,5 +120,57 @@ export async function refreshScoresAction(
     return { error: messageFor(error) };
   }
   revalidatePath(`/leagues/${leagueId}`);
+  return { ok: true };
+}
+
+// ---------------------------------------------------------------------------
+// League feed
+// ---------------------------------------------------------------------------
+
+export async function postMessageAction(
+  _prev: ActionState,
+  formData: FormData,
+): Promise<ActionState> {
+  const leagueId = String(formData.get('leagueId') ?? '');
+  try {
+    const user = await requireUser();
+    await postLeagueMessage(leagueId, user.id, String(formData.get('body') ?? ''));
+  } catch (error) {
+    return { error: messageFor(error) };
+  }
+  revalidatePath(`/leagues/${leagueId}`);
+  return { ok: true };
+}
+
+export async function toggleReactionAction(
+  _prev: ActionState,
+  formData: FormData,
+): Promise<ActionState> {
+  const kind = formData.get('kind') === 'SHADE' ? ('SHADE' as const) : ('HYPE' as const);
+  try {
+    const user = await requireUser();
+    const { leagueId } = await toggleMessageReaction(
+      String(formData.get('messageId') ?? ''),
+      user.id,
+      kind,
+    );
+    revalidatePath(`/leagues/${leagueId}`);
+  } catch (error) {
+    return { error: messageFor(error) };
+  }
+  return { ok: true };
+}
+
+export async function deleteMessageAction(
+  _prev: ActionState,
+  formData: FormData,
+): Promise<ActionState> {
+  try {
+    const user = await requireUser();
+    const { leagueId } = await deleteLeagueMessage(String(formData.get('messageId') ?? ''), user.id);
+    revalidatePath(`/leagues/${leagueId}`);
+  } catch (error) {
+    return { error: messageFor(error) };
+  }
   return { ok: true };
 }
