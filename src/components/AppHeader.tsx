@@ -20,7 +20,7 @@ export function AppHeader({ isPlatformAdmin = false }: { isPlatformAdmin?: boole
           )}
           <SignedOut>
             <SignInButton mode="modal">
-              <button type="button" className="pill bg-surface px-4 py-2 text-xs text-ink shadow-card">
+              <button type="button" className="btn-ghost btn-sm">
                 Sign in
               </button>
             </SignInButton>
