@@ -32,9 +32,15 @@ brew services start postgresql@16
 createdb compbeast
 ```
 
-Then set `DATABASE_URL` in `.env` to `postgresql://<your-mac-username>@localhost:5432/compbeast?schema=public`
-(a stock Homebrew install has no password and uses your macOS username as the superuser),
-and run:
+Then copy `.env.example` to `.env` and fill it in. All three groups are required:
+
+- `DATABASE_URL` — a stock Homebrew install has no password and uses your macOS
+  username as the superuser.
+- **Clerk keys** — there is no development auth bypass, so every page that asks who you
+  are fails without them.
+- `PLATFORM_ADMIN_EMAILS` — your address, to reach `/admin/ingestion`. It is reconciled
+  on every sign-in, so adding an address promotes an account that already exists the next
+  time it signs in.
 
 ```bash
 npm install
@@ -46,13 +52,11 @@ npm run dev
 If you change `.env` while `npm run dev` is already running, restart it — Next.js reads
 environment variables at boot, not per request.
 
-The seed creates a 16-houseguest *Big Brother 27* season, three scoring rulesets, a
-four-team demo league (invite code `DEMO-BB27`) with a completed snake draft, and three
-weeks of aired results. Season dates are anchored relative to today, so a fresh seed always
-lands mid-season with the next week's roster lock still ahead of you.
-
-Until an auth provider is configured, the app signs you in as the first seeded user
-(`Ali Corak`) in development.
+The seed creates a 16-houseguest **Demo Season** (slug `demo-big-brother`, deliberately
+namespaced away from real season slugs so ingestion can claim those), three scoring
+rulesets, a four-team demo league (invite code `DEMO-BB27`) with a completed snake draft,
+and three weeks of aired results. Season dates are anchored relative to today, so a fresh
+seed always lands mid-season with the next week's roster lock still ahead of you.
 
 ## Architecture
 
@@ -167,9 +171,17 @@ npx tsx scripts/ingest.ts sync      big-brother-28        # weekly results
 Re-run `sync` as episodes air to pull in the new week. Bootstrap is only needed
 once per season, though re-running it refreshes the cycle schedule.
 
-Or use the **Sync** button at `/admin/ingestion`. Both are safe to re-run —
-candidates are upserted on `(sourceSlug, sourceRef)`, so re-syncing an unchanged
-page is a no-op and cannot double-score anyone.
+Or use the **Sync** and **Refresh cast** buttons at `/admin/ingestion`. All of these
+are safe to re-run — candidates are upserted on `(sourceSlug, sourceRef)`, so
+re-syncing an unchanged page is a no-op and cannot double-score anyone, and
+bootstrap matches existing houseguests by source id and only fills in fields that
+are missing.
+
+**Refresh cast** re-runs bootstrap from the browser, which is how a *deployed*
+environment gets cast data the adapter learned to capture after that database was
+first populated — contestant photos, most recently. It matters because the
+alternative is pointing a local shell at production's own `DATABASE_URL`, and
+handling a production credential to fill in one column is a bad trade.
 
 ### Three layers
 
@@ -246,14 +258,36 @@ message, and the `DraftPick` unique constraints on `(leagueId, contestantId)` an
 `(leagueId, pickNumber)` are the real guard — two managers clicking the same houseguest at
 the same instant is a race no in-memory check can win.
 
+## League feed
+
+Each league has its own trash-talk feed on `/leagues/[leagueId]` — posting, Hype/Shade
+reactions, and delete by the author or the commissioner. Membership is the gate, so
+knowing a league's id is not enough to read or write it.
+
+Messages soft-delete. Removing one mid-argument should not orphan the reactions hanging
+off it, and a commissioner needs to see that something *was* removed rather than have it
+silently vanish.
+
+It is refresh-based rather than realtime, on purpose. A live transport is a separate piece
+of infrastructure, and eight people arguing about an eviction do not need one for the
+feature to earn its place. Threaded replies, @-mentions and live updates are the natural
+next step, not a gap left by accident.
+
 ## Tests
 
 ```bash
 npm test
 ```
 
-Covers attribution, voiding, ruleset filtering, snapshot vs. restated scoring, tie ranking,
-float drift, and draft order/validation.
+Pure unit tests cover attribution, voiding, ruleset filtering, snapshot vs. restated
+scoring, tie ranking, float drift, and draft order/validation.
+
+`src/server/league-social.test.ts` is different: it talks to a real database. Joining a
+league and the league feed both live in the interaction between a schema default, a
+transaction, and a query's `where` clause — a bug there once left every joiner with no
+team and invisible on the page, and no amount of pure unit testing would have caught it.
+The file skips itself when no database is reachable, so `npm test` stays green on a
+machine that has never run `db:push`.
 
 ## Adding a show
 
