@@ -1,6 +1,6 @@
 'use client';
 
-import { useEffect, useState, useTransition } from 'react';
+import { useEffect, useState } from 'react';
 import { useFormState, useFormStatus } from 'react-dom';
 import { toast } from 'sonner';
 import { Avatar } from '@/components/Avatar';
@@ -256,6 +256,18 @@ function RespondForm({
   );
 }
 
+/**
+ * Remove a friend, or withdraw a request you sent.
+ *
+ * Removing asks twice — the button turns into "Sure?" and only the second tap
+ * submits — rather than opening a `window.confirm`. A browser dialog is
+ * dismissed by reflex, it cannot be styled, and on a phone it yanks focus out
+ * of the page entirely. The two-tap is the same pattern the delete-league
+ * panel uses, and it reverts on blur so an abandoned "Sure?" does not sit
+ * there armed.
+ *
+ * Withdrawing skips the confirm. Cancelling a request you sent is not lossy.
+ */
 function RemoveFriendForm({
   friendUserId,
   name,
@@ -266,28 +278,44 @@ function RemoveFriendForm({
   withdraw?: boolean;
 }) {
   const [state, formAction] = useFormState<ActionState, FormData>(removeFriendAction, {});
-  const [, startTransition] = useTransition();
+  const [confirming, setConfirming] = useState(false);
 
   useEffect(() => {
     if (state.error) toast.error(state.error);
   }, [state.error]);
 
+  // Never leave the destructive state armed after attention moves elsewhere.
+  useEffect(() => {
+    if (!confirming) return;
+    const id = setTimeout(() => setConfirming(false), 4000);
+    return () => clearTimeout(id);
+  }, [confirming]);
+
+  const needsConfirm = !withdraw && !confirming;
+
   return (
-    <form
-      action={(formData) => startTransition(() => formAction(formData))}
-      onSubmit={(event) => {
-        if (withdraw) return;
-        // The only genuinely lossy action on this page. Everything else here
-        // is reversible in one tap.
-        if (!window.confirm(`Remove ${name} from your friends?`)) event.preventDefault();
-      }}
-    >
+    <form action={formAction} onBlur={() => setConfirming(false)}>
       <input type="hidden" name="friendUserId" value={friendUserId} />
-      <PendingButton
-        label={withdraw ? 'Withdraw' : 'Remove'}
-        pendingLabel="…"
-        ariaLabel={withdraw ? `Withdraw request to ${name}` : `Remove ${name} from friends`}
-      />
+      {needsConfirm ? (
+        <button
+          type="button"
+          onClick={() => setConfirming(true)}
+          aria-label={`Remove ${name} from friends`}
+          className="btn-ghost btn-sm shrink-0"
+        >
+          Remove
+        </button>
+      ) : (
+        <PendingButton
+          label={withdraw ? 'Withdraw' : 'Sure?'}
+          pendingLabel="…"
+          ariaLabel={
+            withdraw
+              ? `Withdraw request to ${name}`
+              : `Confirm removing ${name} from friends`
+          }
+        />
+      )}
     </form>
   );
 }
