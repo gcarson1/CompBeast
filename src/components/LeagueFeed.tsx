@@ -172,6 +172,7 @@ function PostButton({ disabled }: { disabled: boolean }) {
     <button
       type="submit"
       disabled={disabled || pending}
+      aria-busy={pending}
       className="btn-primary btn-sm"
     >
       {pending ? 'Posting…' : 'Post'}
