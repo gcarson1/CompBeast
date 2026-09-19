@@ -1,5 +1,5 @@
 import { prisma } from '../lib/db';
-import { isAtRiskCode } from '../lib/engagement';
+import { atRiskMessage, isAtRiskCode, nearMissMessage } from '../lib/engagement';
 import { computeLeagueSnapshot, computeTeamSnapshot } from '../lib/scoring/repository';
 import type { LeagueScoreSnapshot, TeamScore } from '../lib/scoring/types';
 
@@ -11,8 +11,9 @@ export async function getLeaguesForUser(userId: string) {
       name: true,
       draftStatus: true,
       rosterSize: true,
+      maxTeams: true,
       inviteCode: true,
-      season: { select: { name: true, show: { select: { name: true, slug: true } } } },
+      season: { select: { id: true, name: true, show: { select: { name: true, slug: true } } } },
       scoringRuleset: { select: { name: true, slug: true } },
       _count: { select: { teams: true } },
       teams: {
@@ -21,6 +22,7 @@ export async function getLeaguesForUser(userId: string) {
       },
       members: {
         take: 4,
+        where: { status: { not: 'REMOVED' } },
         select: { user: { select: { name: true, handle: true } } },
       },
     },
@@ -592,53 +594,57 @@ export async function getRuleBook(showSlug: string) {
   });
 }
 
-export interface UserTeamSummary {
-  teamId: string;
-  teamName: string;
+export interface HomeLeagueCard {
   leagueId: string;
   leagueName: string;
   showName: string;
   seasonName: string;
+  rulesetName: string;
+  draftStatus: string;
+  inviteCode: string;
+  teamCount: number;
+  maxTeams: number;
+  memberNames: string[];
+  /** Null when someone is a member of the league but owns no team in it. */
+  teamId: string | null;
+  teamName: string | null;
   rank: number;
   totalPoints: number;
   lastCyclePoints: number;
-  rows: LeaderboardRow[];
+  nearMiss: string | null;
+  atRisk: string | null;
   currentCycleLabel: string | null;
   locksAt: Date | null;
   cycleLocked: boolean;
-  atRiskNames: string[];
 }
 
 /**
- * Everything the home dashboard needs for every team a user owns, composed
- * from the same query functions the league and team pages already use, so
- * the dashboard can never drift out of sync with what those pages show.
+ * One card per league the user is in, carrying both the league itself and how
+ * that user's team is doing in it.
+ *
+ * Built from the same query functions the league and team pages already use,
+ * so the home page can never drift out of sync with what those pages show.
+ * It starts from league *membership* rather than from owned teams: someone
+ * who joined but has no team yet still belongs on their own home page, and
+ * keying off teams is exactly the mistake that once made joiners invisible.
+ *
+ * The near-miss and at-risk lines are formatted here rather than in the
+ * component so the full leaderboard never has to cross to the client just to
+ * compute a one-line string from it.
  */
-export async function getUserTeams(userId: string): Promise<UserTeamSummary[]> {
-  const teams = await prisma.team.findMany({
-    where: { ownerId: userId },
-    select: {
-      id: true,
-      league: {
-        select: {
-          id: true,
-          name: true,
-          season: { select: { id: true, name: true, show: { select: { name: true } } } },
-        },
-      },
-    },
-    orderBy: { createdAt: 'desc' },
-  });
+export async function getHomeLeagues(userId: string): Promise<HomeLeagueCard[]> {
+  const leagues = await getLeaguesForUser(userId);
 
   return Promise.all(
-    teams.map(async (team): Promise<UserTeamSummary> => {
+    leagues.map(async (league): Promise<HomeLeagueCard> => {
+      const myTeam = league.teams[0] ?? null;
       const [{ rows }, detail, currentCycle] = await Promise.all([
-        getLeagueLeaderboard(team.league.id),
-        getTeamDetail(team.id),
-        getCurrentCycle(team.league.season.id),
+        getLeagueLeaderboard(league.id),
+        myTeam ? getTeamDetail(myTeam.id) : Promise.resolve(null),
+        getCurrentCycle(league.season.id),
       ]);
 
-      const mine = rows.find((r) => r.teamId === team.id);
+      const mine = myTeam ? rows.find((r) => r.teamId === myTeam.id) : undefined;
       const cycleLocked =
         currentCycle !== null &&
         (currentCycle.status !== 'UPCOMING' || Date.now() >= currentCycle.locksAt.getTime());
@@ -658,20 +664,26 @@ export async function getUserTeams(userId: string): Promise<UserTeamSummary[]> {
       ];
 
       return {
-        teamId: team.id,
-        teamName: detail?.team.name ?? '',
-        leagueId: team.league.id,
-        leagueName: team.league.name,
-        showName: team.league.season.show.name,
-        seasonName: team.league.season.name,
+        leagueId: league.id,
+        leagueName: league.name,
+        showName: league.season.show.name,
+        seasonName: league.season.name,
+        rulesetName: league.scoringRuleset.name,
+        draftStatus: league.draftStatus,
+        inviteCode: league.inviteCode,
+        teamCount: league._count.teams,
+        maxTeams: league.maxTeams,
+        memberNames: league.members.map((m) => m.user.name ?? m.user.handle ?? '?'),
+        teamId: myTeam?.id ?? null,
+        teamName: myTeam?.name ?? null,
         rank: mine?.rank ?? 0,
         totalPoints: mine?.totalPoints ?? 0,
         lastCyclePoints: mine?.lastCyclePoints ?? 0,
-        rows,
+        nearMiss: myTeam ? nearMissMessage(rows, myTeam.id) : null,
+        atRisk: atRiskMessage(atRiskNames),
         currentCycleLabel: currentCycle?.label ?? null,
         locksAt: currentCycle?.locksAt ?? null,
         cycleLocked,
-        atRiskNames,
       };
     }),
   );

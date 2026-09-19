@@ -1,6 +1,7 @@
 import Link from 'next/link';
 import { notFound } from 'next/navigation';
 import { Avatar } from '@/components/Avatar';
+import { InviteCode } from '@/components/InviteCode';
 import { Leaderboard } from '@/components/Leaderboard';
 import { LeagueFeed } from '@/components/LeagueFeed';
 import { getCurrentUser } from '@/lib/auth';
@@ -172,16 +173,16 @@ export default async function LeaguePage({ params }: { params: { leagueId: strin
         <p className="mt-2 px-1 text-2xs leading-relaxed text-muted">
           {openSeats === 0
             ? 'Every seat is taken — this league is full.'
-            : `Share the invite code below to fill the last ${openSeats} ${
-                openSeats === 1 ? 'seat' : 'seats'
-              }.`}
+            : `${openSeats} ${
+                openSeats === 1 ? 'seat is' : 'seats are'
+              } still open — tap the invite code below to copy it, or show the QR code for someone to scan.`}
         </p>
       </section>
 
         <section className="mt-6">
           <h2 className="mb-2 text-lg font-semibold">League</h2>
           <div className="card divide-y divide-hairline">
-            <Row label="Invite code" value={league.inviteCode} />
+            <InviteCode code={league.inviteCode} leagueName={league.name} />
             <Row label="Scoring" value={league.scoringRuleset.name} href="/rules" />
             <Row label="Draft" value={`${league.draftType.toLowerCase()} · ${league.rosterSize} rounds`} />
             <Row label="Visibility" value={league.isPublic ? 'Public' : 'Private'} />

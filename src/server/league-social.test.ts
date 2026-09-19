@@ -7,7 +7,7 @@ import {
   postLeagueMessage,
   toggleMessageReaction,
 } from './mutations';
-import { getLeagueMessages, getLeagueOverview } from './queries';
+import { getHomeLeagues, getLeagueMessages, getLeagueOverview } from './queries';
 
 /**
  * Integration coverage for joining a league and for the league feed.
@@ -269,5 +269,73 @@ describe.skipIf(!dbReady)('the league feed', () => {
 
     await expect(postLeagueMessage(league.id, alice, '   ')).rejects.toThrow();
     await expect(postLeagueMessage(league.id, alice, 'x'.repeat(501))).rejects.toThrow();
+  });
+});
+
+/**
+ * The home page's league rail.
+ *
+ * `getHomeLeagues` is keyed off league *membership*, not off owned teams.
+ * That distinction is the whole bug this file was written for: keying off
+ * teams is what made joiners disappear, and the home page is the one screen
+ * where a league you are in silently missing would be least obvious.
+ */
+describe.skipIf(!dbReady)('the home league rail', () => {
+  it('shows a league to every member, not just the commissioner', async () => {
+    const league = await makeLeague(alice, 'Alice Squad');
+    await joinLeague(bob, await inviteCodeFor(league.id), 'Bob Squad');
+
+    const [forAlice, forBob] = await Promise.all([
+      getHomeLeagues(alice),
+      getHomeLeagues(bob),
+    ]);
+
+    expect(forAlice.map((l) => l.leagueId)).toContain(league.id);
+    expect(forBob.map((l) => l.leagueId)).toContain(league.id);
+  });
+
+  it('carries each viewer their own team, not the commissioner’s', async () => {
+    const league = await makeLeague(alice, 'Alice Squad');
+    await joinLeague(bob, await inviteCodeFor(league.id), 'Bob Squad');
+
+    const card = (await getHomeLeagues(bob)).find((l) => l.leagueId === league.id)!;
+
+    expect(card.teamName).toBe('Bob Squad');
+    expect(card.teamId).not.toBeNull();
+    expect(card.teamCount).toBe(2);
+    expect(card.maxTeams).toBe(4);
+  });
+
+  it('still returns a card when the member owns no team', async () => {
+    const league = await makeLeague(alice, 'Alice Squad');
+    await joinLeague(bob, await inviteCodeFor(league.id), 'Bob Squad');
+
+    // A membership with no team is the state the join bug used to leave
+    // people in. The rail has to render it rather than drop the league.
+    await prisma.team.deleteMany({ where: { leagueId: league.id, ownerId: bob } });
+
+    const card = (await getHomeLeagues(bob)).find((l) => l.leagueId === league.id);
+
+    expect(card).toBeDefined();
+    expect(card!.teamId).toBeNull();
+    expect(card!.teamName).toBeNull();
+    expect(card!.rank).toBe(0);
+  });
+
+  it('leaves out a league the viewer is not in', async () => {
+    const league = await makeLeague(alice, 'Alice Squad');
+
+    const cards = await getHomeLeagues(outsider);
+
+    expect(cards.map((l) => l.leagueId)).not.toContain(league.id);
+  });
+
+  it('exposes the invite code the QR and copy button share', async () => {
+    const league = await makeLeague(alice, 'Alice Squad');
+
+    const card = (await getHomeLeagues(alice)).find((l) => l.leagueId === league.id)!;
+
+    expect(card.inviteCode).toBe(await inviteCodeFor(league.id));
+    expect(card.inviteCode.length).toBeGreaterThan(0);
   });
 });

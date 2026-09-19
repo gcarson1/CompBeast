@@ -173,12 +173,16 @@ const joinLeagueSchema = z.object({
 });
 type JoinLeagueFields = z.infer<typeof joinLeagueSchema>;
 
-export function JoinLeagueForm() {
+export function JoinLeagueForm({ defaultCode = '' }: { defaultCode?: string }) {
   const [state, formAction] = useFormState<ActionState, FormData>(joinLeagueAction, {});
   const {
     register,
     formState: { errors },
-  } = useForm<JoinLeagueFields>({ resolver: zodResolver(joinLeagueSchema), mode: 'onChange' });
+  } = useForm<JoinLeagueFields>({
+    resolver: zodResolver(joinLeagueSchema),
+    mode: 'onChange',
+    defaultValues: { inviteCode: defaultCode },
+  });
 
   useEffect(() => {
     if (state.error) toast.error(state.error);
@@ -194,6 +198,10 @@ export function JoinLeagueForm() {
           id="inviteCode"
           className="field uppercase tracking-widest"
           placeholder="DEMO-BB27"
+          // Also set on the DOM node, not just in RHF's defaultValues, so a
+          // scanned QR code arrives filled in in the server-rendered HTML —
+          // before hydration, and with JavaScript off.
+          defaultValue={defaultCode}
           autoCapitalize="characters"
           autoComplete="off"
           spellCheck={false}

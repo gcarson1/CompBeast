@@ -258,6 +258,36 @@ message, and the `DraftPick` unique constraints on `(leagueId, contestantId)` an
 `(leagueId, pickNumber)` are the real guard — two managers clicking the same houseguest at
 the same instant is a race no in-memory check can win.
 
+## Home
+
+`/leagues` is the home page in both signed-out and signed-in states, and `/` redirects
+there — every link in the app (the logo, the bottom nav, the back link on every league
+page) already pointed at it, so the redirect goes this way round rather than costing a hop
+on every tap.
+
+Signed in, the leagues sit in a horizontally scrolling rail, one card per league, carrying
+that viewer's own team: points, rank, last cycle, roster lock, and the near-miss or
+at-risk line. The rail is keyed off league *membership*, not owned teams — someone who
+joined but has no team yet still sees the league, which is the bug class that once made
+joiners invisible and is covered by `src/server/league-social.test.ts`.
+
+Below the rail is the same live block the signed-out page shows: the airing cast, the last
+scored events, and the `#BB28` timeline. It is one `<LiveSection />` used by both, so the
+two cannot drift, and "what is happening in the house right now" is the reason to open the
+app in either state.
+
+### Sharing a league
+
+The invite code on a league page is a button: tapping it copies the code. The QR button
+beside it opens a modal with a scannable code encoding `/leagues/join?code=…`, so scanning
+lands on the join form with the code already filled in. The origin is read from
+`window.location`, so the code is correct on localhost, on a preview deployment and in
+production with no env var to keep in sync, and the query string survives Clerk's sign-in
+redirect for someone scanning without an account.
+
+The QR encoder is a lazily-imported chunk fetched on first open, since most league page
+views never open it.
+
 ## League feed
 
 Each league has its own trash-talk feed on `/leagues/[leagueId]` — posting, Hype/Shade
@@ -283,11 +313,14 @@ Pure unit tests cover attribution, voiding, ruleset filtering, snapshot vs. rest
 scoring, tie ranking, float drift, and draft order/validation.
 
 `src/server/league-social.test.ts` is different: it talks to a real database. Joining a
-league and the league feed both live in the interaction between a schema default, a
-transaction, and a query's `where` clause — a bug there once left every joiner with no
-team and invisible on the page, and no amount of pure unit testing would have caught it.
-The file skips itself when no database is reachable, so `npm test` stays green on a
-machine that has never run `db:push`.
+league, the league feed, and the home rail all live in the interaction between a schema
+default, a transaction, and a query's `where` clause — a bug there once left every joiner
+with no team and invisible on the page, and no amount of pure unit testing would have
+caught it. The file skips itself when no database is reachable, so `npm test` stays green
+on a machine that has never run `db:push`.
+
+Both database-backed files were checked by reintroducing the bug they exist for and
+confirming the right tests — and only those — fail. A test that cannot fail is decoration.
 
 ## Adding a show
 
