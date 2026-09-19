@@ -33,7 +33,9 @@ export function LiveSection({
   headlines: SeasonHeadline[];
 }) {
   return (
-    <div className="space-y-6 text-left">
+    // No `text-left` here any more — the page is left-aligned by default now,
+    // so it was only ever undoing a `text-center` on the landing page.
+    <div className="space-y-6">
       {featured && featured.cast.length > 0 && (
         <div>
           <div className="mb-3 flex items-center justify-between">

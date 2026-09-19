@@ -164,7 +164,7 @@ export function CandidateCard({ candidate }: { candidate: PendingCandidate }) {
 function SubmitButton({ label, pendingLabel }: { label: string; pendingLabel: string }) {
   const { pending } = useFormStatus();
   return (
-    <button type="submit" disabled={pending} className="btn-primary text-xs disabled:opacity-50">
+    <button type="submit" disabled={pending} aria-busy={pending} className="btn-primary text-xs disabled:opacity-50">
       {pending ? pendingLabel : label}
     </button>
   );
@@ -176,6 +176,7 @@ function GhostSubmitButton({ label, pendingLabel }: { label: string; pendingLabe
     <button
       type="submit"
       disabled={pending}
+      aria-busy={pending}
       className="btn-ghost text-xs disabled:opacity-50"
     >
       {pending ? pendingLabel : label}

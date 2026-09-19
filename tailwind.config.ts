@@ -72,14 +72,26 @@ const config: Config = {
         '5xl': ['2.625rem', { lineHeight: '1' }], // 42px — landing hero
         '6xl': ['3.5rem', { lineHeight: '1' }], // 56px — score readout
       },
+      maxWidth: {
+        /**
+         * Body-copy measure. 60–80 characters is the readable band; `ch` keys
+         * that to the rendered font rather than to a pixel guess, so it holds
+         * when someone raises their browser's base font size.
+         */
+        measure: '68ch',
+      },
       boxShadow: {
-        // Dark UI reads elevation from a light top edge far more than from a
-        // drop shadow; the shadow alone just muddies against a near-black
-        // canvas. Inset hairline first, then a soft ambient shadow.
-        card: 'inset 0 1px 0 rgba(248,250,252,0.06), 0 1px 2px rgba(0,0,0,0.3), 0 8px 24px rgba(0,0,0,0.28)',
-        raised:
-          'inset 0 1px 0 rgba(248,250,252,0.08), 0 2px 4px rgba(0,0,0,0.34), 0 12px 32px rgba(0,0,0,0.34)',
-        nav: '0 -1px 0 rgba(0,0,0,0.4)',
+        /**
+         * Boundaries come from the 1px hairline border on `.card` and from the
+         * surface/canvas value step. The shadow only adds the light top edge
+         * that reads as elevation on a dark UI.
+         *
+         * This used to end in `0 8px 24px rgba(0,0,0,0.28)` — a 28% ambient
+         * drop shadow, which on a near-black canvas is not elevation, it is
+         * just a smudge. The ambient pass is now 4%: present on the darker
+         * card-on-card cases, invisible everywhere it was only adding weight.
+         */
+        card: 'inset 0 1px 0 rgba(248,250,252,0.06), 0 1px 2px rgba(0,0,0,0.04)',
       },
     },
   },

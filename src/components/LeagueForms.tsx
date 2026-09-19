@@ -263,6 +263,10 @@ function SubmitButton({ label }: { label: string }) {
     <button
       type="submit"
       disabled={pending}
+      // `disabled` alone tells a screen reader the control went away, not
+      // that it is working. aria-busy is the state; the label swap is only
+      // the visual half of it.
+      aria-busy={pending}
       className="btn-primary w-full py-3 text-base disabled:opacity-50"
     >
       {pending ? 'Working…' : label}
