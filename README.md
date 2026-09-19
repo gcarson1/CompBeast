@@ -272,7 +272,7 @@ joined but has no team yet still sees the league, which is the bug class that on
 joiners invisible and is covered by `src/server/league-social.test.ts`.
 
 Below the rail is the same live block the signed-out page shows: the airing cast, the last
-scored events, and the `#BB28` timeline. It is one `<LiveSection />` used by both, so the
+scored events, and the buzz panel. It is one `<LiveSection />` used by both, so the
 two cannot drift, and "what is happening in the house right now" is the reason to open the
 app in either state.
 
@@ -324,6 +324,41 @@ transport here for the same reason the league feed has none. Following an alert
 marks it read via a `keepalive` fetch rather than a server action, because the
 click navigates at the same time and a server action's POST races that
 navigation.
+
+## Latest buzz
+
+The home page's buzz panel used to be an embedded X timeline. It did not work,
+and it could not be made to work from our side:
+
+- X retired embedded **search/hashtag** timelines. `widgets.js` parses
+  `twitter.com/search?q=…` as a *profile* for a user literally named `search`,
+  and the resulting iframe renders at zero height.
+- Profile timelines fare no better here — X's own embed generator at
+  `publish.x.com` renders `@BigBrother` at zero height too.
+- Scraping X server-side is not an option: `syndication.twitter.com` answers
+  unauthenticated non-browser requests with `429`.
+
+So the panel now reads RSS, on the server, cached for 15 minutes. Sources are
+tried in order and the first with content wins:
+
+1. **X API v2** — real X content, and what the panel is still named after. Only
+   active when `X_BEARER_TOKEN` is set, because the recent-search endpoint is
+   behind a paid plan. Setting the variable makes X primary with no code change.
+2. **The show's own community feed** — registered per `Show.slug` in
+   `src/lib/social-feed/index.ts`. Big Brother maps to Big Brother Junkies, the
+   same source ingestion already uses.
+3. **Google News**, queried by the show's *name*. This is the universal fallback
+   and is why the module stays show-agnostic: a new show needs no entry anywhere
+   to get a working panel.
+
+Every layer degrades rather than throws — a slow or blocked third party leaves
+an empty panel with a link to the X hashtag, never a broken page. Parsing is a
+pure function tested against saved fixtures, so the suite never touches the
+network.
+
+This is also faster than the embed ever was. `widgets.js` was the heaviest thing
+on the page and the main-thread hog that stalled the cast marquee; the panel now
+ships zero client JavaScript and no iframe.
 
 ## Roster locks
 

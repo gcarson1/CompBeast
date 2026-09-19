@@ -1,13 +1,17 @@
 import Link from 'next/link';
 import { CastTicker, type TickerCastMember } from '@/components/CastTicker';
 import { HeadlineTicker } from '@/components/HeadlineTicker';
-import { TwitterFeed } from '@/components/TwitterFeed';
+import { SocialFeed } from '@/components/SocialFeed';
+import type { SocialBuzz } from '@/lib/social-feed';
 import type { SeasonHeadline } from '@/server/queries';
 
 export interface FeaturedCast {
   seasonId: string;
   seasonSlug: string;
   seasonName: string;
+  /** Drives the buzz feed's query, which is why it is show-agnostic. */
+  showName: string;
+  showSlug: string;
   cast: TickerCastMember[];
 }
 
@@ -22,15 +26,18 @@ export const LIVE_HASHTAG = 'BB28';
  * events, and the community timeline.
  *
  * Shared verbatim between the signed-out landing page and the signed-in home
- * page so the two can't drift. It is a server component; only the pieces that
- * genuinely need the client (the headline crossfade, the X embed) are.
+ * page so the two can't drift. It is a server component; the headline
+ * crossfade is now the only piece here that needs the client at all, since
+ * the buzz feed replaced an embedded widget with server-rendered links.
  */
 export function LiveSection({
   featured,
   headlines,
+  buzz,
 }: {
   featured: FeaturedCast | null;
   headlines: SeasonHeadline[];
+  buzz: SocialBuzz;
 }) {
   return (
     // No `text-left` here any more — the page is left-aligned by default now,
@@ -56,17 +63,7 @@ export function LiveSection({
 
       {headlines.length > 0 && <HeadlineTicker headlines={headlines} />}
 
-      <div>
-        <div className="flex items-center gap-1.5">
-          <span className="h-1.5 w-1.5 animate-pulse rounded-full bg-danger" />
-          <h2 className="text-xs font-semibold uppercase tracking-wide text-muted">
-            Live: #{LIVE_HASHTAG} on X
-          </h2>
-        </div>
-        <div className="card mt-3 overflow-hidden p-1">
-          <TwitterFeed hashtag={LIVE_HASHTAG} />
-        </div>
-      </div>
+      <SocialFeed buzz={buzz} hashtag={LIVE_HASHTAG} />
     </div>
   );
 }
