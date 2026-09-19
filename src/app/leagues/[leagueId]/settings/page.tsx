@@ -24,6 +24,7 @@ export default async function LeagueSettingsPage({
       rosterSize: true,
       maxTeams: true,
       isPublic: true,
+      lockOffsetMinutes: true,
       draftStatus: true,
       season: { select: { showId: true, name: true, show: { select: { name: true } } } },
       _count: { select: { teams: true, members: true } },
@@ -61,6 +62,7 @@ export default async function LeagueSettingsPage({
           rosterSize: league.rosterSize,
           maxTeams: league.maxTeams,
           isPublic: league.isPublic,
+          lockOffsetMinutes: league.lockOffsetMinutes,
           draftStarted: league.draftStatus !== 'NOT_STARTED',
           teamCount: league._count.teams,
         }}

@@ -1,4 +1,5 @@
 import { z } from 'zod';
+import { MAX_LOCK_OFFSET_MINUTES } from './cycles';
 
 // Schemas shared between server mutations and client forms. Kept in its own
 // dependency-free module (no Prisma, no auth) so a 'use client' component can
@@ -65,4 +66,22 @@ export const updateLeagueSchema = z.object({
     .min(2, 'A league needs room for at least 2 teams')
     .max(24, 'Leagues cap at 24 teams'),
   isPublic: z.coerce.boolean().default(false),
+  /**
+   * Minutes before airtime that this league's rosters lock. Null means "use
+   * the season's own deadline".
+   *
+   * `preprocess` rather than `z.coerce.number().nullable()`: coercion runs
+   * first and turns an empty form field into `Number('') === 0`, which is a
+   * real and *different* setting — lock exactly at airtime. The empty select
+   * option has to survive as null.
+   */
+  lockOffsetMinutes: z.preprocess(
+    (value) => (value === '' || value == null ? null : Number(value)),
+    z
+      .number({ invalid_type_error: 'Pick a roster lock time' })
+      .int('Lock offset must be a whole number of minutes')
+      .min(0, 'Rosters cannot lock after the episode airs')
+      .max(MAX_LOCK_OFFSET_MINUTES, 'Rosters cannot lock more than 24 hours before airtime')
+      .nullable(),
+  ),
 });

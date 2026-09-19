@@ -2,6 +2,7 @@ import { PrismaClient } from '@prisma/client';
 import { afterAll, beforeAll, describe, expect, it } from 'vitest';
 import { createLeague, deleteLeague, joinLeague, startDraft, updateLeague } from './mutations';
 import { getNotifications, getUnreadNotificationCount, markAllNotificationsRead, markNotificationRead } from './notifications';
+import { getHomeLeagues } from './queries';
 import {
   getFriendOverview,
   getInvitableFriends,
@@ -407,6 +408,7 @@ describe.skipIf(!dbReady)('league settings', () => {
       rosterSize: 2,
       maxTeams: 4,
       isPublic: false,
+      lockOffsetMinutes: null,
     });
 
     const after = await prisma.league.findUniqueOrThrow({
@@ -431,6 +433,7 @@ describe.skipIf(!dbReady)('league settings', () => {
       rosterSize: 4,
       maxTeams: 4,
       isPublic: false,
+      lockOffsetMinutes: null,
     });
 
     const notifications = await getNotifications(other);
@@ -450,6 +453,7 @@ describe.skipIf(!dbReady)('league settings', () => {
         rosterSize: 2,
         maxTeams: 4,
         isPublic: false,
+        lockOffsetMinutes: null,
       }),
     ).rejects.toThrow();
   });
@@ -471,6 +475,7 @@ describe.skipIf(!dbReady)('league settings', () => {
         rosterSize: 2,
         maxTeams: 2,
         isPublic: false,
+        lockOffsetMinutes: null,
       }),
     ).rejects.toMatchObject({ code: 'MAX_TEAMS_BELOW_CURRENT' });
   });
@@ -489,6 +494,7 @@ describe.skipIf(!dbReady)('league settings', () => {
         rosterSize: 5,
         maxTeams: 4,
         isPublic: false,
+        lockOffsetMinutes: null,
       }),
     ).rejects.toMatchObject({ code: 'ROSTER_SIZE_LOCKED' });
   });
@@ -508,8 +514,138 @@ describe.skipIf(!dbReady)('league settings', () => {
         rosterSize: 2,
         maxTeams: 4,
         isPublic: false,
+        lockOffsetMinutes: null,
       }),
     ).rejects.toMatchObject({ code: 'RULESET_LOCKED' });
+  });
+});
+
+describe.skipIf(!dbReady)('roster lock offset', () => {
+  it('persists the offset and clears it back to the season default', async () => {
+    const host = await makeUser('lock-off');
+    const league = await makeLeague(host);
+
+    await updateLeague(league.id, host, {
+      name: league.name,
+      scoringRulesetId: rulesetId,
+      rosterSize: 2,
+      maxTeams: 4,
+      isPublic: false,
+      lockOffsetMinutes: 60,
+    });
+    expect(
+      (await prisma.league.findUniqueOrThrow({
+        where: { id: league.id },
+        select: { lockOffsetMinutes: true },
+      })).lockOffsetMinutes,
+    ).toBe(60);
+
+    // Null is a real choice, not an absent field: back to the season schedule.
+    await updateLeague(league.id, host, {
+      name: league.name,
+      scoringRulesetId: rulesetId,
+      rosterSize: 2,
+      maxTeams: 4,
+      isPublic: false,
+      lockOffsetMinutes: null,
+    });
+    expect(
+      (await prisma.league.findUniqueOrThrow({
+        where: { id: league.id },
+        select: { lockOffsetMinutes: true },
+      })).lockOffsetMinutes,
+    ).toBeNull();
+  });
+
+  it('keeps zero, rather than treating it as no preference', async () => {
+    const host = await makeUser('lock-zero');
+    const league = await makeLeague(host);
+
+    // 0 means "lock exactly at airtime" — a real, later deadline than the
+    // season default. A falsy check would silently store null instead.
+    await updateLeague(league.id, host, {
+      name: league.name,
+      scoringRulesetId: rulesetId,
+      rosterSize: 2,
+      maxTeams: 4,
+      isPublic: false,
+      lockOffsetMinutes: 0,
+    });
+
+    const saved = await prisma.league.findUniqueOrThrow({
+      where: { id: league.id },
+      select: { lockOffsetMinutes: true },
+    });
+    expect(saved.lockOffsetMinutes).toBe(0);
+  });
+
+  it('moves the deadline the home rail shows', async () => {
+    const host = await makeUser('lock-rail');
+    const league = await makeLeague(host);
+
+    const seasonDefault = (await getHomeLeagues(host)).find((l) => l.leagueId === league.id)!;
+    if (seasonDefault.locksAt === null) return; // season has no scheduled cycle
+
+    await updateLeague(league.id, host, {
+      name: league.name,
+      scoringRulesetId: rulesetId,
+      rosterSize: 2,
+      maxTeams: 4,
+      isPublic: false,
+      lockOffsetMinutes: 1440,
+    });
+
+    const shifted = (await getHomeLeagues(host)).find((l) => l.leagueId === league.id)!;
+    const cycle = await prisma.cycle.findFirstOrThrow({
+      where: { seasonId, status: { not: 'SCORED' } },
+      orderBy: { sequence: 'asc' },
+      select: { airsAt: true },
+    });
+
+    // This is the whole point of the wiring: the rail's countdown has to be
+    // this league's deadline, not the season's.
+    if (cycle.airsAt) {
+      expect(shifted.locksAt!.getTime()).toBe(cycle.airsAt.getTime() - 1440 * 60_000);
+      expect(shifted.locksAt!.getTime()).not.toBe(seasonDefault.locksAt.getTime());
+    }
+  });
+
+  it('tells members the deadline moved', async () => {
+    const host = await makeUser('lock-notify');
+    const other = await makeUser('lock-notify-2');
+    const league = await makeLeague(host);
+    await joinLeague(other, await inviteCodeFor(league.id), 'Other Squad');
+    await markAllNotificationsRead(other);
+
+    await updateLeague(league.id, host, {
+      name: league.name,
+      scoringRulesetId: rulesetId,
+      rosterSize: 2,
+      maxTeams: 4,
+      isPublic: false,
+      lockOffsetMinutes: 120,
+    });
+
+    const notifications = await getNotifications(other);
+    const notice = notifications.find((n) => n.type === 'LEAGUE_UPDATED');
+    expect(notice).toBeDefined();
+    expect(notice!.body).toContain('2 hours before airtime');
+  });
+
+  it('rejects an offset that would lock after the episode airs', async () => {
+    const host = await makeUser('lock-neg');
+    const league = await makeLeague(host);
+
+    await expect(
+      updateLeague(league.id, host, {
+        name: league.name,
+        scoringRulesetId: rulesetId,
+        rosterSize: 2,
+        maxTeams: 4,
+        isPublic: false,
+        lockOffsetMinutes: -30,
+      }),
+    ).rejects.toThrow();
   });
 });
 

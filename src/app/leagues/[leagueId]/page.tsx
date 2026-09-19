@@ -6,6 +6,7 @@ import { InviteFriends } from '@/components/InviteFriends';
 import { Leaderboard } from '@/components/Leaderboard';
 import { LeagueFeed } from '@/components/LeagueFeed';
 import { getCurrentUser } from '@/lib/auth';
+import { effectiveLockAt, isCycleLocked } from '@/lib/cycles';
 import { atRiskMessage, isAtRiskCode, nearMissMessage } from '@/lib/engagement';
 import { relativeTime } from '@/lib/ui';
 import { getInvitableFriends } from '@/server/social';
@@ -37,9 +38,10 @@ export default async function LeaguePage({ params }: { params: { leagueId: strin
   const myTeamDetail = myTeam ? await getTeamDetail(myTeam.id) : null;
   const isCommissioner = user?.id === league.commissionerId;
   const drafting = league.draftStatus !== 'COMPLETED';
+  // This league's deadline, not the season's — see src/lib/cycles.ts.
   const cycleLocked =
-    currentCycle !== null &&
-    (currentCycle.status !== 'UPCOMING' || Date.now() >= currentCycle.locksAt.getTime());
+    currentCycle !== null && isCycleLocked(currentCycle, league.lockOffsetMinutes);
+  const locksAt = currentCycle ? effectiveLockAt(currentCycle, league.lockOffsetMinutes) : null;
 
   const nearMiss = myTeam ? nearMissMessage(rows, myTeam.id) : null;
   const myRosterNames = new Map((myTeamDetail?.roster ?? []).map((p) => [p.contestantId, p.name]));
@@ -103,14 +105,14 @@ export default async function LeaguePage({ params }: { params: { leagueId: strin
         </Link>
       )}
 
-      {currentCycle && (
+      {currentCycle && locksAt && (
         <div className="card mt-4 flex items-center justify-between p-4">
           <span>
             <span className="block text-base font-semibold">{currentCycle.label}</span>
             <span className="mt-0.5 block text-xs text-muted">
               {cycleLocked
-                ? `Locked ${relativeTime(currentCycle.locksAt)}`
-                : `Rosters lock ${relativeTime(currentCycle.locksAt)}`}
+                ? `Locked ${relativeTime(locksAt)}`
+                : `Rosters lock ${relativeTime(locksAt)}`}
             </span>
           </span>
           <span

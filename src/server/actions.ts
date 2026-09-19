@@ -150,6 +150,7 @@ export async function updateLeagueAction(
       rosterSize: formData.get('rosterSize'),
       maxTeams: formData.get('maxTeams'),
       isPublic: formData.get('isPublic') === 'on',
+      lockOffsetMinutes: formData.get('lockOffsetMinutes'),
     });
     await updateLeague(leagueId, user.id, parsed);
   } catch (error) {
