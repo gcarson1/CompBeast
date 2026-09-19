@@ -4,6 +4,7 @@ import { useFormState, useFormStatus } from 'react-dom';
 import {
   approveCandidateAction,
   rejectCandidateAction,
+  runBootstrapAction,
   runSyncAction,
   type IngestionActionState,
 } from '@/server/ingestion-actions';
@@ -22,31 +23,63 @@ export interface PendingCandidate {
   resolvable: boolean;
 }
 
-export function SyncButton({
+/**
+ * One source-backed season, with both things an admin can trigger against it:
+ * `Sync` reads the results grid and publishes events, `Refresh cast` re-runs
+ * the season bootstrap to pull cast fields the adapter can now capture but
+ * this environment's database predates (photos).
+ *
+ * The card is a plain element wrapping two sibling forms rather than being a
+ * form itself — HTML has no valid way to nest them, and each action carries
+ * its own pending state and result message.
+ */
+export function SeasonSourceCard({
   sourceSlug,
   seasonSlug,
   seasonName,
+  showSlug,
+  year,
 }: {
   sourceSlug: string;
   seasonSlug: string;
   seasonName: string;
+  showSlug: string;
+  year: number;
 }) {
-  const [state, formAction] = useFormState<IngestionActionState, FormData>(runSyncAction, {});
+  const [syncState, sync] = useFormState<IngestionActionState, FormData>(runSyncAction, {});
+  const [bootstrapState, bootstrap] = useFormState<IngestionActionState, FormData>(
+    runBootstrapAction,
+    {},
+  );
+
+  const message = syncState.message ?? bootstrapState.message;
+  const error = syncState.error ?? bootstrapState.error;
 
   return (
-    <form action={formAction} className="card flex items-center justify-between gap-3 p-4">
-      <input type="hidden" name="sourceSlug" value={sourceSlug} />
-      <input type="hidden" name="seasonSlug" value={seasonSlug} />
-      <span className="min-w-0">
-        <span className="block truncate text-[14px] font-semibold">{seasonName}</span>
-        <span className="mt-0.5 block truncate text-[12px] text-muted">{sourceSlug}</span>
-        {state.message && (
-          <span className="mt-1 block text-[12px] text-brand-gold-deep">{state.message}</span>
-        )}
-        {state.error && <span className="mt-1 block text-[12px] text-danger">{state.error}</span>}
-      </span>
-      <SubmitButton label="Sync" pendingLabel="Syncing…" />
-    </form>
+    <div className="card p-4">
+      <div className="flex items-center justify-between gap-3">
+        <span className="min-w-0">
+          <span className="block truncate text-[14px] font-semibold">{seasonName}</span>
+          <span className="mt-0.5 block truncate text-[12px] text-muted">{sourceSlug}</span>
+        </span>
+        <div className="flex shrink-0 items-center gap-2">
+          <form action={bootstrap}>
+            <input type="hidden" name="sourceSlug" value={sourceSlug} />
+            <input type="hidden" name="seasonSlug" value={seasonSlug} />
+            <input type="hidden" name="showSlug" value={showSlug} />
+            <input type="hidden" name="year" value={year} />
+            <GhostSubmitButton label="Refresh cast" pendingLabel="Refreshing…" />
+          </form>
+          <form action={sync}>
+            <input type="hidden" name="sourceSlug" value={sourceSlug} />
+            <input type="hidden" name="seasonSlug" value={seasonSlug} />
+            <SubmitButton label="Sync" pendingLabel="Syncing…" />
+          </form>
+        </div>
+      </div>
+      {message && <p className="mt-2 text-[12px] text-brand-gold-deep">{message}</p>}
+      {error && <p className="mt-2 text-[12px] text-danger">{error}</p>}
+    </div>
   );
 }
 
@@ -132,6 +165,19 @@ function SubmitButton({ label, pendingLabel }: { label: string; pendingLabel: st
   const { pending } = useFormStatus();
   return (
     <button type="submit" disabled={pending} className="btn-primary text-[13px] disabled:opacity-50">
+      {pending ? pendingLabel : label}
+    </button>
+  );
+}
+
+function GhostSubmitButton({ label, pendingLabel }: { label: string; pendingLabel: string }) {
+  const { pending } = useFormStatus();
+  return (
+    <button
+      type="submit"
+      disabled={pending}
+      className="btn-ghost text-[13px] disabled:opacity-50"
+    >
       {pending ? pendingLabel : label}
     </button>
   );

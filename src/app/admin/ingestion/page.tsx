@@ -1,10 +1,15 @@
 import Link from 'next/link';
-import { CandidateCard, SyncButton, type PendingCandidate } from '@/components/IngestionReview';
+import { CandidateCard, SeasonSourceCard, type PendingCandidate } from '@/components/IngestionReview';
 import { getCurrentUser } from '@/lib/auth';
 import { prisma } from '@/lib/db';
 import { relativeTime } from '@/lib/ui';
 
 export const dynamic = 'force-dynamic';
+
+// Sync and bootstrap both fetch and parse a full season off the source before
+// writing. That comfortably outruns the default serverless budget on a cold
+// start, and the failure mode is a half-written season, so buy the headroom.
+export const maxDuration = 60;
 
 const RUN_TONE: Record<string, string> = {
   SUCCESS: 'bg-brand-gold-soft text-brand-gold-deep',
@@ -53,7 +58,7 @@ export default async function IngestionPage() {
     prisma.ingestionRun.findMany({ orderBy: { startedAt: 'desc' }, take: 5 }),
     prisma.season.findMany({
       where: { contestants: { some: { externalRefs: { some: {} } } } },
-      select: { slug: true, name: true },
+      select: { slug: true, name: true, year: true, show: { select: { slug: true } } },
     }),
     prisma.ingestedEventCandidate.groupBy({ by: ['status'], _count: true }),
   ]);
@@ -113,11 +118,13 @@ export default async function IngestionPage() {
         ) : (
           <div className="space-y-2">
             {seasons.map((season) => (
-              <SyncButton
+              <SeasonSourceCard
                 key={season.slug}
                 sourceSlug="big-brother-junkies"
                 seasonSlug={season.slug}
                 seasonName={season.name}
+                showSlug={season.show.slug}
+                year={season.year}
               />
             ))}
           </div>

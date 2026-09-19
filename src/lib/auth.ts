@@ -40,7 +40,20 @@ export async function getCurrentUser(): Promise<SessionUser | null> {
   if (!clerkUser) return null;
 
   const existing = await prisma.user.findUnique({ where: { authId: clerkUser.id }, select: SELECT });
-  if (existing) return existing;
+  if (existing) {
+    // Reconciled on every sign-in, not just at row creation. An account that
+    // already existed when PLATFORM_ADMIN_EMAILS was set would otherwise be
+    // stranded without admin forever, because nothing else in the app grants
+    // the flag. Grant-only: a flag set some other way is never revoked here.
+    if (!existing.isPlatformAdmin && adminEmailList().includes(existing.email.toLowerCase())) {
+      return prisma.user.update({
+        where: { id: existing.id },
+        data: { isPlatformAdmin: true },
+        select: SELECT,
+      });
+    }
+    return existing;
+  }
 
   const email =
     clerkUser.emailAddresses.find((e) => e.id === clerkUser.primaryEmailAddressId)?.emailAddress ??
@@ -49,15 +62,6 @@ export async function getCurrentUser(): Promise<SessionUser | null> {
 
   const name = [clerkUser.firstName, clerkUser.lastName].filter(Boolean).join(' ') || null;
 
-  // Bootstrap admin by email. Platform admin can only be granted by another
-  // admin, so without this the first real account after any database reset has
-  // no way to reach ingestion review — the flag previously survived only as a
-  // manual SQL update.
-  const adminEmails = (process.env.PLATFORM_ADMIN_EMAILS ?? '')
-    .split(',')
-    .map((e) => e.trim().toLowerCase())
-    .filter(Boolean);
-
   return prisma.user.create({
     data: {
       authId: clerkUser.id,
@@ -65,10 +69,24 @@ export async function getCurrentUser(): Promise<SessionUser | null> {
       name,
       avatarUrl: clerkUser.imageUrl || null,
       handle: clerkUser.username,
-      isPlatformAdmin: adminEmails.includes(email.toLowerCase()),
+      isPlatformAdmin: adminEmailList().includes(email.toLowerCase()),
     },
     select: SELECT,
   });
+}
+
+/**
+ * Emails this deploy grants platform admin to, from `PLATFORM_ADMIN_EMAILS`.
+ *
+ * Bootstraps admin by email because platform admin can only be granted by
+ * another admin — without it, the first real account after any database reset
+ * has no way to reach ingestion review short of a manual SQL update.
+ */
+function adminEmailList(): string[] {
+  return (process.env.PLATFORM_ADMIN_EMAILS ?? '')
+    .split(',')
+    .map((e) => e.trim().toLowerCase())
+    .filter(Boolean);
 }
 
 export async function requireUser(): Promise<SessionUser> {
