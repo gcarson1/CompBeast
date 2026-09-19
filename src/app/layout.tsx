@@ -81,7 +81,7 @@ export default async function RootLayout({ children }: { children: React.ReactNo
           <div className="pointer-events-none fixed inset-x-0 top-0 -z-10 h-[420px] bg-[radial-gradient(60%_100%_at_50%_0%,rgba(245,158,11,0.10),transparent_70%)]" />
           <div className="flex min-h-dvh flex-col">
             <AppHeader isPlatformAdmin={user?.isPlatformAdmin ?? false} />
-            <main id="main" className="mx-auto w-full max-w-md flex-1 px-5 pb-6 sm:max-w-lg">
+            <main id="main" className="mx-auto w-full max-w-md flex-1 px-5 pb-6 sm:max-w-lg lg:max-w-3xl">
               {children}
             </main>
             {user && <BottomNav />}

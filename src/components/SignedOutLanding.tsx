@@ -40,20 +40,29 @@ export function SignedOutLanding({
 }) {
   return (
     <motion.div variants={container} initial="hidden" animate="show" className="pt-6 text-center">
-      <motion.h1 variants={item} className="mt-4 font-display text-5xl leading-[0.95] tracking-wide">
+      <motion.h1
+        variants={item}
+        className="mt-4 font-display text-5xl leading-[0.95] tracking-wide sm:text-[64px] lg:text-[76px]"
+      >
         DRAFT THE HOUSE.
         <br />
         <span className="text-brand-gold">OWN THE LEADERBOARD.</span>
       </motion.h1>
 
-      <motion.p variants={item} className="mx-auto mt-4 max-w-xs text-sm leading-relaxed text-muted">
+      <motion.p
+        variants={item}
+        className="mx-auto mt-4 max-w-xs text-sm leading-relaxed text-muted sm:max-w-md sm:text-md"
+      >
         Fantasy leagues for reality TV. Draft real houseguests, score every HOH, veto, and
         blindside, and chase the board live as episodes air.
       </motion.p>
 
       <motion.div variants={item}>
         <SignInButton mode="modal">
-          <button type="button" className="btn-primary mt-6 w-full py-3.5 text-md">
+          {/* Full-bleed on a phone where it is the only thing to tap; sized to
+              its own text once the hero is wide enough that a 700px button
+              would read as a banner rather than a control. */}
+          <button type="button" className="btn-primary mt-6 w-full py-3.5 text-md sm:w-auto sm:px-12">
             Sign In
           </button>
         </SignInButton>
@@ -80,7 +89,9 @@ export function SignedOutLanding({
         </motion.div>
       )}
 
-      <motion.div variants={item} className="mt-10 space-y-3 text-left">
+      {/* Three equal claims, so they sit as a row the moment there is width
+          for one — stacked on a phone, side by side everywhere else. */}
+      <motion.div variants={item} className="mt-10 grid gap-3 text-left sm:grid-cols-3">
         <FeatureRow
           icon={<DraftIcon />}
           title="Draft real houseguests"

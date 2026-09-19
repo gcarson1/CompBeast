@@ -130,6 +130,10 @@ export default async function LeaguePage({ params }: { params: { leagueId: strin
         <Leaderboard rows={rows} myTeamId={myTeam?.id ?? null} />
       </section>
 
+      {/* Managers and the league's settings are both short reference lists, so
+          they pair off once there is room rather than each taking a full
+          screen-width row on a desktop. */}
+      <div className="lg:grid lg:grid-cols-2 lg:gap-6">
       <section className="mt-6">
         <div className="mb-2 flex items-baseline justify-between">
           <h2 className="text-lg font-semibold">
@@ -173,27 +177,30 @@ export default async function LeaguePage({ params }: { params: { leagueId: strin
         </p>
       </section>
 
+        <section className="mt-6">
+          <h2 className="mb-2 text-lg font-semibold">League</h2>
+          <div className="card divide-y divide-hairline">
+            <Row label="Invite code" value={league.inviteCode} />
+            <Row label="Scoring" value={league.scoringRuleset.name} href="/rules" />
+            <Row label="Draft" value={`${league.draftType.toLowerCase()} · ${league.rosterSize} rounds`} />
+            <Row label="Visibility" value={league.isPublic ? 'Public' : 'Private'} />
+          </div>
+          {league.scoringRuleset.description && (
+            <p className="mt-2 px-1 text-2xs leading-relaxed text-muted">
+              {league.scoringRuleset.description}
+            </p>
+          )}
+        </section>
+      </div>
+
+      {/* Full width on purpose: the feed is the part people come back to, and
+          it reads badly squeezed into a half column next to a settings list. */}
       <LeagueFeed
         leagueId={league.id}
         messages={messages}
         canPost={Boolean(user && league.members.some((m) => m.user.id === user.id))}
         isCommissioner={isCommissioner}
       />
-
-      <section className="mt-6">
-        <h2 className="mb-2 text-lg font-semibold">League</h2>
-        <div className="card divide-y divide-hairline">
-          <Row label="Invite code" value={league.inviteCode} />
-          <Row label="Scoring" value={league.scoringRuleset.name} href="/rules" />
-          <Row label="Draft" value={`${league.draftType.toLowerCase()} · ${league.rosterSize} rounds`} />
-          <Row label="Visibility" value={league.isPublic ? 'Public' : 'Private'} />
-        </div>
-        {league.scoringRuleset.description && (
-          <p className="mt-2 px-1 text-2xs leading-relaxed text-muted">
-            {league.scoringRuleset.description}
-          </p>
-        )}
-      </section>
     </div>
   );
 }
