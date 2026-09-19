@@ -693,6 +693,130 @@ export async function getHomeLeagues(userId: string): Promise<HomeLeagueCard[]> 
   );
 }
 
+export interface PointHistoryPoint {
+  label: string;
+  sequence: number;
+  cyclePoints: number;
+  cumulativePoints: number;
+  rank: number | null;
+}
+
+export interface SeasonHistoryRow {
+  teamId: string;
+  teamName: string;
+  leagueId: string;
+  leagueName: string;
+  showName: string;
+  seasonName: string;
+  seasonStatus: 'UPCOMING' | 'ACTIVE' | 'COMPLETED';
+  /** Standing at the last cycle that actually happened; 0 before any scoring. */
+  rank: number;
+  teamCount: number;
+  totalPoints: number;
+  history: PointHistoryPoint[];
+}
+
+export interface AccountOverview {
+  leaguesPlayed: number;
+  seasonsPlayed: number;
+  /** Every point this account has ever scored, across every league. */
+  totalPoints: number;
+  /** Best finishing position reached in any league. Null before any scoring. */
+  bestRank: number | null;
+  /** First-place finishes in seasons that have actually ended. */
+  titles: number;
+  rows: SeasonHistoryRow[];
+}
+
+/**
+ * Career view for the account page: every team this person has ever owned,
+ * with its week-by-week trajectory.
+ *
+ * Read from the materialized `TeamCycleScore` rows rather than replaying the
+ * ledger — the recalculation job already writes them on every scoring change,
+ * and an account page has no business re-deriving a season's worth of events
+ * per team just to draw a line.
+ *
+ * One query, then all the arithmetic in memory. The obvious alternative,
+ * calling `getLeagueLeaderboard` once per team, is a query per league on a
+ * page whose whole job is to show someone with a lot of leagues.
+ */
+export async function getAccountOverview(userId: string): Promise<AccountOverview> {
+  const teams = await prisma.team.findMany({
+    where: { ownerId: userId },
+    orderBy: { createdAt: 'desc' },
+    select: {
+      id: true,
+      name: true,
+      league: {
+        select: {
+          id: true,
+          name: true,
+          _count: { select: { teams: true } },
+          season: { select: { id: true, name: true, status: true, show: { select: { name: true } } } },
+        },
+      },
+      cycleScores: {
+        select: {
+          cyclePoints: true,
+          cumulativePoints: true,
+          rank: true,
+          cycle: { select: { label: true, sequence: true, status: true } },
+        },
+      },
+    },
+  });
+
+  const rows: SeasonHistoryRow[] = teams.map((team) => {
+    const scores = [...team.cycleScores].sort((a, b) => a.cycle.sequence - b.cycle.sequence);
+
+    // Cut the series at the last cycle that has actually happened. Cumulative
+    // totals carry forward through unscored weeks, so plotting the whole
+    // season would draw a long flat tail into the future and read as a team
+    // that stopped scoring rather than a season still being played.
+    let lastPlayed = -1;
+    scores.forEach((score, index) => {
+      if (score.cycle.status !== 'UPCOMING') lastPlayed = index;
+    });
+    const played = lastPlayed >= 0 ? scores.slice(0, lastPlayed + 1) : [];
+
+    const history: PointHistoryPoint[] = played.map((score) => ({
+      label: score.cycle.label,
+      sequence: score.cycle.sequence,
+      cyclePoints: Number(score.cyclePoints),
+      cumulativePoints: Number(score.cumulativePoints),
+      rank: score.rank,
+    }));
+
+    const latest = history.at(-1);
+    return {
+      teamId: team.id,
+      teamName: team.name,
+      leagueId: team.league.id,
+      leagueName: team.league.name,
+      showName: team.league.season.show.name,
+      seasonName: team.league.season.name,
+      seasonStatus: team.league.season.status,
+      rank: latest?.rank ?? 0,
+      teamCount: team.league._count.teams,
+      totalPoints: latest?.cumulativePoints ?? 0,
+      history,
+    };
+  });
+
+  const ranked = rows.filter((row) => row.rank > 0);
+  return {
+    leaguesPlayed: rows.length,
+    seasonsPlayed: new Set(teams.map((team) => team.league.season.id)).size,
+    totalPoints: Math.round(rows.reduce((sum, row) => sum + row.totalPoints, 0) * 100) / 100,
+    bestRank: ranked.length > 0 ? Math.min(...ranked.map((row) => row.rank)) : null,
+    // Only seasons that actually ended. Leading an active league is not a win
+    // yet, and counting it as one would quietly inflate the number every week.
+    titles: rows.filter((row) => row.seasonStatus === 'COMPLETED' && row.rank === 1).length,
+    rows,
+  };
+}
+
 export interface SeasonHeadline {
   id: string;
   contestantName: string;

@@ -4,6 +4,9 @@ const isProtectedRoute = createRouteMatcher([
   '/leagues/new(.*)',
   '/leagues/join(.*)',
   '/leagues/:leagueId/draft(.*)',
+  '/leagues/:leagueId/settings(.*)',
+  '/account(.*)',
+  '/notifications(.*)',
   '/admin(.*)',
 ]);
 

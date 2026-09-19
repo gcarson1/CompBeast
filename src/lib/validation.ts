@@ -35,3 +35,34 @@ export const createLeagueSchema = z.object({
     .min(2, 'Give your team a name of at least 2 characters')
     .max(40, 'Team names are limited to 40 characters'),
 });
+
+/**
+ * What a commissioner may change after a league exists.
+ *
+ * Deliberately a subset of `createLeagueSchema`. `seasonId` is absent because
+ * moving a league to another season would orphan every draft pick and scored
+ * event already attached to it — that is a new league, not an edit. The two
+ * fields that *are* here but constrained at the mutation are `rosterSize` and
+ * `scoringRulesetId`: both are frozen once the draft starts, because roster
+ * size sets the number of picks in a draft already under way, and a ruleset
+ * swap mid-season changes what future weeks are worth.
+ */
+export const updateLeagueSchema = z.object({
+  name: z
+    .string()
+    .trim()
+    .min(3, 'Give your league a name of at least 3 characters')
+    .max(60, 'League names are limited to 60 characters'),
+  scoringRulesetId: z.string().min(1, 'Pick a scoring ruleset'),
+  rosterSize: z.coerce
+    .number({ invalid_type_error: 'Roster size must be a number' })
+    .int('Roster size must be a whole number')
+    .min(1, 'Each team needs at least 1 houseguest')
+    .max(12, 'Rosters cap at 12 houseguests'),
+  maxTeams: z.coerce
+    .number({ invalid_type_error: 'Max teams must be a number' })
+    .int('Max teams must be a whole number')
+    .min(2, 'A league needs room for at least 2 teams')
+    .max(24, 'Leagues cap at 24 teams'),
+  isPublic: z.coerce.boolean().default(false),
+});

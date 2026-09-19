@@ -2,11 +2,13 @@ import Link from 'next/link';
 import { notFound } from 'next/navigation';
 import { Avatar } from '@/components/Avatar';
 import { InviteCode } from '@/components/InviteCode';
+import { InviteFriends } from '@/components/InviteFriends';
 import { Leaderboard } from '@/components/Leaderboard';
 import { LeagueFeed } from '@/components/LeagueFeed';
 import { getCurrentUser } from '@/lib/auth';
 import { atRiskMessage, isAtRiskCode, nearMissMessage } from '@/lib/engagement';
 import { relativeTime } from '@/lib/ui';
+import { getInvitableFriends } from '@/server/social';
 import {
   getCurrentCycle,
   getLeagueLeaderboard,
@@ -26,6 +28,10 @@ export default async function LeaguePage({ params }: { params: { leagueId: strin
     getCurrentCycle(league.season.id),
     getLeagueMessages(league.id, user?.id ?? null),
   ]);
+
+  const isMember = Boolean(user && league.members.some((m) => m.user.id === user.id));
+  // Only members can invite, so only members pay for the query.
+  const invitableFriends = user && isMember ? await getInvitableFriends(user.id, league.id) : [];
 
   const myTeam = league.teams.find((t) => t.owner.id === user?.id);
   const myTeamDetail = myTeam ? await getTeamDetail(myTeam.id) : null;
@@ -62,9 +68,14 @@ export default async function LeaguePage({ params }: { params: { leagueId: strin
             the controls look arbitrary to whoever has them and missing to
             everyone else. This is what `brand-velvet` is reserved for. */}
         {isCommissioner && (
-          <span className="pill shrink-0 bg-brand-velvet-soft text-2xs text-brand-velvet-deep">
+          <Link
+            href={`/leagues/${league.id}/settings`}
+            prefetch={false}
+            className="pill shrink-0 gap-1.5 bg-brand-velvet-soft text-2xs text-brand-velvet-deep transition hover:brightness-125"
+          >
             Commissioner
-          </span>
+            <GearIcon />
+          </Link>
         )}
       </div>
       <p className="mt-0.5 text-xs text-muted">
@@ -195,15 +206,32 @@ export default async function LeaguePage({ params }: { params: { leagueId: strin
         </section>
       </div>
 
+      {isMember && league.draftStatus === 'NOT_STARTED' && (
+        <InviteFriends
+          leagueId={league.id}
+          friends={invitableFriends}
+          seatsLeft={openSeats}
+        />
+      )}
+
       {/* Full width on purpose: the feed is the part people come back to, and
           it reads badly squeezed into a half column next to a settings list. */}
       <LeagueFeed
         leagueId={league.id}
         messages={messages}
-        canPost={Boolean(user && league.members.some((m) => m.user.id === user.id))}
+        canPost={isMember}
         isCommissioner={isCommissioner}
       />
     </div>
+  );
+}
+
+function GearIcon() {
+  return (
+    <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" aria-hidden>
+      <circle cx="12" cy="12" r="3.2" />
+      <path d="M12 2.5v2M12 19.5v2M21.5 12h-2M4.5 12h-2M18.7 5.3l-1.4 1.4M6.7 17.3l-1.4 1.4M18.7 18.7l-1.4-1.4M6.7 6.7 5.3 5.3" strokeLinecap="round" />
+    </svg>
   );
 }
 

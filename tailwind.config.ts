@@ -32,6 +32,11 @@ const config: Config = {
           DEFAULT: '#EF4444', // Eviction Red — fills, borders, indicator dots
           soft: 'rgba(239,68,68,0.16)',
           deep: '#F87171', // text-on-dark only — #EF4444 is 3.9:1 on surface
+          // Destructive *buttons* only. White on the #EF4444 fill measures
+          // 3.77:1, under the 4.5:1 floor for a 14px semibold label, so the
+          // one control in the app that must not be misread cannot use it.
+          // White on this is 6.5:1.
+          strong: '#B91C1C',
         },
         warn: '#FB923C', // kept distinct from brand-gold
         'brand-velvet': {

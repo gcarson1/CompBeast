@@ -4,19 +4,14 @@ import { prisma } from '../lib/db';
 import { assertLeagueRole } from '../lib/auth';
 import { buildDraftOrder, validatePick } from '../lib/draft/snake';
 import { recalculateLeague, recalculateLeaguesForCycle } from '../lib/scoring/repository';
-import { createLeagueSchema } from '../lib/validation';
+import { createLeagueSchema, updateLeagueSchema } from '../lib/validation';
+import { DomainError } from './errors';
+import { notify } from './notifications';
 
-export { createLeagueSchema };
-
-export class DomainError extends Error {
-  constructor(
-    message: string,
-    readonly code: string,
-    readonly status = 400,
-  ) {
-    super(message);
-  }
-}
+export { createLeagueSchema, updateLeagueSchema };
+// Re-exported so the many existing importers of `DomainError` from this module
+// keep working; `./errors` is the definition.
+export { DomainError };
 
 const INVITE_ALPHABET = 'ABCDEFGHJKLMNPQRSTUVWXYZ23456789';
 
@@ -98,8 +93,10 @@ export async function joinLeague(userId: string, inviteCode: string, teamName: s
     where: { inviteCode: inviteCode.trim().toUpperCase() },
     select: {
       id: true,
+      name: true,
       maxTeams: true,
       draftStatus: true,
+      commissionerId: true,
       season: { select: { status: true, name: true } },
       _count: { select: { teams: true } },
     },
@@ -158,7 +155,7 @@ export async function joinLeague(userId: string, inviteCode: string, teamName: s
   // unhandled P2002 — a generic "something went wrong" for what is really a
   // normal, explainable outcome.
   try {
-    return await prisma.$transaction(async (tx) => {
+    const leagueId = await prisma.$transaction(async (tx) => {
       const seatsTaken = await tx.team.count({ where: { leagueId: league.id } });
       if (seatsTaken >= league.maxTeams) {
         throw new DomainError('This league is full.', 'LEAGUE_FULL', 409);
@@ -177,6 +174,23 @@ export async function joinLeague(userId: string, inviteCode: string, teamName: s
       });
       return league.id;
     });
+
+    // After the commit, never inside it — see src/server/notifications.ts.
+    const joiner = await prisma.user.findUnique({
+      where: { id: userId },
+      select: { name: true, handle: true },
+    });
+    await notify({
+      userId: league.commissionerId,
+      actorId: userId,
+      type: 'LEAGUE_MEMBER_JOINED',
+      title: `${joiner?.name ?? joiner?.handle ?? 'Someone'} joined ${league.name}`,
+      body: `${teamName} took a seat.`,
+      href: `/leagues/${league.id}`,
+      data: { leagueId: league.id },
+    });
+
+    return leagueId;
   } catch (error) {
     // Two joins that interleave *between* the count and the insert still
     // collide; the constraint is the real arbiter and this turns losing that
@@ -190,6 +204,169 @@ export async function joinLeague(userId: string, inviteCode: string, teamName: s
     }
     throw error;
   }
+}
+
+// ---------------------------------------------------------------------------
+// League settings
+// ---------------------------------------------------------------------------
+
+/**
+ * Commissioner edits.
+ *
+ * Every rule here exists because the alternative corrupts a league in
+ * progress rather than merely looking odd:
+ *
+ * - `maxTeams` cannot drop below the teams already seated. Shrinking past them
+ *   does not evict anyone, it just makes the league permanently over capacity
+ *   and the "N of M seats" line read backwards.
+ * - `rosterSize` is frozen once drafting starts. It sets the total number of
+ *   picks, so changing it mid-draft would move the finish line under everyone
+ *   — either stranding a draft that can never complete or ending it early.
+ * - `scoringRulesetId` is frozen at the same point, and must stay on the same
+ *   show. Settled weeks are safe (ScoredEvent snapshots its own points), but
+ *   every future week would silently be worth something different from what
+ *   people drafted against.
+ */
+export async function updateLeague(
+  leagueId: string,
+  userId: string,
+  input: z.infer<typeof updateLeagueSchema>,
+) {
+  await assertLeagueRole(leagueId, userId, ['COMMISSIONER']);
+  const data = updateLeagueSchema.parse(input);
+
+  const league = await prisma.league.findUnique({
+    where: { id: leagueId },
+    select: {
+      name: true,
+      rosterSize: true,
+      maxTeams: true,
+      isPublic: true,
+      draftStatus: true,
+      scoringRulesetId: true,
+      season: { select: { showId: true } },
+      _count: { select: { teams: true } },
+    },
+  });
+  if (!league) throw new DomainError('That league no longer exists.', 'LEAGUE_NOT_FOUND', 404);
+
+  if (data.maxTeams < league._count.teams) {
+    throw new DomainError(
+      `This league already has ${league._count.teams} teams, so it cannot cap at ${data.maxTeams}.`,
+      'MAX_TEAMS_BELOW_CURRENT',
+    );
+  }
+
+  const drafting = league.draftStatus !== 'NOT_STARTED';
+  if (drafting && data.rosterSize !== league.rosterSize) {
+    throw new DomainError(
+      'Roster size is locked once the draft starts — it sets how many picks there are.',
+      'ROSTER_SIZE_LOCKED',
+      409,
+    );
+  }
+  if (drafting && data.scoringRulesetId !== league.scoringRulesetId) {
+    throw new DomainError(
+      'Scoring is locked once the draft starts. Everyone drafted against these rules.',
+      'RULESET_LOCKED',
+      409,
+    );
+  }
+
+  if (data.scoringRulesetId !== league.scoringRulesetId) {
+    const ruleset = await prisma.scoringRuleset.findUnique({
+      where: { id: data.scoringRulesetId },
+      select: { showId: true },
+    });
+    if (!ruleset || ruleset.showId !== league.season.showId) {
+      throw new DomainError('That ruleset belongs to a different show.', 'RULESET_MISMATCH');
+    }
+  }
+
+  const updated = await prisma.league.update({
+    where: { id: leagueId },
+    data: {
+      name: data.name,
+      scoringRulesetId: data.scoringRulesetId,
+      rosterSize: data.rosterSize,
+      maxTeams: data.maxTeams,
+      isPublic: data.isPublic,
+    },
+    select: { id: true, name: true },
+  });
+
+  // Only the changes worth interrupting someone for. A commissioner fixing a
+  // typo in the league name should not ping eight phones.
+  const notable: string[] = [];
+  if (data.rosterSize !== league.rosterSize) {
+    notable.push(`rosters are now ${data.rosterSize} picks`);
+  }
+  if (data.scoringRulesetId !== league.scoringRulesetId) notable.push('the scoring rules changed');
+  if (data.maxTeams !== league.maxTeams) notable.push(`the league now caps at ${data.maxTeams} teams`);
+
+  if (notable.length > 0) {
+    const members = await prisma.leagueMember.findMany({
+      where: { leagueId, status: 'ACTIVE' },
+      select: { userId: true },
+    });
+    await notify(
+      members.map((member) => ({
+        userId: member.userId,
+        actorId: userId,
+        type: 'LEAGUE_UPDATED' as const,
+        title: `${updated.name} settings changed`,
+        body: `${notable.join(', ')}.`,
+        href: `/leagues/${leagueId}`,
+        data: { leagueId },
+      })),
+    );
+  }
+
+  return updated;
+}
+
+/**
+ * Deletes a league and everything hanging off it.
+ *
+ * Members, teams, roster slots, draft picks, cycle scores, feed messages and
+ * reactions all cascade at the database level, so this is one statement rather
+ * than a hand-rolled teardown that could miss a table as the schema grows.
+ *
+ * Members are notified *before* the delete, on purpose: afterwards there is no
+ * membership list left to read, and a league vanishing with no explanation is
+ * the single most alarming thing this app can do to someone.
+ */
+export async function deleteLeague(leagueId: string, userId: string, confirmName: string) {
+  await assertLeagueRole(leagueId, userId, ['COMMISSIONER']);
+
+  const league = await prisma.league.findUnique({
+    where: { id: leagueId },
+    select: { id: true, name: true, members: { where: { status: 'ACTIVE' }, select: { userId: true } } },
+  });
+  if (!league) throw new DomainError('That league no longer exists.', 'LEAGUE_NOT_FOUND', 404);
+
+  // Typing the name is the guard. A confirm dialog is dismissed by reflex;
+  // this cannot be satisfied by accident.
+  if (confirmName.trim() !== league.name) {
+    throw new DomainError(
+      'Type the league name exactly to confirm deletion.',
+      'CONFIRM_NAME_MISMATCH',
+    );
+  }
+
+  await notify(
+    league.members.map((member) => ({
+      userId: member.userId,
+      actorId: userId,
+      type: 'LEAGUE_DELETED' as const,
+      title: `${league.name} was deleted`,
+      body: 'The commissioner closed this league. Its standings are gone.',
+      href: '/leagues',
+    })),
+  );
+
+  await prisma.league.delete({ where: { id: leagueId } });
+  return { deleted: true, name: league.name };
 }
 
 // ---------------------------------------------------------------------------
@@ -208,10 +385,32 @@ export async function startDraft(leagueId: string, userId: string) {
   if (league._count.teams < 2) {
     throw new DomainError('A draft needs at least two teams.', 'NOT_ENOUGH_TEAMS');
   }
-  return prisma.league.update({
+  const updated = await prisma.league.update({
     where: { id: leagueId },
     data: { draftStatus: 'IN_PROGRESS', draftStartsAt: new Date() },
+    select: { id: true, name: true, draftStatus: true, draftStartsAt: true },
   });
+
+  // The one notification in this app that is genuinely time-critical: a snake
+  // draft stalls on whoever is on the clock, so someone who does not know it
+  // started holds up everybody else.
+  const members = await prisma.leagueMember.findMany({
+    where: { leagueId, status: 'ACTIVE' },
+    select: { userId: true },
+  });
+  await notify(
+    members.map((member) => ({
+      userId: member.userId,
+      actorId: userId,
+      type: 'LEAGUE_DRAFT_STARTED' as const,
+      title: `The ${updated.name} draft has started`,
+      body: 'Get in before your pick comes around.',
+      href: `/leagues/${leagueId}/draft`,
+      data: { leagueId },
+    })),
+  );
+
+  return updated;
 }
 
 /**

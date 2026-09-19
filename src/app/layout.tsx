@@ -6,6 +6,7 @@ import './globals.css';
 import { AppHeader } from '@/components/AppHeader';
 import { BottomNav } from '@/components/BottomNav';
 import { getCurrentUser } from '@/lib/auth';
+import { getUnreadNotificationCount } from '@/server/notifications';
 
 /**
  * isPlatformAdmin still needs a server-side lookup (Clerk's client components
@@ -59,6 +60,9 @@ export const viewport: Viewport = {
 
 export default async function RootLayout({ children }: { children: React.ReactNode }) {
   const user = await getCurrentUser().catch(() => null);
+  // Server-rendered so the badge is correct on first paint rather than
+  // popping in after a client fetch. The bell polls from here.
+  const unreadCount = user ? await getUnreadNotificationCount(user.id).catch(() => 0) : 0;
 
   return (
     <ClerkProvider>
@@ -80,7 +84,11 @@ export default async function RootLayout({ children }: { children: React.ReactNo
               does that without pretending to be a desktop redesign. */}
           <div className="pointer-events-none fixed inset-x-0 top-0 -z-10 h-[420px] bg-[radial-gradient(60%_100%_at_50%_0%,rgba(245,158,11,0.10),transparent_70%)]" />
           <div className="flex min-h-dvh flex-col">
-            <AppHeader isPlatformAdmin={user?.isPlatformAdmin ?? false} />
+            <AppHeader
+              isPlatformAdmin={user?.isPlatformAdmin ?? false}
+              signedIn={Boolean(user)}
+              unreadCount={unreadCount}
+            />
             <main id="main" className="mx-auto w-full max-w-md flex-1 px-5 pb-6 sm:max-w-lg lg:max-w-3xl">
               {children}
             </main>

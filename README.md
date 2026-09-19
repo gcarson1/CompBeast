@@ -288,6 +288,79 @@ redirect for someone scanning without an account.
 The QR encoder is a lazily-imported chunk fetched on first open, since most league page
 views never open it.
 
+## Friends, invites and alerts
+
+`Friendship` is one directed row — a request genuinely has a sender and a
+receiver — for a relationship that is symmetric once accepted, so every read
+matches on either column. That `OR` is written once, in `friendIdsFor`;
+scattering it is how half a feature ends up only seeing the friends you happened
+to ask first. If two people each send a request, the second one *accepts* the
+first rather than creating a mirror, because two people who both asked are two
+people who both agreed.
+
+Friend search matches names and handles on a fragment but **email only in full**.
+A substring search over emails turns the box into an address-book scraper.
+
+The payoff is one-tap league invites: a friend gets an alert deep-linking to
+`/leagues/join?code=…` with the code already filled in, instead of you copying a
+code into a message and hoping it comes back intact.
+
+### Notifications
+
+`Notification` stores its own `title`/`body` at send time instead of joining back
+at render. That is the whole point — an alert has to survive the thing it
+describes. "Your league was deleted" has no league left to join to, and a league
+renamed afterwards should still read the way it read when it happened. `data` is
+a JSON escape hatch so new alert kinds only grow the enum.
+
+**A notification can never fail the thing it reports.** `notify()` swallows its
+own errors and every caller invokes it *after* the primary write commits, never
+inside the transaction — inside, a failed insert would poison the transaction and
+take the real work down with it.
+
+The header badge is server-rendered for first paint, then polls
+`/api/notifications/unread` on an interval and on tab focus. There is no realtime
+transport here for the same reason the league feed has none. Following an alert
+marks it read via a `keepalive` fetch rather than a server action, because the
+click navigates at the same time and a server action's POST races that
+navigation.
+
+## League settings
+
+Commissioners can edit a league at `/leagues/[id]/settings`, or delete it. Three
+rules exist to prevent corruption rather than to tidy the form:
+
+- `maxTeams` cannot drop below the teams already seated. It does not evict
+  anyone — it just makes the league permanently over capacity.
+- `rosterSize` freezes once drafting starts. It sets the total number of picks,
+  so changing it mid-draft moves the finish line under everyone.
+- The scoring ruleset freezes at the same point. Settled weeks are safe
+  (`ScoredEvent` snapshots its own points), but every future week would be worth
+  something different from what people drafted against.
+
+Members are notified only for changes that affect play — a typo fix in the league
+name should not ping eight phones.
+
+Deleting cascades at the database level rather than by hand, so a table added
+later cannot be missed. Members are notified **before** the delete, because
+afterwards there is no membership list left to read. Confirmation is typing the
+league name, not a dialog that gets dismissed by reflex.
+
+## Account
+
+`/account` is the career view: total points, leagues, best finish and titles
+(first places in seasons that actually *ended* — leading an active league is not
+a win yet), a per-season history, and a cumulative points chart.
+
+The chart is hand-rolled SVG, not a charting library — it draws one polyline and
+some dots, and the smallest credible dependency is bigger than the page. That
+also keeps it a server component with no client JavaScript, so the exact numbers
+live in a visually-hidden table underneath where a screen reader can reach them.
+It reads the materialized `TeamCycleScore` rows rather than replaying the ledger,
+and stops at the last cycle that actually aired — cumulative totals carry forward
+through unscored weeks, so plotting the whole season would draw a long flat tail
+that reads as a team who stopped scoring.
+
 ## League feed
 
 Each league has its own trash-talk feed on `/leagues/[leagueId]` — posting, Hype/Shade
@@ -312,15 +385,18 @@ npm test
 Pure unit tests cover attribution, voiding, ruleset filtering, snapshot vs. restated
 scoring, tie ranking, float drift, and draft order/validation.
 
-`src/server/league-social.test.ts` is different: it talks to a real database. Joining a
-league, the league feed, and the home rail all live in the interaction between a schema
-default, a transaction, and a query's `where` clause — a bug there once left every joiner
-with no team and invisible on the page, and no amount of pure unit testing would have
-caught it. The file skips itself when no database is reachable, so `npm test` stays green
-on a machine that has never run `db:push`.
+Three files talk to a real database instead: `league-social.test.ts` (joining, the feed,
+the home rail), `draft.test.ts` (the pick fan-out and snake order), and `social.test.ts`
+(friendships, notifications, league settings and deletion). These cover the things pure
+unit tests cannot reach — a friendship is only correct if it reads the same from *both*
+directions, a notification is only useful if it survives the thing it describes being
+deleted, and the settings rules exist to stop a database being corrupted mid-draft. Each
+file skips itself when no database is reachable, so `npm test` stays green on a machine
+that has never run `db:push`.
 
-Both database-backed files were checked by reintroducing the bug they exist for and
-confirming the right tests — and only those — fail. A test that cannot fail is decoration.
+Every database-backed file was checked by reintroducing the bug it exists for and
+confirming the right tests — and only those — fail. Breaking the symmetric friendship
+read, for instance, fails exactly ten of them. A test that cannot fail is decoration.
 
 ## Adding a show
 

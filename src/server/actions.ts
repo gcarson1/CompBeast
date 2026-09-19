@@ -7,6 +7,7 @@ import {
   DomainError,
   createLeague,
   createLeagueSchema,
+  deleteLeague,
   deleteLeagueMessage,
   joinLeague,
   makeDraftPick,
@@ -14,7 +15,16 @@ import {
   refreshLeagueScores,
   startDraft,
   toggleMessageReaction,
+  updateLeague,
+  updateLeagueSchema,
 } from './mutations';
+import { markAllNotificationsRead } from './notifications';
+import {
+  inviteFriendToLeague,
+  removeFriend,
+  respondToFriendRequest,
+  sendFriendRequest,
+} from './social';
 
 export type ActionState = { error?: string; ok?: boolean };
 
@@ -120,6 +130,142 @@ export async function refreshScoresAction(
     return { error: messageFor(error) };
   }
   revalidatePath(`/leagues/${leagueId}`);
+  return { ok: true };
+}
+
+// ---------------------------------------------------------------------------
+// League settings
+// ---------------------------------------------------------------------------
+
+export async function updateLeagueAction(
+  _prev: ActionState,
+  formData: FormData,
+): Promise<ActionState> {
+  const leagueId = String(formData.get('leagueId') ?? '');
+  try {
+    const user = await requireUser();
+    const parsed = updateLeagueSchema.parse({
+      name: formData.get('name'),
+      scoringRulesetId: formData.get('scoringRulesetId'),
+      rosterSize: formData.get('rosterSize'),
+      maxTeams: formData.get('maxTeams'),
+      isPublic: formData.get('isPublic') === 'on',
+    });
+    await updateLeague(leagueId, user.id, parsed);
+  } catch (error) {
+    return { error: messageFor(error) };
+  }
+  revalidatePath(`/leagues/${leagueId}`);
+  revalidatePath(`/leagues/${leagueId}/settings`);
+  revalidatePath('/leagues');
+  return { ok: true };
+}
+
+/**
+ * Deleting redirects out of the league that no longer exists.
+ *
+ * `redirect` throws to unwind, so it has to sit outside the try — inside, the
+ * catch would treat a successful delete as a failure and report "something
+ * went wrong" for work that actually completed.
+ */
+export async function deleteLeagueAction(
+  _prev: ActionState,
+  formData: FormData,
+): Promise<ActionState> {
+  try {
+    const user = await requireUser();
+    await deleteLeague(
+      String(formData.get('leagueId') ?? ''),
+      user.id,
+      String(formData.get('confirmName') ?? ''),
+    );
+  } catch (error) {
+    return { error: messageFor(error) };
+  }
+  revalidatePath('/leagues');
+  redirect('/leagues');
+}
+
+// ---------------------------------------------------------------------------
+// Friends
+// ---------------------------------------------------------------------------
+
+export async function sendFriendRequestAction(
+  _prev: ActionState,
+  formData: FormData,
+): Promise<ActionState> {
+  try {
+    const user = await requireUser();
+    await sendFriendRequest(user.id, String(formData.get('targetUserId') ?? ''));
+  } catch (error) {
+    return { error: messageFor(error) };
+  }
+  revalidatePath('/account');
+  return { ok: true };
+}
+
+export async function respondToFriendRequestAction(
+  _prev: ActionState,
+  formData: FormData,
+): Promise<ActionState> {
+  try {
+    const user = await requireUser();
+    await respondToFriendRequest(
+      user.id,
+      String(formData.get('friendshipId') ?? ''),
+      formData.get('accept') === 'true',
+    );
+  } catch (error) {
+    return { error: messageFor(error) };
+  }
+  revalidatePath('/account');
+  return { ok: true };
+}
+
+export async function removeFriendAction(
+  _prev: ActionState,
+  formData: FormData,
+): Promise<ActionState> {
+  try {
+    const user = await requireUser();
+    await removeFriend(user.id, String(formData.get('friendUserId') ?? ''));
+  } catch (error) {
+    return { error: messageFor(error) };
+  }
+  revalidatePath('/account');
+  return { ok: true };
+}
+
+export async function inviteFriendAction(
+  _prev: ActionState,
+  formData: FormData,
+): Promise<ActionState> {
+  const leagueId = String(formData.get('leagueId') ?? '');
+  try {
+    const user = await requireUser();
+    await inviteFriendToLeague(user.id, String(formData.get('friendUserId') ?? ''), leagueId);
+  } catch (error) {
+    return { error: messageFor(error) };
+  }
+  revalidatePath(`/leagues/${leagueId}`);
+  return { ok: true };
+}
+
+// ---------------------------------------------------------------------------
+// Notifications
+// ---------------------------------------------------------------------------
+
+export async function markAllNotificationsReadAction(
+  _prev: ActionState,
+  _formData: FormData,
+): Promise<ActionState> {
+  try {
+    const user = await requireUser();
+    await markAllNotificationsRead(user.id);
+  } catch (error) {
+    return { error: messageFor(error) };
+  }
+  revalidatePath('/notifications');
   return { ok: true };
 }
 
