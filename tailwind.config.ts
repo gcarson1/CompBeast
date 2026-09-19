@@ -48,7 +48,16 @@ const config: Config = {
         sans: ['var(--font-text)', 'ui-sans-serif', '-apple-system', 'system-ui', 'sans-serif'],
       },
       borderRadius: {
-        card: '20px',
+        // Tightened from 20px — the previous value read as a rounded-poster
+        // aesthetic on sections that are otherwise a flat, hairline-bordered
+        // dark UI. Cards, callouts and the dialog all key off this one value.
+        card: '10px',
+        // Buttons and the tab switcher were stadium pills (999px). `.pill`
+        // itself stays fully round — that shape is reserved for non-tappable
+        // status badges specifically so a badge never looks like a button
+        // (see the comment on `.pill` in globals.css) — but the tappable
+        // controls now get a tighter, literal rounded-rect corner instead.
+        btn: '10px',
         pill: '999px',
       },
       // Named scale in rem, replacing ~200 one-off `text-[13px]`-style values.
