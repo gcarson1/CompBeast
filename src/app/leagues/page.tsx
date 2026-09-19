@@ -1,6 +1,7 @@
 import Link from 'next/link';
 import { LeagueRail } from '@/components/LeagueRail';
-import { LiveSection, type FeaturedCast } from '@/components/LiveSection';
+import { LIVE_HASHTAG, LiveSection, type FeaturedCast } from '@/components/LiveSection';
+import { getSocialBuzz } from '@/lib/social-feed';
 import { SignedOutLanding } from '@/components/SignedOutLanding';
 import { getCurrentUser } from '@/lib/auth';
 import {
@@ -25,8 +26,15 @@ export default async function HomePage() {
   const user = await getCurrentUser();
 
   const featured = await getFeaturedCast();
-  const headlines = featured ? await getRecentHeadlines(featured.seasonId) : [];
-  const live = <LiveSection featured={featured} headlines={headlines} />;
+  const [headlines, buzz] = await Promise.all([
+    featured ? getRecentHeadlines(featured.seasonId) : Promise.resolve([]),
+    getSocialBuzz({
+      showName: featured?.showName ?? 'Big Brother',
+      showSlug: featured?.showSlug ?? 'big-brother',
+      hashtag: LIVE_HASHTAG,
+    }),
+  ]);
+  const live = <LiveSection featured={featured} headlines={headlines} buzz={buzz} />;
 
   if (!user) return <SignedOutLanding live={live} />;
 
@@ -107,6 +115,8 @@ async function getFeaturedCast(): Promise<FeaturedCast | null> {
         seasonId: season.id,
         seasonSlug: board.season.slug,
         seasonName: board.season.name,
+        showName: season.show.name,
+        showSlug: season.show.slug,
         cast,
       };
     }
