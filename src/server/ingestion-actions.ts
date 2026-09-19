@@ -2,7 +2,12 @@
 
 import { revalidatePath } from 'next/cache';
 import { requirePlatformAdmin } from '../lib/auth';
-import { approveCandidate, ingestSeason, rejectCandidate } from '../lib/ingestion/pipeline';
+import {
+  approveCandidate,
+  bootstrapSeasonFromSource,
+  ingestSeason,
+  rejectCandidate,
+} from '../lib/ingestion/pipeline';
 import { IngestionError } from '../lib/ingestion/types';
 
 export type IngestionActionState = { error?: string; message?: string };
@@ -66,6 +71,40 @@ export async function runSyncAction(
     revalidatePath('/admin/ingestion');
     return {
       message: `${result.candidatesNew} new · ${result.autoPublished} published · ${result.pendingReview} to review`,
+    };
+  } catch (error) {
+    return { error: messageFor(error) };
+  }
+}
+
+/**
+ * Re-runs a season's bootstrap against its source.
+ *
+ * Bootstrap is idempotent — an already-linked houseguest is matched by source
+ * id and only has missing fields filled in — so this doubles as the way to
+ * pull in cast data the adapter learned to capture after a season was first
+ * ingested (photos, most recently). Exposing it here means a deployed
+ * environment can be refreshed by an admin in the browser, rather than
+ * requiring someone to point a local shell at that environment's database.
+ */
+export async function runBootstrapAction(
+  _prev: IngestionActionState,
+  formData: FormData,
+): Promise<IngestionActionState> {
+  try {
+    await requirePlatformAdmin();
+    const result = await bootstrapSeasonFromSource({
+      sourceSlug: String(formData.get('sourceSlug') ?? ''),
+      seasonExternalId: String(formData.get('seasonSlug') ?? ''),
+      showSlug: String(formData.get('showSlug') ?? ''),
+      year: Number(formData.get('year') ?? 0),
+    });
+
+    revalidatePath('/admin/ingestion');
+    return {
+      message:
+        `${result.photosBackfilled} photos · ${result.contestantsCreated} new houseguests · ` +
+        `${result.cyclesCreated} new weeks`,
     };
   } catch (error) {
     return { error: messageFor(error) };

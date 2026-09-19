@@ -588,3 +588,39 @@ export async function getUserTeams(userId: string): Promise<UserTeamSummary[]> {
     }),
   );
 }
+
+export interface SeasonHeadline {
+  id: string;
+  contestantName: string;
+  eventLabel: string;
+  points: number;
+  occurredAt: Date;
+}
+
+/**
+ * The most recent real scored events for a season, for a "what just
+ * happened" ticker. Deliberately real data rather than fabricated copy —
+ * whatever the ingestion pipeline or an admin has actually recorded.
+ */
+export async function getRecentHeadlines(seasonId: string, limit = 8): Promise<SeasonHeadline[]> {
+  const events = await prisma.scoredEvent.findMany({
+    where: { isVoided: false, contestant: { seasonId } },
+    orderBy: { occurredAt: 'desc' },
+    take: limit,
+    select: {
+      id: true,
+      pointsAwarded: true,
+      occurredAt: true,
+      contestant: { select: { name: true } },
+      eventDefinition: { select: { label: true } },
+    },
+  });
+
+  return events.map((e) => ({
+    id: e.id,
+    contestantName: e.contestant.name,
+    eventLabel: e.eventDefinition.label,
+    points: Number(e.pointsAwarded),
+    occurredAt: e.occurredAt,
+  }));
+}
