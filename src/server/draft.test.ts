@@ -136,6 +136,52 @@ describe.skipIf(!dbReady)('starting a draft', () => {
     await expect(startDraft(leagueId, bob)).rejects.toThrow();
   });
 
+  /**
+   * The worst failure this app can have: a draft that cannot finish. The board
+   * runs out of houseguests, the team on the clock can never pick, and the
+   * league sits IN_PROGRESS with no way out short of editing the database.
+   * Four teams at five apiece is twenty picks against a sixteen-houseguest
+   * season, so it is an ordinary configuration rather than an exotic one.
+   */
+  it('refuses a draft that needs more houseguests than the season has', async () => {
+    const total = await prisma.contestant.count({ where: { seasonId } });
+    // Two teams needing more than the whole cast between them.
+    const rosterSize = Math.floor(total / 2) + 1;
+    expect(rosterSize, 'season is too large to construct this case').toBeLessThanOrEqual(12);
+
+    const league = await createLeague(alice, {
+      name: `${stamp} oversized`,
+      seasonId,
+      scoringRulesetId: rulesetId,
+      rosterSize,
+      maxTeams: 2,
+      isPublic: false,
+      teamName: 'Alice Squad',
+    });
+    leagueIds.push(league.id);
+    await joinLeague(
+      bob,
+      (
+        await prisma.league.findUniqueOrThrow({
+          where: { id: league.id },
+          select: { inviteCode: true },
+        })
+      ).inviteCode,
+      'Bob Squad',
+    );
+
+    await expect(startDraft(league.id, alice)).rejects.toMatchObject({
+      code: 'NOT_ENOUGH_CONTESTANTS',
+    });
+
+    // And the league is untouched, so lowering the roster size fixes it.
+    const after = await prisma.league.findUniqueOrThrow({
+      where: { id: league.id },
+      select: { draftStatus: true },
+    });
+    expect(after.draftStatus).toBe('NOT_STARTED');
+  });
+
   it('refuses a pick before the draft has started', async () => {
     const league = await createLeague(alice, {
       name: `${stamp} unstarted`,

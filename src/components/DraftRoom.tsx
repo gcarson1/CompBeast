@@ -5,7 +5,7 @@ import { useEffect, useMemo, useRef, useState } from 'react';
 import { AnimatePresence, motion } from 'framer-motion';
 import { toast } from 'sonner';
 import { Avatar } from '@/components/Avatar';
-import { useLeaguePulse } from '@/lib/live';
+import { useLeaguePulse, type PulseStatus } from '@/lib/live';
 import { cn } from '@/lib/ui';
 import { draftPickAction, startDraftAction, type ActionState } from '@/server/actions';
 
@@ -29,7 +29,14 @@ export interface DraftRoomProps {
   totalPicks: number;
   teams: Array<{ id: string; name: string; ownerName: string | null; position: number | null }>;
   picks: DraftPickView[];
-  available: Array<{ id: string; name: string; photoUrl: string | null; occupation: string | null }>;
+  available: Array<{
+    id: string;
+    name: string;
+    photoUrl: string | null;
+    occupation: string | null;
+    /** False once they have been evicted — still draftable, rarely wise. */
+    isActive: boolean;
+  }>;
 }
 
 const TAB_TRANSITION = { duration: 0.15 };
@@ -53,7 +60,7 @@ export function DraftRoom(props: DraftRoomProps) {
    * makes someone else's pick appear here without a manual refresh — the whole
    * reason this screen was unusable with more than one person in it.
    */
-  const { live, syncing } = useLeaguePulse({
+  const { status, syncing } = useLeaguePulse({
     leagueId: props.leagueId,
     watch: { picks: props.picks.length, draftStatus: props.draftStatus },
     intervalMs: drafting ? DRAFT_POLL_MS : IDLE_POLL_MS,
@@ -76,10 +83,15 @@ export function DraftRoom(props: DraftRoomProps) {
 
   const filtered = useMemo(() => {
     const q = query.trim().toLowerCase();
-    if (!q) return props.available;
-    return props.available.filter(
-      (c) => c.name.toLowerCase().includes(q) || c.occupation?.toLowerCase().includes(q),
-    );
+    const matches = q
+      ? props.available.filter(
+          (c) => c.name.toLowerCase().includes(q) || c.occupation?.toLowerCase().includes(q),
+        )
+      : props.available;
+    // Evicted houseguests sink. Nothing stops you drafting one — a late-season
+    // league might want the points they already banked — but they should never
+    // be the first name your thumb lands on.
+    return [...matches].sort((a, b) => Number(b.isActive) - Number(a.isActive));
   }, [props.available, query]);
 
   const myPicks = props.picks.filter((p) => p.teamId === props.myTeamId);
@@ -116,8 +128,8 @@ export function DraftRoom(props: DraftRoomProps) {
             </div>
 
             <p className="mt-3 flex items-center gap-1.5 border-t border-hairline pt-3 text-2xs text-muted">
-              <LiveDot live={live} syncing={syncing} />
-              {!live
+              <LiveDot status={status} syncing={syncing} />
+              {status === 'reconnecting'
                 ? 'Reconnecting — this board may be behind'
                 : myTurn
                   ? 'Your pick. Choose a houseguest below.'
@@ -177,10 +189,24 @@ export function DraftRoom(props: DraftRoomProps) {
               <ul className="card divide-y divide-hairline">
                 {filtered.map((contestant) => (
                   <li key={contestant.id} className="flex items-center gap-3 p-3.5">
-                    <Avatar name={contestant.name} photoUrl={contestant.photoUrl} size={40} />
+                    <span className={cn('shrink-0', !contestant.isActive && 'opacity-50')}>
+                      <Avatar name={contestant.name} photoUrl={contestant.photoUrl} size={40} />
+                    </span>
                     <span className="min-w-0 flex-1">
-                      <span className="block truncate text-base font-semibold">
-                        {contestant.name}
+                      <span className="flex items-baseline gap-2">
+                        <span
+                          className={cn(
+                            'min-w-0 truncate text-base font-semibold',
+                            !contestant.isActive && 'text-muted',
+                          )}
+                        >
+                          {contestant.name}
+                        </span>
+                        {!contestant.isActive && (
+                          <span className="pill shrink-0 bg-danger-soft text-[11px] leading-none text-danger-deep">
+                            evicted
+                          </span>
+                        )}
                       </span>
                       <span className="mt-0.5 block truncate text-2xs text-muted">
                         {contestant.occupation ?? 'Houseguest'}
@@ -326,13 +352,17 @@ function useAnnounceMyTurn(myTurn: boolean, pickNumber: number) {
   }, [myTurn, pickNumber]);
 }
 
-function LiveDot({ live, syncing }: { live: boolean; syncing: boolean }) {
+function LiveDot({ status, syncing }: { status: PulseStatus; syncing: boolean }) {
   return (
     <span
       aria-hidden
       className={cn(
         'h-1.5 w-1.5 shrink-0 rounded-full',
-        !live ? 'bg-muted' : syncing ? 'animate-pulse bg-brand-gold' : 'bg-brand-gold-deep',
+        status !== 'live'
+          ? 'bg-muted'
+          : syncing
+            ? 'animate-pulse bg-brand-gold'
+            : 'bg-brand-gold-deep',
       )}
     />
   );

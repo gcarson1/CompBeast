@@ -32,9 +32,19 @@ function signature(watch: PulseWatch, keys: string[]): string {
   return keys.map((key) => `${key}=${watch[key as keyof LeaguePulse] ?? ''}`).join('|');
 }
 
+/**
+ * - `live` — updates are arriving.
+ * - `reconnecting` — several polls in a row failed; what is on screen may be
+ *   behind, and it is worth saying so.
+ * - `off` — this viewer is not allowed to poll (a signed-out visitor reading a
+ *   public league). Distinct from `reconnecting` because nothing is wrong and
+ *   nothing is going to change: telling them we are reconnecting would be a
+ *   promise we are not going to keep.
+ */
+export type PulseStatus = 'live' | 'reconnecting' | 'off';
+
 export interface UseLeaguePulseResult {
-  /** False once several polls in a row have failed — the page may be stale. */
-  live: boolean;
+  status: PulseStatus;
   /** True between noticing a change and the new server render arriving. */
   syncing: boolean;
 }
@@ -57,7 +67,7 @@ export function useLeaguePulse({
   enabled?: boolean;
 }): UseLeaguePulseResult {
   const router = useRouter();
-  const [live, setLive] = useState(true);
+  const [status, setStatus] = useState<PulseStatus>('live');
   const [syncing, setSyncing] = useState(false);
 
   // Sorted so the signature does not depend on key order in the literal.
@@ -107,12 +117,20 @@ export function useLeaguePulse({
       inFlight = true;
       try {
         const response = await fetch(`/api/leagues/${leagueId}/pulse`, { cache: 'no-store' });
+        if (response.status === 401 || response.status === 403) {
+          // A permanent no. Retrying it forever would burn a request every few
+          // seconds to be told the same thing, and would leave a
+          // "reconnecting" badge on a page that is working perfectly.
+          cancelled = true;
+          setStatus('off');
+          return;
+        }
         if (!response.ok) throw new Error(`pulse ${response.status}`);
         const pulse = (await response.json()) as LeaguePulse;
         failures = 0;
         if (cancelled) return;
 
-        setLive(true);
+        setStatus('live');
         const next = signature(pulse, keysRef.current);
         if (next !== seen.current) {
           seen.current = next;
@@ -124,7 +142,7 @@ export function useLeaguePulse({
         // One dropped request on a phone means nothing. Three in a row means
         // the page in front of someone may be out of date, and they deserve
         // to be told rather than to sit staring at a stale board.
-        if (!cancelled && failures >= 3) setLive(false);
+        if (!cancelled && failures >= 3) setStatus('reconnecting');
       } finally {
         inFlight = false;
         const backoff = failures === 0 ? intervalMs : Math.min(intervalMs * 2 ** failures, 60_000);
@@ -156,5 +174,5 @@ export function useLeaguePulse({
     return () => clearTimeout(id);
   }, [syncing]);
 
-  return { live, syncing };
+  return { status, syncing };
 }

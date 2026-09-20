@@ -23,8 +23,10 @@ export const dynamic = 'force-dynamic';
  * move a count, and neither moves a `max(createdAt)`.
  */
 export async function GET(_request: Request, { params }: { params: { leagueId: string } }) {
-  const user = await getCurrentUser();
-  if (!user) return NextResponse.json({ error: 'Unauthenticated' }, { status: 401 });
+  // Signed out is allowed as far as a *public* league, because the league page
+  // itself is. Answering 401 here would leave a signed-out reader of a public
+  // league watching a "reconnecting" badge on a page that is fine.
+  const user = await getCurrentUser().catch(() => null);
 
   const [league, reactions] = await Promise.all([
     prisma.league.findUnique({
@@ -32,7 +34,9 @@ export async function GET(_request: Request, { params }: { params: { leagueId: s
       select: {
         isPublic: true,
         draftStatus: true,
-        members: { where: { userId: user.id, status: 'ACTIVE' }, select: { id: true } },
+        members: user
+          ? { where: { userId: user.id, status: 'ACTIVE' }, select: { id: true } }
+          : { where: { id: '' }, select: { id: true } },
         _count: {
           select: {
             draftPicks: true,

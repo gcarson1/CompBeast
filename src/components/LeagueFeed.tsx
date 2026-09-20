@@ -47,7 +47,7 @@ export function LeagueFeed({
   const formRef = useRef<HTMLFormElement>(null);
   const reduceMotion = useReducedMotion();
 
-  const { live } = useLeaguePulse({
+  const { status } = useLeaguePulse({
     leagueId,
     watch: {
       messages: messages.length,
@@ -71,11 +71,16 @@ export function LeagueFeed({
       <div className="mb-2 flex items-baseline justify-between">
         <h2 className="text-lg font-semibold">Trash talk</h2>
         <span className="flex items-center gap-1.5 text-2xs text-muted">
-          <span
-            aria-hidden
-            className={`h-1.5 w-1.5 rounded-full ${live ? 'bg-brand-gold-deep' : 'bg-muted'}`}
-          />
-          {!live
+          {/* No dot for a viewer who cannot poll — a signed-out reader of a
+              public league. Claiming "live" there would be untrue, and
+              claiming "reconnecting" would promise something not coming. */}
+          {status !== 'off' && (
+            <span
+              aria-hidden
+              className={`h-1.5 w-1.5 rounded-full ${status === 'live' ? 'bg-brand-gold-deep' : 'bg-muted'}`}
+            />
+          )}
+          {status === 'reconnecting'
             ? 'Reconnecting'
             : messages.length === 0
               ? 'No posts yet'

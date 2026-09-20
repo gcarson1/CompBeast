@@ -1,5 +1,5 @@
 import type { NotificationType } from '@prisma/client';
-import { BRAND, renderShell, renderText } from './layout';
+import { BRAND, renderShell, renderText, type Accent } from './layout';
 
 /**
  * One notification row, dressed for the inbox.
@@ -21,8 +21,7 @@ export type EmailCategory = 'draft' | 'league' | 'friends';
 export interface EmailStyle {
   /** Small uppercase label above the headline. */
   eyebrow: string;
-  accent: string;
-  accentInk: string;
+  accent: Accent;
   /** Button label. Null for messages with nowhere useful to send anyone. */
   cta: string | null;
   /** Completes "You're getting this because …". */
@@ -30,57 +29,82 @@ export interface EmailStyle {
   category: EmailCategory;
 }
 
-const GOLD = { accent: BRAND.gold, accentInk: BRAND.onGold };
-const VELVET = { accent: BRAND.velvet, accentInk: '#FFFFFF' };
-const DANGER = { accent: BRAND.danger, accentInk: '#FFFFFF' };
-const NEUTRAL = { accent: BRAND.slate, accentInk: '#FFFFFF' };
+/**
+ * Every value below is measured against the card surface (#1E293B) or against
+ * its own fill. See the `Accent` doc in ./layout for why one colour cannot do
+ * all three jobs.
+ */
+const GOLD: Accent = {
+  rule: BRAND.gold,
+  eyebrow: BRAND.gold, // 6.8:1 on the card
+  fill: BRAND.gold,
+  ink: BRAND.onGold, // 8.6:1 on gold
+};
+const VELVET: Accent = {
+  rule: BRAND.velvet, // bright enough to see as a band
+  eyebrow: BRAND.velvetDeep, // 7.9:1 — the bright velvet is only 3.5:1
+  fill: BRAND.velvetDeepFill, // white on the bright velvet is 4.2:1
+  ink: '#FFFFFF', // 11:1 here
+};
+const DANGER: Accent = {
+  rule: BRAND.danger,
+  eyebrow: BRAND.dangerDeep, // 5.3:1 — plain #EF4444 is 3.9:1
+  fill: BRAND.dangerStrong,
+  ink: '#FFFFFF', // 6.5:1
+};
+const NEUTRAL: Accent = {
+  rule: BRAND.slate,
+  eyebrow: BRAND.muted, // 5.7:1 — slate itself is 3.1:1
+  fill: BRAND.slate,
+  ink: '#FFFFFF', // 4.8:1
+};
 
 export const EMAIL_STYLES: Record<NotificationType, EmailStyle> = {
   LEAGUE_DRAFT_PICK_DUE: {
     eyebrow: 'You are on the clock',
-    ...GOLD,
+    accent: GOLD,
     cta: 'Make your pick',
     because: 'a draft you are in is waiting on your pick',
     category: 'draft',
   },
   LEAGUE_DRAFT_STARTED: {
     eyebrow: 'Draft started',
-    ...GOLD,
+    accent: GOLD,
     cta: 'Go to the draft room',
     because: 'a league you are in started drafting',
     category: 'draft',
   },
   LEAGUE_DRAFT_COMPLETED: {
     eyebrow: 'Rosters set',
-    ...GOLD,
+    accent: GOLD,
     cta: 'See your roster',
     because: 'a draft you were in finished',
     category: 'draft',
   },
   LEAGUE_INVITE: {
     eyebrow: 'Invitation',
-    ...GOLD,
+    accent: GOLD,
     cta: 'Take your seat',
     because: 'someone invited you to their league',
     category: 'league',
   },
   LEAGUE_MEMBER_JOINED: {
     eyebrow: 'New manager',
-    ...GOLD,
+    accent: GOLD,
     cta: 'See the league',
     because: 'you run a league somebody just joined',
     category: 'league',
   },
   LEAGUE_UPDATED: {
     eyebrow: 'League settings',
-    ...NEUTRAL,
+    accent: NEUTRAL,
     cta: 'Review the changes',
     because: 'a commissioner changed the rules of a league you are in',
     category: 'league',
   },
   LEAGUE_DELETED: {
     eyebrow: 'League closed',
-    ...DANGER,
+    accent: DANGER,
     // Nowhere to send anyone: the league it refers to no longer exists.
     cta: null,
     because: 'a league you were in was deleted',
@@ -88,14 +112,14 @@ export const EMAIL_STYLES: Record<NotificationType, EmailStyle> = {
   },
   FRIEND_REQUEST: {
     eyebrow: 'Friend request',
-    ...VELVET,
+    accent: VELVET,
     cta: 'See the request',
     because: 'somebody sent you a friend request',
     category: 'friends',
   },
   FRIEND_ACCEPTED: {
     eyebrow: 'Friends',
-    ...VELVET,
+    accent: VELVET,
     cta: 'View your friends',
     because: 'somebody accepted your friend request',
     category: 'friends',
@@ -152,7 +176,7 @@ export interface RenderedEmail {
 export function renderNotificationEmail(input: RenderInput): RenderedEmail {
   const style = EMAIL_STYLES[input.type] ?? {
     eyebrow: 'Comp Beast',
-    ...NEUTRAL,
+    accent: NEUTRAL,
     cta: 'Open Comp Beast',
     because: 'something happened in a league you are in',
     category: 'league' as const,
@@ -180,7 +204,6 @@ export function renderNotificationEmail(input: RenderInput): RenderedEmail {
       preheader: body,
       eyebrow: style.eyebrow,
       accent: style.accent,
-      accentInk: style.accentInk,
       ...shared,
     }),
     text: renderText(shared),

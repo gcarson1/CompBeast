@@ -1,5 +1,6 @@
 import { NotificationType } from '@prisma/client';
 import { describe, expect, it } from 'vitest';
+import { BRAND } from './layout';
 import { CATEGORIES, EMAIL_STYLES, categoryOf, renderNotificationEmail } from './templates';
 
 const BASE = 'https://compbeast.example';
@@ -43,6 +44,64 @@ describe('the type catalogue', () => {
     for (const [name, group] of Object.entries(CATEGORIES)) {
       for (const type of group.types) expect(categoryOf(type)).toBe(name);
     }
+  });
+});
+
+/**
+ * Contrast, checked here rather than trusted.
+ *
+ * An email is the one surface nobody can file a bug about: it renders once, in
+ * somebody's inbox, and if the label above the headline is illegible they
+ * simply do not read it and we never find out. Three of these accents were
+ * under the floor the first time they were written, all for the same reason —
+ * one colour being asked to work as a band, as small text, and as a fill.
+ */
+function relativeLuminance(hex: string): number {
+  const channels = [1, 3, 5].map((i) => {
+    const value = parseInt(hex.slice(i, i + 2), 16) / 255;
+    return value <= 0.03928 ? value / 12.92 : ((value + 0.055) / 1.055) ** 2.4;
+  });
+  return 0.2126 * channels[0] + 0.7152 * channels[1] + 0.0722 * channels[2];
+}
+
+function contrast(a: string, b: string): number {
+  const [x, y] = [relativeLuminance(a), relativeLuminance(b)].sort((m, n) => n - m);
+  return (x + 0.05) / (y + 0.05);
+}
+
+describe('accent contrast', () => {
+  const SURFACE = BRAND.surface;
+  const accents = [...new Set(Object.values(EMAIL_STYLES).map((style) => style.accent))];
+
+  it('has an accent for every type that clears AA as small text', () => {
+    // 11px uppercase is small text: the 4.5:1 floor, not the 3:1 large-text one.
+    for (const accent of accents) {
+      expect(contrast(accent.eyebrow, SURFACE), `eyebrow ${accent.eyebrow}`).toBeGreaterThanOrEqual(
+        4.5,
+      );
+    }
+  });
+
+  it('puts readable ink on every button fill', () => {
+    // 14px bold is still small text under WCAG — "large" starts at 18.66px bold.
+    for (const accent of accents) {
+      expect(
+        contrast(accent.ink, accent.fill),
+        `${accent.ink} on ${accent.fill}`,
+      ).toBeGreaterThanOrEqual(4.5);
+    }
+  });
+
+  it('keeps the accent rule visible against the card', () => {
+    // Decorative, so the 3:1 non-text threshold applies rather than 4.5:1.
+    for (const accent of accents) {
+      expect(contrast(accent.rule, SURFACE), `rule ${accent.rule}`).toBeGreaterThanOrEqual(3);
+    }
+  });
+
+  it('reads body copy at AA against the card', () => {
+    expect(contrast(BRAND.muted, SURFACE)).toBeGreaterThanOrEqual(4.5);
+    expect(contrast(BRAND.ink, SURFACE)).toBeGreaterThanOrEqual(4.5);
   });
 });
 

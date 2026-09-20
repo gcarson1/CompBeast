@@ -394,13 +394,38 @@ export async function startDraft(leagueId: string, userId: string) {
   await assertLeagueRole(leagueId, userId, ['COMMISSIONER', 'ADMIN']);
   const league = await prisma.league.findUniqueOrThrow({
     where: { id: leagueId },
-    select: { draftStatus: true, _count: { select: { teams: true } } },
+    select: {
+      draftStatus: true,
+      rosterSize: true,
+      seasonId: true,
+      _count: { select: { teams: true } },
+    },
   });
   if (league.draftStatus !== 'NOT_STARTED') {
     throw new DomainError('The draft has already started.', 'DRAFT_STARTED', 409);
   }
   if (league._count.teams < 2) {
     throw new DomainError('A draft needs at least two teams.', 'NOT_ENOUGH_TEAMS');
+  }
+
+  /**
+   * A draft that asks for more houseguests than the show has cannot finish.
+   *
+   * There is no failure mode worse than this one in the app: the board simply
+   * runs out of people, the team on the clock can never pick, and the draft
+   * stays IN_PROGRESS forever with no way out short of editing the database.
+   * Four teams at five apiece is twenty picks, and a Big Brother season has
+   * sixteen houseguests — so this is not an exotic configuration, it is an
+   * ordinary one.
+   */
+  const needed = league._count.teams * league.rosterSize;
+  const available = await prisma.contestant.count({ where: { seasonId: league.seasonId } });
+  if (needed > available) {
+    throw new DomainError(
+      `This draft needs ${needed} houseguests (${league._count.teams} teams × ${league.rosterSize}) ` +
+        `but the season only has ${available}. Lower the roster size in league settings and try again.`,
+      'NOT_ENOUGH_CONTESTANTS',
+    );
   }
   const updated = await prisma.league.update({
     where: { id: leagueId },

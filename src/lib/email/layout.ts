@@ -26,8 +26,12 @@ export const BRAND = {
   onGold: '#1A1206',
   danger: '#EF4444',
   dangerDeep: '#F87171',
+  /** Destructive button fill. White on plain #EF4444 is only 3.8:1. */
+  dangerStrong: '#B91C1C',
   velvet: '#8B5CF6',
   velvetDeep: '#C4B5FD',
+  /** Velvet button fill. White on the bright velvet is only 4.2:1. */
+  velvetDeepFill: '#4C1D95',
   slate: '#64748B',
 } as const;
 
@@ -49,15 +53,36 @@ export function escapeHtml(value: string): string {
     .replace(/'/g, '&#39;');
 }
 
+/**
+ * One accent, three jobs, three colours.
+ *
+ * They cannot be the same value. A hue bright enough to read as a label on
+ * the dark card is too light to put white text on, and a fill dark enough for
+ * white text disappears as a rule against the card. Collapsing them into one
+ * "accent" is what produced eyebrow labels at 3.1:1 and button text at 4.2:1
+ * — both under the 4.5:1 floor, in the one place nobody can report a bug
+ * from, because it is in their inbox.
+ *
+ * The app's own palette already encodes this split: `deep` variants are
+ * text-on-dark only, `strong` exists so a destructive button has a fill white
+ * can sit on.
+ */
+export interface Accent {
+  /** The 3px band across the top of the card. Decorative; 3:1 is the floor. */
+  rule: string;
+  /** The small uppercase label. Text on the card, so 4.5:1 against surface. */
+  eyebrow: string;
+  /** Button fill, paired with `ink` below to clear 4.5:1. */
+  fill: string;
+  ink: string;
+}
+
 export interface ShellInput {
   /** Inbox preview line. Shown next to the subject before anything is opened. */
   preheader: string;
   /** Small uppercase label above the headline, e.g. "Draft". */
   eyebrow: string;
-  /** Accent for the eyebrow, rule and button. */
-  accent: string;
-  /** Readable text colour on top of `accent`. */
-  accentInk: string;
+  accent: Accent;
   headline: string;
   body: string;
   cta?: { label: string; url: string };
@@ -74,7 +99,6 @@ export function renderShell(input: ShellInput): string {
     preheader,
     eyebrow,
     accent,
-    accentInk,
     headline,
     body,
     cta,
@@ -105,12 +129,12 @@ export function renderShell(input: ShellInput): string {
 
   <tr><td style="background-color:${BRAND.surface};border:1px solid ${BRAND.hairline};border-radius:10px;">
     <table role="presentation" cellpadding="0" cellspacing="0" border="0" width="100%">
-      <tr><td style="height:3px;line-height:3px;font-size:3px;background-color:${accent};border-radius:10px 10px 0 0;">&nbsp;</td></tr>
+      <tr><td style="height:3px;line-height:3px;font-size:3px;background-color:${accent.rule};border-radius:10px 10px 0 0;">&nbsp;</td></tr>
       <tr><td style="padding:28px 28px 30px 28px;">
-        <p style="margin:0 0 10px 0;font-family:${TEXT_STACK};font-size:11px;font-weight:700;letter-spacing:1.2px;text-transform:uppercase;color:${accent};">${escapeHtml(eyebrow)}</p>
+        <p style="margin:0 0 10px 0;font-family:${TEXT_STACK};font-size:11px;font-weight:700;letter-spacing:1.2px;text-transform:uppercase;color:${accent.eyebrow};">${escapeHtml(eyebrow)}</p>
         <h1 style="margin:0;font-family:${TEXT_STACK};font-size:23px;line-height:30px;font-weight:700;color:${BRAND.ink};">${escapeHtml(headline)}</h1>
         <p style="margin:12px 0 0 0;font-family:${TEXT_STACK};font-size:15px;line-height:23px;color:${BRAND.muted};">${escapeHtml(body)}</p>
-        ${cta ? button(cta.label, cta.url, accent, accentInk) : ''}
+        ${cta ? button(cta.label, cta.url, accent) : ''}
         ${
           detail
             ? `<p style="margin:18px 0 0 0;padding-top:16px;border-top:1px solid ${BRAND.hairline};font-family:${TEXT_STACK};font-size:13px;line-height:19px;color:${BRAND.muted};">${escapeHtml(detail)}</p>`
@@ -161,10 +185,10 @@ function wordmark(): string {
  * Outlook ignores padding on anchors, so the button is a table cell with the
  * link stretched inside it. Without this it renders as bare blue text.
  */
-function button(label: string, url: string, accent: string, accentInk: string): string {
+function button(label: string, url: string, accent: Accent): string {
   return `<table role="presentation" cellpadding="0" cellspacing="0" border="0" style="margin-top:22px;"><tr>
-    <td align="center" style="background-color:${accent};border-radius:10px;">
-      <a href="${escapeHtml(url)}" style="display:inline-block;padding:12px 22px;font-family:${TEXT_STACK};font-size:14px;font-weight:700;line-height:18px;color:${accentInk};text-decoration:none;">${escapeHtml(label)}</a>
+    <td align="center" style="background-color:${accent.fill};border-radius:10px;">
+      <a href="${escapeHtml(url)}" style="display:inline-block;padding:12px 22px;font-family:${TEXT_STACK};font-size:14px;font-weight:700;line-height:18px;color:${accent.ink};text-decoration:none;">${escapeHtml(label)}</a>
     </td>
   </tr></table>`;
 }

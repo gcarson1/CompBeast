@@ -65,6 +65,7 @@ export default async function DraftPage({ params }: { params: { leagueId: string
             name: c.name,
             photoUrl: c.photoUrl,
             occupation: (c.metadata as { occupation?: string } | null)?.occupation ?? null,
+            isActive: c.isActive,
           }))}
       />
     </div>
