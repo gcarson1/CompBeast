@@ -87,17 +87,22 @@ export default async function LeaguePage({ params }: { params: { leagueId: strin
 
       <div className="mt-2 flex items-start justify-between gap-3">
         <h1 className="text-3xl font-semibold tracking-tight">{league.name}</h1>
-        {/* Commissioner powers (starting the draft, league settings) show up
-            conditionally, so the role itself needs to be visible — otherwise
-            the controls look arbitrary to whoever has them and missing to
-            everyone else. This is what `brand-velvet` is reserved for. */}
+        {/* Settings are the commissioner's alone (the mutation refuses anyone
+            else), so the control only renders for them. It is a plain icon
+            button, not a badge: the previous "Commissioner" pill announced a
+            role where a control was expected, and a pill is the shape this
+            app reserves for things you cannot tap. The role itself is still
+            shown where it belongs, on the commissioner's row in the managers
+            list. 44px square: WCAG 2.5.8's target size for a standalone
+            control, the same floor as `.btn`. */}
         {isCommissioner && (
           <Link
             href={`/leagues/${league.id}/settings`}
             prefetch={false}
-            className="pill shrink-0 gap-1.5 bg-brand-velvet-soft text-2xs text-brand-velvet-deep transition hover:brightness-125"
+            aria-label="League settings"
+            title="League settings"
+            className="grid h-11 w-11 shrink-0 place-items-center rounded-btn border border-hairline bg-surface text-muted transition hover:bg-surface-raised hover:text-ink active:scale-[0.97]"
           >
-            Commissioner
             <GearIcon />
           </Link>
         )}
@@ -254,7 +259,7 @@ export default async function LeaguePage({ params }: { params: { leagueId: strin
 
 function GearIcon() {
   return (
-    <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" aria-hidden>
+    <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" aria-hidden>
       <circle cx="12" cy="12" r="3.2" />
       <path d="M12 2.5v2M12 19.5v2M21.5 12h-2M4.5 12h-2M18.7 5.3l-1.4 1.4M6.7 17.3l-1.4 1.4M18.7 18.7l-1.4-1.4M6.7 6.7 5.3 5.3" strokeLinecap="round" />
     </svg>

@@ -445,16 +445,53 @@ rules exist to prevent corruption rather than to tidy the form:
 Members are notified only for changes that affect play — a typo fix in the league
 name should not ping eight phones.
 
+Both are the commissioner's alone. The mutation checks the `COMMISSIONER`
+membership role *and* `League.commissionerId`, which are written together and
+should never disagree — the second check exists so that if they ever do, the
+edit is refused rather than decided by whichever field happened to be read.
+On the league page the control is a plain cog button that only the commissioner
+sees; the role itself is shown on their row in the managers list, because a pill
+is the shape this app reserves for things you cannot tap.
+
 Deleting cascades at the database level rather than by hand, so a table added
 later cannot be missed. Members are notified **before** the delete, because
 afterwards there is no membership list left to read. Confirmation is typing the
 league name, not a dialog that gets dismissed by reflex.
 
+**The points survive the league.** In the same transaction as the delete,
+`deleteLeague` writes one `CareerRecord` per team that had scored anything:
+league, team, season and show names, the final total and rank, whether the
+season had ended (a first place in a season still running is a lead, not a
+title), and the week-by-week line for the chart. Like `Notification`, the row
+holds copies rather than relations, so it survives the thing it describes. The
+account page reads live teams and these records through one reduction
+(`src/lib/career.ts`), so a season keeps its shape when its league closes. A
+team that never scored leaves no record — nothing was played.
+
 ## Account
 
 `/account` is the career view: total points, leagues, best finish and titles
 (first places in seasons that actually *ended* — leading an active league is not
-a win yet), a per-season history, and a cumulative points chart.
+a win yet), a per-season history, and a cumulative points chart. Lines from
+leagues that were later deleted come from `CareerRecord` and render without a
+link, tagged "League closed".
+
+### Badges
+
+Six tiers on lifetime points, defined in `src/lib/badges.ts`: Houseguest (1),
+Comp Winner (100), Head of Household (250), Jury Member (500), Finalist (1,000)
+and Comp Beast (2,500). The thresholds are set against real numbers: in the
+completed Big Brother 27 season the average houseguest scored about 52 points
+under Classic rules, so a default five-houseguest roster comes out near 260 for
+a season — the ladder is a first point, a third of a season, a season, two,
+four, and a decade at the top.
+
+Badges are derived from the account's total, never stored, so there is no row
+to fall out of sync with the ledger and nothing to backfill. Because that total
+includes `CareerRecord`s, a badge earned in a league that was later deleted
+stays earned. The shelf shows every tier with the locked ones dimmed and a
+progress line to the next, measured from the previous tier rather than from
+zero so the last stretch never looks nearly full for years.
 
 The chart is hand-rolled SVG, not a charting library — it draws one polyline and
 some dots, and the smallest credible dependency is bigger than the page. That

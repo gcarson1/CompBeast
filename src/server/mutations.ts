@@ -2,6 +2,7 @@ import { z } from 'zod';
 import { Prisma } from '@prisma/client';
 import { prisma } from '../lib/db';
 import { assertLeagueRole } from '../lib/auth';
+import { playedHistory } from '../lib/career';
 import { describeLockOffset, isCycleLocked } from '../lib/cycles';
 import {
   DRAFT_TEAM_ORDER,
@@ -245,6 +246,7 @@ export async function updateLeague(
     where: { id: leagueId },
     select: {
       name: true,
+      commissionerId: true,
       rosterSize: true,
       maxTeams: true,
       isPublic: true,
@@ -256,6 +258,7 @@ export async function updateLeague(
     },
   });
   if (!league) throw new DomainError('That league no longer exists.', 'LEAGUE_NOT_FOUND', 404);
+  assertCommissioner(league, userId);
 
   if (data.maxTeams < league._count.teams) {
     throw new DomainError(
@@ -353,14 +356,51 @@ export async function updateLeague(
  * membership list left to read, and a league vanishing with no explanation is
  * the single most alarming thing this app can do to someone.
  */
+/**
+ * Settings and deletion answer to the league's commissioner and nobody else.
+ *
+ * Two facts claim to say who that is — `League.commissionerId`, which the
+ * pages read, and the `COMMISSIONER` membership role, which `assertLeagueRole`
+ * reads. They are written together in `createLeague` and nothing today moves
+ * one without the other, so this check should never fire; it exists so that
+ * if the two ever drift, the mutation refuses rather than letting whichever
+ * one happens to be checked decide who may edit or delete a league.
+ */
+function assertCommissioner(league: { commissionerId: string }, userId: string): void {
+  if (league.commissionerId !== userId) {
+    throw new DomainError('Only the commissioner can change this league.', 'NOT_COMMISSIONER', 403);
+  }
+}
+
 export async function deleteLeague(leagueId: string, userId: string, confirmName: string) {
   await assertLeagueRole(leagueId, userId, ['COMMISSIONER']);
 
   const league = await prisma.league.findUnique({
     where: { id: leagueId },
-    select: { id: true, name: true, members: { where: { status: 'ACTIVE' }, select: { userId: true } } },
+    select: {
+      id: true,
+      name: true,
+      commissionerId: true,
+      season: { select: { id: true, name: true, status: true, show: { select: { name: true } } } },
+      members: { where: { status: 'ACTIVE' }, select: { userId: true } },
+      teams: {
+        select: {
+          ownerId: true,
+          name: true,
+          cycleScores: {
+            select: {
+              cyclePoints: true,
+              cumulativePoints: true,
+              rank: true,
+              cycle: { select: { label: true, sequence: true, status: true } },
+            },
+          },
+        },
+      },
+    },
   });
   if (!league) throw new DomainError('That league no longer exists.', 'LEAGUE_NOT_FOUND', 404);
+  assertCommissioner(league, userId);
 
   // Typing the name is the guard. A confirm dialog is dismissed by reflex;
   // this cannot be satisfied by accident.
@@ -377,18 +417,49 @@ export async function deleteLeague(leagueId: string, userId: string, confirmName
       actorId: userId,
       type: 'LEAGUE_DELETED' as const,
       title: `${league.name} was deleted`,
-      body: 'The commissioner closed this league. Its standings are gone.',
-      href: '/leagues',
+      body: 'The commissioner closed this league. The points you scored in it stay on your account.',
+      href: '/account',
     })),
   );
 
-  await prisma.league.delete({ where: { id: leagueId } });
+  // What each manager walks away with. The cascade below takes the teams and
+  // every materialized score with them, so this is the last moment the
+  // numbers exist — see `CareerRecord` in the schema for why they must
+  // outlive the league. A team that never scored (a league closed before its
+  // season aired) leaves no record: nothing was played, so there is nothing
+  // to keep, and a row of zeros would only pad the career view.
+  const records = league.teams.flatMap((team) => {
+    const history = playedHistory(team.cycleScores);
+    const last = history.at(-1);
+    if (!last) return [];
+    return [
+      {
+        userId: team.ownerId,
+        leagueId: league.id,
+        seasonId: league.season.id,
+        leagueName: league.name,
+        teamName: team.name,
+        seasonName: league.season.name,
+        showName: league.season.show.name,
+        totalPoints: last.cumulativePoints,
+        finalRank: last.rank,
+        teamCount: league.teams.length,
+        seasonCompleted: league.season.status === 'COMPLETED',
+        history,
+      },
+    ];
+  });
+
+  // One transaction: a record without its delete would double-count a league
+  // still standing, and a delete without its records is the loss this exists
+  // to prevent. `skipDuplicates` covers a retry after a partial failure.
+  await prisma.$transaction(async (tx) => {
+    if (records.length > 0) await tx.careerRecord.createMany({ data: records, skipDuplicates: true });
+    await tx.league.delete({ where: { id: leagueId } });
+  });
+
   return { deleted: true, name: league.name };
 }
-
-// ---------------------------------------------------------------------------
-// Draft
-// ---------------------------------------------------------------------------
 
 export async function startDraft(leagueId: string, userId: string) {
   await assertLeagueRole(leagueId, userId, ['COMMISSIONER', 'ADMIN']);

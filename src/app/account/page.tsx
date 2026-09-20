@@ -1,10 +1,12 @@
 import Link from 'next/link';
 import { redirect } from 'next/navigation';
 import { Avatar } from '@/components/Avatar';
+import { BadgeShelf } from '@/components/BadgeShelf';
 import { EmailPreferences } from '@/components/EmailPreferences';
 import { FriendsPanel } from '@/components/FriendsPanel';
 import { PointHistoryChart } from '@/components/PointHistoryChart';
 import { getCurrentUser } from '@/lib/auth';
+import { BADGES, earnedBadges, highestBadge } from '@/lib/badges';
 import { formatPoints, pointsTone } from '@/lib/ui';
 import { getEmailPreferences } from '@/server/notification-email';
 import { getAccountOverview, type SeasonHistoryRow } from '@/server/queries';
@@ -30,8 +32,12 @@ export default async function AccountPage() {
       Number(b.seasonStatus === 'ACTIVE') - Number(a.seasonStatus === 'ACTIVE') ||
       b.totalPoints - a.totalPoints,
   );
-  const current = ordered.find((row) => row.seasonStatus !== 'COMPLETED' && row.history.length > 0);
+  // A closed league is never "this season", whatever its season is doing.
+  const current = ordered.find(
+    (row) => !row.archived && row.seasonStatus !== 'COMPLETED' && row.history.length > 0,
+  );
   const past = ordered.filter((row) => row.seasonStatus === 'COMPLETED');
+  const badge = highestBadge(account.totalPoints);
 
   return (
     <div className="pt-2">
@@ -43,8 +49,13 @@ export default async function AccountPage() {
         <Avatar name={displayName} photoUrl={user.avatarUrl} size={56} />
         <div className="min-w-0">
           <h1 className="truncate text-3xl font-semibold tracking-tight">{displayName}</h1>
-          <p className="truncate text-xs text-muted">
-            {user.handle ? `@${user.handle}` : user.email}
+          <p className="flex min-w-0 items-center gap-2 text-xs text-muted">
+            <span className="truncate">{user.handle ? `@${user.handle}` : user.email}</span>
+            {badge && (
+              <span className="pill shrink-0 bg-brand-gold-soft px-2 py-0.5 text-2xs font-medium text-brand-gold-deep">
+                {badge.name}
+              </span>
+            )}
           </p>
         </div>
       </div>
@@ -62,6 +73,18 @@ export default async function AccountPage() {
           />
           <Stat label="Titles" value={String(account.titles)} hint="Seasons won outright" />
         </dl>
+      </section>
+
+      <section className="mt-8" aria-labelledby="badges">
+        <div className="mb-3 flex items-baseline justify-between gap-3">
+          <h2 id="badges" className="text-lg font-semibold">
+            Badges
+          </h2>
+          <span className="text-2xs text-muted">
+            {earnedBadges(account.totalPoints).length} of {BADGES.length}
+          </span>
+        </div>
+        <BadgeShelf points={account.totalPoints} />
       </section>
 
       {current && (
@@ -117,13 +140,14 @@ export default async function AccountPage() {
         ) : (
           <ul className="divide-y divide-hairline border-y border-hairline">
             {ordered.map((row) => (
-              <SeasonRow key={row.teamId} row={row} />
+              <SeasonRow key={row.id} row={row} />
             ))}
           </ul>
         )}
         {past.length === 0 && account.rows.length > 0 && (
           <p className="mt-3 text-2xs text-muted">
-            Finished seasons stay here permanently, with the score you ended on.
+            Finished seasons stay here permanently, with the score you ended on — even if the
+            league is deleted later.
           </p>
         )}
       </section>
@@ -170,49 +194,64 @@ const STATUS_LABEL: Record<SeasonHistoryRow['seasonStatus'], string> = {
   COMPLETED: 'Finished',
 };
 
+/**
+ * A line from a league that still exists links to the team page. Once the
+ * league has been deleted there is nothing to link to, so the same layout
+ * renders as plain text with a "League closed" tag — the numbers are the
+ * frozen final line from `CareerRecord`, which is the whole point of it.
+ */
 function SeasonRow({ row }: { row: SeasonHistoryRow }) {
   const last = row.history.at(-1);
+  const body = (
+    <>
+      <span className="min-w-0 flex-1">
+        <span className="block truncate text-sm font-semibold">{row.teamName}</span>
+        <span className="mt-0.5 block truncate text-2xs text-muted">
+          {row.showName} · {row.seasonName} · {row.leagueName}
+        </span>
+      </span>
+
+      <span className="shrink-0 text-right">
+        <span className="block font-display text-xl leading-none tracking-wide">
+          {row.totalPoints}
+        </span>
+        {last && (
+          <span className={`mt-1 block text-2xs tabular-nums ${pointsTone(last.cyclePoints)}`}>
+            {formatPoints(last.cyclePoints)} last
+          </span>
+        )}
+      </span>
+
+      <span className="w-20 shrink-0 text-right">
+        {row.rank > 0 ? (
+          <span
+            className={`pill text-2xs ${
+              row.rank === 1 && row.settled ? 'bg-brand-gold text-on-gold' : 'bg-canvas text-muted'
+            }`}
+          >
+            #{row.rank}
+          </span>
+        ) : (
+          <span className="pill bg-canvas text-2xs text-muted">{STATUS_LABEL[row.seasonStatus]}</span>
+        )}
+        {row.archived && (
+          <span className="mt-1 block text-[11px] leading-tight text-muted">League closed</span>
+        )}
+      </span>
+    </>
+  );
+
+  if (row.archived || !row.teamId) {
+    return <li className="flex items-center gap-3 px-1 py-4">{body}</li>;
+  }
+
   return (
     <li>
       <Link
         href={`/teams/${row.teamId}`}
         className="flex items-center gap-3 rounded-btn px-1 py-4 transition hover:bg-surface/60"
       >
-        <span className="min-w-0 flex-1">
-          <span className="block truncate text-sm font-semibold">{row.teamName}</span>
-          <span className="mt-0.5 block truncate text-2xs text-muted">
-            {row.showName} · {row.seasonName} · {row.leagueName}
-          </span>
-        </span>
-
-        <span className="shrink-0 text-right">
-          <span className="block font-display text-xl leading-none tracking-wide">
-            {row.totalPoints}
-          </span>
-          {last && (
-            <span className={`mt-1 block text-2xs tabular-nums ${pointsTone(last.cyclePoints)}`}>
-              {formatPoints(last.cyclePoints)} last
-            </span>
-          )}
-        </span>
-
-        <span className="w-20 shrink-0 text-right">
-          {row.rank > 0 ? (
-            <span
-              className={`pill text-2xs ${
-                row.rank === 1 && row.seasonStatus === 'COMPLETED'
-                  ? 'bg-brand-gold text-on-gold'
-                  : 'bg-canvas text-muted'
-              }`}
-            >
-              #{row.rank}
-            </span>
-          ) : (
-            <span className="pill bg-canvas text-2xs text-muted">
-              {STATUS_LABEL[row.seasonStatus]}
-            </span>
-          )}
-        </span>
+        {body}
       </Link>
     </li>
   );

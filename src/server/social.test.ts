@@ -2,7 +2,7 @@ import { PrismaClient } from '@prisma/client';
 import { afterAll, beforeAll, describe, expect, it } from 'vitest';
 import { createLeague, deleteLeague, joinLeague, startDraft, updateLeague } from './mutations';
 import { getNotifications, getUnreadNotificationCount, markAllNotificationsRead, markNotificationRead } from './notifications';
-import { getHomeLeagues } from './queries';
+import { getAccountOverview, getHomeLeagues } from './queries';
 import {
   getFriendOverview,
   getInvitableFriends,
@@ -693,6 +693,66 @@ describe.skipIf(!dbReady)('deleting a league', () => {
       teams: 0,
       messages: 0,
     });
+  });
+
+  it('keeps every manager\'s points as a career record, and skips teams that never scored', async (ctx) => {
+    // A cycle that has actually been played: the history reduction stops at
+    // the last non-UPCOMING week, so scores on a future week would not count
+    // — for a live team or for the record, which is the parity being tested.
+    const cycle = await prisma.cycle.findFirst({
+      where: { seasonId, status: { not: 'UPCOMING' } },
+      orderBy: { sequence: 'asc' },
+      select: { id: true, sequence: true },
+    });
+    if (!cycle) return ctx.skip();
+
+    const host = await makeUser('keep-host');
+    const other = await makeUser('keep-other');
+    const idle = await makeUser('keep-idle');
+    const league = await makeLeague(host);
+    const code = await inviteCodeFor(league.id);
+    await joinLeague(other, code, 'Other Squad');
+    await joinLeague(idle, code, 'Idle Squad');
+
+    const teams = await prisma.team.findMany({
+      where: { leagueId: league.id },
+      select: { id: true, ownerId: true },
+    });
+    const teamOf = (userId: string) => teams.find((t) => t.ownerId === userId)!.id;
+    await prisma.teamCycleScore.createMany({
+      data: [
+        { teamId: teamOf(host), cycleId: cycle.id, cyclePoints: 12.5, cumulativePoints: 12.5, rank: 1 },
+        { teamId: teamOf(other), cycleId: cycle.id, cyclePoints: 4, cumulativePoints: 4, rank: 2 },
+        // The idle manager's team has no score rows at all.
+      ],
+    });
+
+    const before = await getAccountOverview(host);
+    expect(before.totalPoints).toBe(12.5);
+
+    await deleteLeague(league.id, host, league.name);
+
+    const records = await prisma.careerRecord.findMany({
+      where: { leagueId: league.id },
+      orderBy: { totalPoints: 'desc' },
+    });
+    expect(records.map((r) => [r.userId, Number(r.totalPoints), r.finalRank, r.teamCount])).toEqual([
+      [host, 12.5, 1, 3],
+      [other, 4, 2, 3],
+    ]);
+    expect(records[0]).toMatchObject({ leagueName: league.name, teamName: 'Owner Squad' });
+
+    // The account page reads the same total it did while the league existed,
+    // now from the record, marked as a closed league with nothing to link to.
+    const after = await getAccountOverview(host);
+    expect(after.totalPoints).toBe(12.5);
+    expect(after.leaguesPlayed).toBe(before.leaguesPlayed);
+    const line = after.rows.find((row) => row.leagueName === league.name);
+    expect(line).toMatchObject({ archived: true, teamId: null, leagueId: null, rank: 1, totalPoints: 12.5 });
+    expect(line!.history.map((p) => p.sequence)).toEqual([cycle.sequence]);
+
+    // Nothing played, nothing kept.
+    expect((await getAccountOverview(idle)).rows).toHaveLength(0);
   });
 
   it('tells the members before the league stops existing', async () => {

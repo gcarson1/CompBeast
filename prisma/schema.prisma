@@ -62,6 +62,7 @@ model User {
   friendshipsReceived Friendship[]             @relation("FriendshipAddressee")
   notifications       Notification[]           @relation("NotificationRecipient")
   notificationsCaused Notification[]           @relation("NotificationActor")
+  careerRecords       CareerRecord[]
 
   @@map("users")
 }
@@ -749,4 +750,50 @@ model TeamCycleScore {
   @@unique([teamId, cycleId])
   @@index([cycleId])
   @@map("team_cycle_scores")
+}
+
+/// One manager's final line from a league that no longer exists.
+///
+/// Deleting a league cascades through its teams, rosters, picks and
+/// materialized scores, and that is right for the league — nothing about it
+/// should linger. It is wrong for the people who played in it: the points a
+/// manager scored are theirs, and the career view, the lifetime total and the
+/// badges built on it must not lose a season because a commissioner closed
+/// the league afterwards. So `deleteLeague` writes one of these per team that
+/// had scored anything, in the same transaction as the delete.
+///
+/// Like `Notification`, the row carries its own copy of every name it needs
+/// and holds no relation to the league or the season, so it survives the
+/// thing it describes.
+model CareerRecord {
+  id     String @id @default(cuid())
+  userId String
+  user   User   @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  /// Plain ids, not relations: a handle for dedupe and support, never a dependency.
+  leagueId String
+  seasonId String
+
+  leagueName String
+  teamName   String
+  seasonName String
+  showName   String
+
+  /// Cumulative points at the last cycle that had actually been played.
+  totalPoints     Decimal @db.Decimal(8, 2)
+  /// Standing at that same cycle; null when nothing had been scored yet.
+  finalRank       Int?
+  teamCount       Int
+  /// Whether the season had finished when the league closed. A first place
+  /// in a season still running is a lead, not a title.
+  seasonCompleted Boolean
+  /// The week-by-week line the career chart draws:
+  /// `[{ label, sequence, cyclePoints, cumulativePoints, rank }]`.
+  history         Json
+
+  archivedAt DateTime @default(now())
+
+  @@unique([leagueId, userId])
+  @@index([userId])
+  @@map("career_records")
 }
