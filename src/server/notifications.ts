@@ -1,5 +1,7 @@
 import type { NotificationType, Prisma } from '@prisma/client';
+import { waitUntil } from '@vercel/functions';
 import { prisma } from '../lib/db';
+import { deliverNotificationEmails } from './notification-email';
 
 /**
  * Notification delivery.
@@ -42,7 +44,10 @@ export async function notify(inputs: NotifyInput | NotifyInput[]): Promise<numbe
   if (rows.length === 0) return 0;
 
   try {
-    const result = await prisma.notification.createMany({
+    // `createManyAndReturn` rather than `createMany`: the email layer needs
+    // the ids to record what it sent, and a second round trip to find rows we
+    // just wrote would be pure waste.
+    const created = await prisma.notification.createManyAndReturn({
       data: rows.map((row) => ({
         userId: row.userId,
         type: row.type,
@@ -52,12 +57,35 @@ export async function notify(inputs: NotifyInput | NotifyInput[]): Promise<numbe
         actorId: row.actorId,
         data: row.data,
       })),
+      select: { id: true, userId: true, type: true, title: true, body: true, href: true },
     });
-    return result.count;
+
+    background(deliverNotificationEmails(created));
+    return created.length;
   } catch (error) {
     // Deliberately not rethrown. See the module comment.
     console.error('[notify] could not write notifications', error);
     return 0;
+  }
+}
+
+/**
+ * Runs work the caller must not wait for.
+ *
+ * Email lives downstream of things people are staring at — a draft pick, a
+ * league invite — and an inbox is not worth a second of somebody's turn.
+ * `waitUntil` hands the promise to the platform, which keeps the function
+ * alive until it settles *after* the response has gone out.
+ *
+ * Off Vercel there is no such platform, so the promise is simply left running:
+ * locally the process outlives it anyway, and in tests it is awaited directly
+ * through `deliverNotificationEmails`.
+ */
+function background(work: Promise<unknown>): void {
+  try {
+    waitUntil(work);
+  } catch {
+    void work;
   }
 }
 

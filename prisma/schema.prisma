@@ -21,20 +21,34 @@ datasource db {
 // ---------------------------------------------------------------------------
 
 model User {
-  id              String   @id @default(cuid())
+  id              String  @id @default(cuid())
   // Opaque subject id from whichever auth provider is wired up (Clerk, Auth.js,
   // Supabase). Kept provider-neutral so swapping providers is a config change.
-  authId          String   @unique
-  email           String   @unique
+  authId          String  @unique
+  email           String  @unique
   name            String?
   avatarUrl       String?
-  handle          String?  @unique
+  handle          String? @unique
   /// Grants access to ingestion review, which rewrites scores across every
   /// league on a season — deliberately separate from per-league commissioner
   /// rights, which only ever affect one league.
-  isPlatformAdmin Boolean  @default(false)
-  createdAt       DateTime @default(now())
-  updatedAt       DateTime @updatedAt
+  isPlatformAdmin Boolean @default(false)
+
+  /// Master switch for every email this app sends. In-app alerts are
+  /// unaffected — turning this off changes the channel, not the notification.
+  emailNotifications Boolean            @default(true)
+  /// Types this person has turned off individually. Storing the *off* set
+  /// rather than the on set means a notification type added later arrives by
+  /// default, instead of being silently undeliverable to everyone who
+  /// registered before it existed.
+  emailOptOut        NotificationType[]
+  /// Opaque key behind the one-click unsubscribe link in every email. Written
+  /// the first time we send to this person, which is why it is nullable —
+  /// adding the column needed no backfill and no downtime.
+  emailToken         String?            @unique
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
 
   leaguesOwned        League[]                 @relation("LeagueCommissioner")
   memberships         LeagueMember[]
@@ -129,6 +143,10 @@ model Notification {
   /// Type-specific context (leagueId, inviteCode, friendshipId, ...).
   data      Json?
   readAt    DateTime?
+  /// When this went out as an email, or null for in-app only. Kept so a
+  /// duplicate send is impossible to do by accident, and so "did they
+  /// actually get told?" is answerable without the provider's dashboard.
+  emailedAt DateTime?
   createdAt DateTime         @default(now())
 
   @@index([userId, createdAt])

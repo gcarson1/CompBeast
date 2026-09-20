@@ -18,6 +18,8 @@ import {
   updateLeague,
   updateLeagueSchema,
 } from './mutations';
+import type { EmailCategory } from '../lib/email/templates';
+import { setEmailPreference } from './notification-email';
 import { markAllNotificationsRead } from './notifications';
 import {
   inviteFriendToLeague,
@@ -255,6 +257,33 @@ export async function inviteFriendAction(
 // ---------------------------------------------------------------------------
 // Notifications
 // ---------------------------------------------------------------------------
+
+/**
+ * One switch, one submit.
+ *
+ * Each toggle posts its own form rather than being part of a settings form
+ * with a save button: a preference someone changed and then navigated away
+ * from should already be saved, and on a phone the save button is the step
+ * people miss.
+ */
+export async function setEmailPreferenceAction(
+  _prev: ActionState,
+  formData: FormData,
+): Promise<ActionState> {
+  try {
+    const user = await requireUser();
+    const scope = String(formData.get('scope') ?? '');
+    await setEmailPreference(
+      user.id,
+      scope === 'all' ? 'all' : (scope as EmailCategory),
+      formData.get('enabled') === 'true',
+    );
+  } catch (error) {
+    return { error: messageFor(error) };
+  }
+  revalidatePath('/account');
+  return { ok: true };
+}
 
 export async function markAllNotificationsReadAction(
   _prev: ActionState,

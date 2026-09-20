@@ -37,6 +37,39 @@ import { Prisma, PrismaClient } from '@prisma/client';
 export type DatasourceMode = 'pooled' | 'direct-capped' | 'direct' | 'unset';
 
 /**
+ * Scheme and host of each candidate connection variable, for the admin health
+ * check — never the credentials.
+ *
+ * Which variable holds the pooled endpoint is not knowable from here, and
+ * guessing it wrong is what the connection incident was. This reports the two
+ * parts of a connection string that are not secret (a scheme, and a host that
+ * already appears in every error message) and drops userinfo, path and query
+ * on the floor, so the question can be answered from a URL instead of from a
+ * secret store.
+ */
+export function describeDatasourceEnv(): Record<string, string> {
+  const described: Record<string, string> = {};
+  for (const name of ['DATABASE_URL', 'PRISMA_DATABASE_URL', 'POSTGRES_URL']) {
+    const raw = process.env[name];
+    if (!raw) {
+      described[name] = 'unset';
+      continue;
+    }
+    const scheme = raw.split('://')[0];
+    let host = '?';
+    try {
+      // Only the host survives. Anything that could carry a credential —
+      // username, password, api_key — is never read.
+      host = new URL(raw).hostname || '?';
+    } catch {
+      host = 'unparseable';
+    }
+    described[name] = `${scheme}://…@${host}`;
+  }
+  return described;
+}
+
+/**
  * Which endpoint won, for the admin health check.
  *
  * Reported rather than assumed: the whole fix above depends on an environment
