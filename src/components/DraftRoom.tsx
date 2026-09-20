@@ -346,9 +346,13 @@ function useAnnounceMyTurn(myTurn: boolean, pickNumber: number) {
     if (announced.current === pickNumber) return;
     announced.current = pickNumber;
     toast.success("You're on the clock", { description: 'Pick a houseguest to lock in.' });
-    // Unsupported on iOS and a no-op without prior interaction elsewhere, so
-    // this is a bonus on the platforms that have it rather than the mechanism.
-    navigator.vibrate?.(180);
+
+    // A bonus on the platforms that have it, never the mechanism — iOS has no
+    // vibrate at all. The activation check is not optional: calling this
+    // before the page has been touched does not throw, it logs a console
+    // error, which would mean a red line in the console on every draft page
+    // that loads on your turn.
+    if (navigator.userActivation?.hasBeenActive) navigator.vibrate?.(180);
   }, [myTurn, pickNumber]);
 }
 

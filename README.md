@@ -258,6 +258,21 @@ message, and the `DraftPick` unique constraints on `(leagueId, contestantId)` an
 `(leagueId, pickNumber)` are the real guard — two managers clicking the same houseguest at
 the same instant is a race no in-memory check can win.
 
+`startDraft` refuses a draft the season cannot supply — four teams at five apiece is
+twenty picks against a sixteen-houseguest Big Brother season. Without the check the board
+simply runs out of people, the team on the clock can never pick, and the league sits
+`IN_PROGRESS` with no way out short of editing the database.
+
+Team ordering is pinned with an id tiebreaker (`DRAFT_TEAM_ORDER`). `draftOrderPosition`
+is nullable and Postgres promises nothing about ties, so without it the page and the
+mutation could disagree about whose turn it is — which surfaces as "another team is on the
+clock" to the person whose turn it genuinely is.
+
+**The board is live.** It polls `/api/leagues/[leagueId]/pulse` every four seconds while
+visible and calls `router.refresh()` when a count moves, so someone else's pick appears
+where you are standing and the next manager is told the draft is waiting on them. See
+*Live updates* below.
+
 ## Home
 
 `/leagues` is the home page in both signed-out and signed-in states, and `/` redirects
@@ -319,11 +334,42 @@ inside the transaction — inside, a failed insert would poison the transaction 
 take the real work down with it.
 
 The header badge is server-rendered for first paint, then polls
-`/api/notifications/unread` on an interval and on tab focus. There is no realtime
-transport here for the same reason the league feed has none. Following an alert
+`/api/notifications/unread` on an interval and on tab focus. Following an alert
 marks it read via a `keepalive` fetch rather than a server action, because the
 click navigates at the same time and a server action's POST races that
 navigation.
+
+### Email
+
+Every notification can also arrive as email (`src/lib/email/`). The copy is not
+rewritten per channel — a notification already has a title, a body and a
+destination, so the templates supply presentation only: an eyebrow label, an
+accent, a button, and a line saying why this landed in your inbox. Rewriting the
+words per channel is how an email ends up promising something the app does not
+show.
+
+Written the way email has to be written rather than the way the app is: tables,
+inline styles, no web fonts, no SVG, and a logo drawn from background-coloured
+cells because most clients block remote images and branding nobody can see is
+not branding. Every message carries a plain-text part and an RFC 8058 one-click
+unsubscribe, both of which spam filters weigh.
+
+Each accent is a *rule* colour, an *eyebrow* colour and a *fill/ink* pair rather
+than one value, because a hue bright enough to read as a label on the dark card
+is too light to put white text on. `templates.test.ts` measures all of them
+against the 4.5:1 floor — an inbox is the one surface nobody can file a bug
+about.
+
+Sending happens after the response goes out (`waitUntil`), so an inbox never
+costs anyone a second of their turn. **With no `RESEND_API_KEY` the app behaves
+exactly as it did before email existed**: alerts still appear in-app, nothing is
+sent, and `/account#email` says so rather than offering switches that govern
+nothing.
+
+Preferences are per-type in the database and per-category in the UI — three
+switches, not nine — so a type added to a category later inherits the answer
+somebody already gave about that category. `/api/admin/email-preview` renders
+all nine templates in a browser.
 
 ## Latest buzz
 
@@ -429,10 +475,46 @@ Messages soft-delete. Removing one mid-argument should not orphan the reactions 
 off it, and a commissioner needs to see that something *was* removed rather than have it
 silently vanish.
 
-It is refresh-based rather than realtime, on purpose. A live transport is a separate piece
-of infrastructure, and eight people arguing about an eviction do not need one for the
-feature to earn its place. Threaded replies, @-mentions and live updates are the natural
-next step, not a gap left by accident.
+New posts and reactions arrive on their own — the feed watches the same league pulse the
+draft board does. Threaded replies and @-mentions are the natural next step.
+
+## Live updates
+
+One endpoint, `/api/leagues/[leagueId]/pulse`, answers "has anything happened in this
+league since I loaded the page?" with three indexed counts and an enum. Clients poll it
+and re-render themselves through `router.refresh()` only when a number moves, so a quiet
+league costs a count query every few seconds and a busy one costs a page render exactly as
+often as something actually changed. `useLeaguePulse` in `src/lib/live.ts` is the client
+half; callers pass the watched values *as their current render sees them*, which is what
+makes drift between "what we polled" and "what is on screen" impossible.
+
+Polling rather than a socket is a choice, not a stopgap. Sockets on serverless mean
+holding an invocation open per viewer; a draft between eight friends does not need that,
+and polling survives a phone locking, a tunnel and a backgrounded Safari tab — none of
+which a socket does. Hidden tabs do not poll at all, and a permanent 403 stops the loop
+rather than retrying a settled answer forever.
+
+Counts rather than timestamps: a soft-deleted message and an un-hyped post both move a
+count, and neither moves a `max(createdAt)`.
+
+## Database connections
+
+Production drafts were crashing a few picks in with `P2037 — too many connections for role
+prisma_migration`. The cause was not the draft. Every serverless invocation opened its own
+TCP connection *pool* (Prisma sizes it from the CPU count, so five to nine sockets each)
+against the database's direct endpoint, whose role allows 45. A draft is simply the first
+thing in this app that puts several people on the same league in the same second.
+
+`src/lib/db.ts` now prefers a pooled `prisma+postgres://` endpoint if `PRISMA_DATABASE_URL`
+provides one, caps itself at a single connection per function instance if it ends up on the
+direct endpoint anyway, reuses one client per process in every environment, and retries the
+narrow set of errors that mean the query never ran (`P1001`, `P1002`, `P2024`, `P2037` —
+not `P1017`, where the write may have committed).
+
+Half that fix lives in an environment variable this code cannot read, so
+`/api/admin/db-health` reports which endpoint won, the role's connection limit and how many
+connections are currently open. `"mode":"pooled"` is the best answer; `"direct-capped"`
+works and is what runs today.
 
 ## Tests
 

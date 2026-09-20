@@ -77,6 +77,18 @@ export function useLeaguePulse({
   const keysRef = useRef(keys);
   keysRef.current = keys;
   const seen = useRef(rendered);
+  /**
+   * The remote signature we last acted on.
+   *
+   * Without this, a poll and a render that persistently disagree would
+   * refresh on every single tick forever: the refresh lands, the page comes
+   * back with the old value, the next poll sees a difference again. They
+   * cannot normally disagree — both read the same rows — but "cannot normally"
+   * is not a reason to leave a hot loop in a page people leave open for an
+   * evening. One refresh per distinct remote value is enough to catch up, and
+   * bounded if catching up is impossible.
+   */
+  const actedOn = useRef<string | null>(null);
 
   /**
    * A completed server render always wins. This is what closes the loop: the
@@ -88,6 +100,12 @@ export function useLeaguePulse({
     seen.current = rendered;
     setSyncing(false);
   }, [rendered]);
+
+  // A different league means a different set of numbers; carrying the old
+  // baseline across would suppress the first real update.
+  useEffect(() => {
+    actedOn.current = null;
+  }, [leagueId]);
 
   useEffect(() => {
     if (!enabled) return;
@@ -132,8 +150,8 @@ export function useLeaguePulse({
 
         setStatus('live');
         const next = signature(pulse, keysRef.current);
-        if (next !== seen.current) {
-          seen.current = next;
+        if (next !== seen.current && next !== actedOn.current) {
+          actedOn.current = next;
           setSyncing(true);
           router.refresh();
         }
