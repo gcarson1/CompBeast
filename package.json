@@ -23,6 +23,7 @@
     "@clerk/nextjs": "^6.39.6",
     "@hookform/resolvers": "^5.9.1",
     "@prisma/client": "^5.22.0",
+    "@vercel/functions": "^3.9.8",
     "cheerio": "^1.2.0",
     "clsx": "^2.1.1",
     "framer-motion": "^13.4.0",

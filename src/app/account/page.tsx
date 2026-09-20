@@ -1,10 +1,12 @@
 import Link from 'next/link';
 import { redirect } from 'next/navigation';
 import { Avatar } from '@/components/Avatar';
+import { EmailPreferences } from '@/components/EmailPreferences';
 import { FriendsPanel } from '@/components/FriendsPanel';
 import { PointHistoryChart } from '@/components/PointHistoryChart';
 import { getCurrentUser } from '@/lib/auth';
 import { formatPoints, pointsTone } from '@/lib/ui';
+import { getEmailPreferences } from '@/server/notification-email';
 import { getAccountOverview, type SeasonHistoryRow } from '@/server/queries';
 import { getFriendOverview } from '@/server/social';
 
@@ -14,9 +16,10 @@ export default async function AccountPage() {
   const user = await getCurrentUser();
   if (!user) redirect('/leagues');
 
-  const [account, friends] = await Promise.all([
+  const [account, friends, emailPreferences] = await Promise.all([
     getAccountOverview(user.id),
     getFriendOverview(user.id),
+    getEmailPreferences(user.id),
   ]);
 
   const displayName = user.name ?? user.handle ?? 'Manager';
@@ -134,6 +137,18 @@ export default async function AccountPage() {
           filled in.
         </p>
         <FriendsPanel overview={friends} />
+      </section>
+
+      {/* id="email" is the anchor every email footer links back to. */}
+      <section className="mt-10 scroll-mt-6" id="email" aria-labelledby="email-heading">
+        <h2 id="email-heading" className="mb-1 text-lg font-semibold">
+          Email alerts
+        </h2>
+        <p className="mb-4 max-w-measure text-2xs leading-relaxed text-muted">
+          Alerts always appear in the app. These decide which of them also reach{' '}
+          <span className="text-ink">{user.email}</span>.
+        </p>
+        <EmailPreferences preferences={emailPreferences} />
       </section>
     </div>
   );
