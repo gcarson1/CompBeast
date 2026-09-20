@@ -42,6 +42,8 @@ export default async function DraftPage({ params }: { params: { leagueId: string
         myTeamId={myTeam?.id ?? null}
         onTheClockTeamId={onTheClock?.teamId ?? null}
         currentPickNumber={Math.min(picks.length + 1, order.length)}
+        currentRound={onTheClock?.round ?? league.rosterSize}
+        totalRounds={league.rosterSize}
         totalPicks={order.length}
         teams={teams.map((t) => ({
           id: t.id,
@@ -52,6 +54,7 @@ export default async function DraftPage({ params }: { params: { leagueId: string
         picks={picks.map((p) => ({
           pickNumber: p.pickNumber,
           round: p.round,
+          teamId: p.teamId,
           teamName: p.team.name,
           contestantName: p.contestant.name,
         }))}

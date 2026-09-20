@@ -144,6 +144,9 @@ enum NotificationType {
   LEAGUE_INVITE
   LEAGUE_MEMBER_JOINED
   LEAGUE_DRAFT_STARTED
+  /// Your turn. The only alert in the app that somebody else is blocked on.
+  LEAGUE_DRAFT_PICK_DUE
+  LEAGUE_DRAFT_COMPLETED
   LEAGUE_UPDATED
   LEAGUE_DELETED
 }

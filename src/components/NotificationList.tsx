@@ -24,6 +24,8 @@ const STYLES: Record<string, { tone: string; icon: 'person' | 'league' | 'draft'
   LEAGUE_INVITE: { tone: 'text-brand-gold-deep', icon: 'league' },
   LEAGUE_MEMBER_JOINED: { tone: 'text-brand-gold-deep', icon: 'league' },
   LEAGUE_DRAFT_STARTED: { tone: 'text-brand-gold-deep', icon: 'draft' },
+  LEAGUE_DRAFT_PICK_DUE: { tone: 'text-brand-gold-deep', icon: 'draft' },
+  LEAGUE_DRAFT_COMPLETED: { tone: 'text-brand-gold-deep', icon: 'draft' },
   LEAGUE_UPDATED: { tone: 'text-muted', icon: 'alert' },
   LEAGUE_DELETED: { tone: 'text-danger-deep', icon: 'alert' },
 };

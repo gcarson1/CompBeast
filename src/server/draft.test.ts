@@ -271,3 +271,82 @@ describe.skipIf(!dbReady)('making a pick', () => {
     ).rejects.toMatchObject({ code: 'DRAFT_NOT_RUNNING' });
   });
 });
+
+/**
+ * A snake draft is a queue with one server: nobody can do anything until the
+ * person on the clock picks. So "you're up" is the one alert in this app that
+ * other people are actively blocked on, and it is worth testing that it
+ * reaches exactly the right person and nobody else.
+ */
+describe.skipIf(!dbReady)('draft notifications', () => {
+  const pickDue = (leagueId: string, userId: string) =>
+    prisma.notification.findMany({
+      where: { userId, type: 'LEAGUE_DRAFT_PICK_DUE', data: { path: ['leagueId'], equals: leagueId } },
+      select: { title: true, href: true },
+    });
+
+  it('puts the next manager on the clock', async () => {
+    const { leagueId, teams } = await startedLeague();
+
+    await makeDraftPick({
+      leagueId,
+      teamId: teams[0].id,
+      contestantId: contestantIds[0],
+      userId: teams[0].ownerId!,
+    });
+
+    const waiting = await pickDue(leagueId, teams[1].ownerId!);
+    expect(waiting).toHaveLength(1);
+    expect(waiting[0].href).toBe(`/leagues/${leagueId}/draft`);
+
+    // And nobody else: the person who just picked knows they picked.
+    expect(await pickDue(leagueId, teams[0].ownerId!)).toHaveLength(0);
+  });
+
+  it('stays quiet on a back-to-back snake turn', async () => {
+    const { leagueId, teams } = await startedLeague();
+
+    // Two teams, two rounds: 1, 2, 2, 1 — so picks 2 and 3 are both team 2.
+    await makeDraftPick({
+      leagueId,
+      teamId: teams[0].id,
+      contestantId: contestantIds[0],
+      userId: teams[0].ownerId!,
+    });
+    await makeDraftPick({
+      leagueId,
+      teamId: teams[1].id,
+      contestantId: contestantIds[1],
+      userId: teams[1].ownerId!,
+    });
+
+    // Telling someone they are on the clock immediately after they picked is
+    // noise — they are looking at the board.
+    expect(await pickDue(leagueId, teams[1].ownerId!)).toHaveLength(1);
+  });
+
+  it('tells everyone when the last pick lands', async () => {
+    const { leagueId, teams } = await startedLeague();
+
+    for (const [i, team] of [teams[0], teams[1], teams[1], teams[0]].entries()) {
+      await makeDraftPick({
+        leagueId,
+        teamId: team.id,
+        contestantId: contestantIds[i],
+        userId: team.ownerId!,
+      });
+    }
+
+    const done = await prisma.notification.findMany({
+      where: {
+        type: 'LEAGUE_DRAFT_COMPLETED',
+        data: { path: ['leagueId'], equals: leagueId },
+      },
+      select: { userId: true },
+    });
+    // Including whoever made the final pick: this one is a milestone, not a
+    // prompt, so the usual "don't tell people about their own action" rule
+    // would leave the person who finished the draft as the only one not told.
+    expect(new Set(done.map((n) => n.userId))).toEqual(new Set([alice, bob]));
+  });
+});

@@ -1,3 +1,22 @@
+/**
+ * How teams must be ordered before being fed to `buildDraftOrder`.
+ *
+ * Every caller has to sort identically or the draft breaks in the worst
+ * possible way: the board shows one team on the clock while the server thinks
+ * it is another, so the person whose turn it genuinely is gets told "another
+ * team is on the clock" and the draft simply stops.
+ *
+ * `draftOrderPosition` is nullable, and Postgres does not promise any
+ * particular order among rows that tie — the same query can come back in a
+ * different order depending on the plan it picks. The id tiebreaker removes
+ * that freedom. It exists here, next to the function that consumes the order,
+ * so a new caller finds it rather than inventing its own `orderBy`.
+ */
+export const DRAFT_TEAM_ORDER: Array<{ draftOrderPosition?: 'asc'; id?: 'asc' }> = [
+  { draftOrderPosition: 'asc' },
+  { id: 'asc' },
+];
+
 export interface DraftSlot {
   pickNumber: number;
   round: number;
