@@ -54,6 +54,13 @@ export function LeagueFeed({
       // Reactions count too: someone hyping your post is the cheapest and most
       // common thing that happens in here, and a feed where it only shows up
       // after a reload is not a live feed.
+      //
+      // Both numbers are what *this render* can see, which is the newest page
+      // of messages. Past that page they read one behind the league-wide
+      // counts the pulse returns, so the first poll finds a difference and
+      // spends one redundant refresh. It settles there rather than looping —
+      // `useLeaguePulse` acts at most once per distinct remote value — and new
+      // posts still arrive, because a new post moves that value again.
       reactions: messages.reduce((total, message) => total + message.hype + message.shade, 0),
     },
     intervalMs: FEED_POLL_MS,

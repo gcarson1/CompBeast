@@ -45,7 +45,13 @@ export async function GET(_request: Request, { params }: { params: { leagueId: s
         },
       },
     }),
-    prisma.leagueMessageReaction.count({ where: { message: { leagueId: params.leagueId } } }),
+    // Scoped to messages the feed can still see. Counting reactions on
+    // soft-deleted messages would leave this permanently a few ahead of what
+    // any reader can add up, and a counter that never matches is a counter
+    // that reports a change that is not there.
+    prisma.leagueMessageReaction.count({
+      where: { message: { leagueId: params.leagueId, deletedAt: null } },
+    }),
   ]);
 
   if (!league) return NextResponse.json({ error: 'League not found' }, { status: 404 });

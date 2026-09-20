@@ -27,7 +27,9 @@ export default async function UnsubscribePage({
   const token = searchParams.t ?? '';
   const category = searchParams.c ?? null;
   const group = category && category in CATEGORIES ? CATEGORIES[category as keyof typeof CATEGORIES] : null;
-  const scope = group ? group.label.toLowerCase() : 'all Comp Beast email';
+  // "emails about drafts" rather than "drafts emails" — the category labels are
+  // plural nouns, and they only read as English with the preposition.
+  const scope = group ? `emails about ${group.label.toLowerCase()}` : 'all Comp Beast email';
 
   if (searchParams.done) {
     return (
@@ -58,10 +60,10 @@ export default async function UnsubscribePage({
   }
 
   return (
-    <Shell title={group ? `Stop ${scope} emails?` : 'Stop all emails?'}>
+    <Shell title={group ? `Stop ${scope}?` : 'Stop all emails?'}>
       <p className="max-w-measure text-sm leading-relaxed text-muted">
         {group
-          ? `You will stop getting emails about ${scope}: ${group.description.toLowerCase()} They will still show up in the app.`
+          ? `${group.description} Those will still show up in the app — just not in your inbox.`
           : 'You will stop getting every email from Comp Beast. Alerts will still show up in the app.'}
       </p>
 
