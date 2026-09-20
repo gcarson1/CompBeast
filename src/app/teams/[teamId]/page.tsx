@@ -58,7 +58,14 @@ export default async function TeamPage({ params }: { params: { teamId: string } 
         <section className="mt-6">
           <h2 className="mb-2 text-lg font-semibold">Week by week</h2>
           <div className="card divide-y divide-hairline">
-            {score.cycles.map((cycle) => (
+            {/*
+              Newest week first. Copied before reversing because `reverse()`
+              mutates, and this same array is read elsewhere with `.at(-1)` to
+              mean "the latest cycle" — reversing it in place would quietly
+              turn the at-risk banner into an at-risk-three-weeks-ago banner.
+              That is also why this is not done in the query.
+            */}
+            {[...score.cycles].reverse().map((cycle) => (
               <details key={cycle.cycleId} className="group">
                 <summary className="flex cursor-pointer list-none items-center justify-between p-4">
                   <span className="text-base font-medium">{cycle.label}</span>
@@ -70,7 +77,9 @@ export default async function TeamPage({ params }: { params: { teamId: string } 
                   </span>
                 </summary>
                 <ul className="space-y-1.5 border-t border-hairline bg-canvas/60 px-4 py-3">
-                  {cycle.lines.map((line) => (
+                  {/* Lines arrive oldest-first by occurredAt; the last thing
+                      that happened belongs at the top of the week too. */}
+                  {[...cycle.lines].reverse().map((line) => (
                     <li key={line.scoredEventId} className="flex items-center justify-between gap-3">
                       <span className="min-w-0 flex-1 truncate text-xs text-muted">{line.label}</span>
                       <span className={`text-xs font-medium tabular-nums ${pointsTone(line.points)}`}>

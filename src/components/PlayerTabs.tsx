@@ -9,6 +9,8 @@ export interface PlayerEvent {
   points: number;
   note: string | null;
   cycleLabel: string;
+  /** Grouping key. Labels are display text and two cycles can share one. */
+  cycleSequence: number;
   label: string;
   category: string;
 }
@@ -105,14 +107,26 @@ function SummaryTab({ events }: { events: PlayerEvent[] }) {
   );
 }
 
+/**
+ * Newest first, both between weeks and inside them.
+ *
+ * The reversal lives here rather than in the query on purpose. `gameLog` is
+ * built from the same ascending `events` the Summary tab aggregates, and the
+ * team-level equivalent of this list is read elsewhere with `.at(-1)` to mean
+ * "the latest cycle" — flipping the data underneath those callers would
+ * silently hand them the oldest week instead. Presentation order is a
+ * presentation concern.
+ */
 function GameLogTab({ gameLog, events }: { gameLog: PlayerGameLogRow[]; events: PlayerEvent[] }) {
   if (gameLog.length === 0) {
     return <p className="card p-4 text-xs text-muted">Nothing logged yet.</p>;
   }
 
+  const newestFirst = [...gameLog].sort((a, b) => b.sequence - a.sequence);
+
   return (
     <div className="space-y-3">
-      {gameLog.map((row) => (
+      {newestFirst.map((row) => (
         <div key={row.sequence} className="card overflow-hidden">
           <div className="flex items-center justify-between border-b border-hairline px-4 py-3">
             <span className="text-sm font-semibold">{row.label}</span>
@@ -122,7 +136,12 @@ function GameLogTab({ gameLog, events }: { gameLog: PlayerGameLogRow[]; events: 
           </div>
           <ul className="divide-y divide-hairline">
             {events
-              .filter((e) => e.cycleLabel === row.label)
+              // Match on sequence, not the display label — two cycles can
+              // carry the same text and would pool into one week.
+              .filter((e) => e.cycleSequence === row.sequence)
+              // Events arrive oldest-first within a cycle; the last thing that
+              // happened belongs at the top of the week too, not the bottom.
+              .reverse()
               .map((event) => (
                 <li key={event.id} className="flex items-center justify-between gap-3 px-4 py-2.5">
                   <span className="min-w-0 flex-1">
