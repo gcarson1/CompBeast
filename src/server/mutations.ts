@@ -3,7 +3,12 @@ import { Prisma } from '@prisma/client';
 import { prisma } from '../lib/db';
 import { assertLeagueRole } from '../lib/auth';
 import { describeLockOffset, isCycleLocked } from '../lib/cycles';
-import { buildDraftOrder, validatePick } from '../lib/draft/snake';
+import {
+  DRAFT_TEAM_ORDER,
+  type DraftSlot,
+  buildDraftOrder,
+  validatePick,
+} from '../lib/draft/snake';
 import { recalculateLeague, recalculateLeaguesForCycle } from '../lib/scoring/repository';
 import { createLeagueSchema, updateLeagueSchema } from '../lib/validation';
 import { DomainError } from './errors';
@@ -443,7 +448,14 @@ export async function makeDraftPick(input: {
 
   const league = await prisma.league.findUniqueOrThrow({
     where: { id: leagueId },
-    select: { id: true, seasonId: true, rosterSize: true, draftType: true, draftStatus: true },
+    select: {
+      id: true,
+      name: true,
+      seasonId: true,
+      rosterSize: true,
+      draftType: true,
+      draftStatus: true,
+    },
   });
   if (league.draftStatus !== 'IN_PROGRESS') {
     throw new DomainError('This draft is not currently running.', 'DRAFT_NOT_RUNNING', 409);
@@ -463,7 +475,7 @@ export async function makeDraftPick(input: {
   const [teams, picks, eligible] = await Promise.all([
     prisma.team.findMany({
       where: { leagueId },
-      orderBy: { draftOrderPosition: 'asc' },
+      orderBy: DRAFT_TEAM_ORDER,
       select: { id: true },
     }),
     prisma.draftPick.findMany({
@@ -523,7 +535,73 @@ export async function makeDraftPick(input: {
     throw error;
   }
 
+  await announceDraftProgress({
+    leagueId,
+    leagueName: league.name,
+    order,
+    slot: validation.slot,
+    actorId: userId,
+  });
+
   return validation.slot;
+}
+
+/**
+ * Tells the next manager the draft is waiting on them.
+ *
+ * A snake draft is a queue with one server: until the person on the clock
+ * picks, nobody else can do anything. That makes this the one notification in
+ * the app with a real cost to being missed, and the reason it is worth a
+ * round trip after every single pick.
+ *
+ * After the commit and never inside it, like every other notification here —
+ * an alert must not be able to roll back the pick it is reporting.
+ */
+async function announceDraftProgress(input: {
+  leagueId: string;
+  leagueName: string;
+  order: DraftSlot[];
+  slot: DraftSlot;
+  actorId: string;
+}) {
+  const { leagueId, leagueName, order, slot, actorId } = input;
+
+  // `slot.pickNumber` is 1-indexed, so this index is the pick *after* it.
+  const next = order[slot.pickNumber];
+
+  if (!next) {
+    const members = await prisma.leagueMember.findMany({
+      where: { leagueId, status: 'ACTIVE' },
+      select: { userId: true },
+    });
+    await notify(
+      members.map((member) => ({
+        userId: member.userId,
+        type: 'LEAGUE_DRAFT_COMPLETED' as const,
+        title: `The ${leagueName} draft is done`,
+        body: 'Rosters are set. Scores start moving with the next episode.',
+        href: `/leagues/${leagueId}`,
+        data: { leagueId },
+      })),
+    );
+    return;
+  }
+
+  const team = await prisma.team.findUnique({
+    where: { id: next.teamId },
+    select: { name: true, ownerId: true },
+  });
+  if (!team) return;
+
+  await notify({
+    userId: team.ownerId,
+    actorId,
+    type: 'LEAGUE_DRAFT_PICK_DUE',
+    title: `You're on the clock in ${leagueName}`,
+    body: `Round ${next.round}, pick ${next.pickNumber} of ${order.length}. Everyone else is waiting on you.`,
+    href: `/leagues/${leagueId}/draft`,
+    data: { leagueId, pickNumber: next.pickNumber, round: next.round },
+  });
 }
 
 // ---------------------------------------------------------------------------

@@ -5,6 +5,7 @@ import { useFormState, useFormStatus } from 'react-dom';
 import { AnimatePresence, motion, useReducedMotion } from 'framer-motion';
 import { toast } from 'sonner';
 import { Avatar } from '@/components/Avatar';
+import { useLeaguePulse } from '@/lib/live';
 import { relativeTime } from '@/lib/ui';
 import {
   deleteMessageAction,
@@ -15,15 +16,20 @@ import {
 import type { LeagueMessageView } from '@/server/queries';
 
 const MAX_LENGTH = 500;
+/** Chat cadence: fast enough to feel like a conversation, slow enough to be free. */
+const FEED_POLL_MS = 6_000;
 
 /**
  * The league's trash-talk feed.
  *
- * Posting goes through a server action and the page revalidates, so this is a
- * refresh-based feed rather than a live socket. That is a deliberate stopping
- * point: a real-time transport is a separate piece of infrastructure, and a
- * league of eight people arguing about an eviction does not need one to be
- * useful. The composer clears optimistically so it still feels immediate.
+ * Posting goes through a server action; everyone else's posts arrive because
+ * the feed watches the league pulse and re-renders itself when the message or
+ * reaction count moves (see src/lib/live.ts). So it is live without holding a
+ * socket open per reader — which matters on a phone, where the socket would be
+ * dropped every time the screen locks.
+ *
+ * The composer clears before the round trip finishes, because leaving the text
+ * sitting there reads as a failed post.
  */
 export function LeagueFeed({
   leagueId,
@@ -41,6 +47,18 @@ export function LeagueFeed({
   const formRef = useRef<HTMLFormElement>(null);
   const reduceMotion = useReducedMotion();
 
+  const { live } = useLeaguePulse({
+    leagueId,
+    watch: {
+      messages: messages.length,
+      // Reactions count too: someone hyping your post is the cheapest and most
+      // common thing that happens in here, and a feed where it only shows up
+      // after a reload is not a live feed.
+      reactions: messages.reduce((total, message) => total + message.hype + message.shade, 0),
+    },
+    intervalMs: FEED_POLL_MS,
+  });
+
   useEffect(() => {
     if (state.error) toast.error(state.error);
   }, [state.error]);
@@ -52,10 +70,16 @@ export function LeagueFeed({
     <section className="mt-6">
       <div className="mb-2 flex items-baseline justify-between">
         <h2 className="text-lg font-semibold">Trash talk</h2>
-        <span className="text-2xs text-muted">
-          {messages.length === 0
-            ? 'No posts yet'
-            : `${messages.length} ${messages.length === 1 ? 'post' : 'posts'}`}
+        <span className="flex items-center gap-1.5 text-2xs text-muted">
+          <span
+            aria-hidden
+            className={`h-1.5 w-1.5 rounded-full ${live ? 'bg-brand-gold-deep' : 'bg-muted'}`}
+          />
+          {!live
+            ? 'Reconnecting'
+            : messages.length === 0
+              ? 'No posts yet'
+              : `${messages.length} ${messages.length === 1 ? 'post' : 'posts'}`}
         </span>
       </div>
 

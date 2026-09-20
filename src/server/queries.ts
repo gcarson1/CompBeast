@@ -1,5 +1,6 @@
 import { prisma } from '../lib/db';
 import { effectiveLockAt, isCycleLocked } from '../lib/cycles';
+import { DRAFT_TEAM_ORDER } from '../lib/draft/snake';
 import { atRiskMessage, isAtRiskCode, nearMissMessage } from '../lib/engagement';
 import { computeLeagueSnapshot, computeTeamSnapshot } from '../lib/scoring/repository';
 import type { LeagueScoreSnapshot, TeamScore } from '../lib/scoring/types';
@@ -63,7 +64,7 @@ export async function getLeagueOverview(leagueId: string) {
           draftOrderPosition: true,
           owner: { select: { id: true, name: true, handle: true } },
         },
-        orderBy: { draftOrderPosition: 'asc' },
+        orderBy: DRAFT_TEAM_ORDER,
       },
       // Members were never selected here, so anyone without a team was
       // invisible on the league page — which, until the join bug was fixed,
@@ -377,7 +378,7 @@ export async function getDraftBoard(leagueId: string) {
     }),
     prisma.team.findMany({
       where: { leagueId },
-      orderBy: { draftOrderPosition: 'asc' },
+      orderBy: DRAFT_TEAM_ORDER,
       select: { id: true, name: true, draftOrderPosition: true, owner: { select: { name: true } } },
     }),
   ]);
