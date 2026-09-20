@@ -53,21 +53,6 @@ export function emailFrom(): string {
   return process.env.EMAIL_FROM || 'Comp Beast <onboarding@resend.dev>';
 }
 
-/**
- * The origin to build links against.
- *
- * An email link has to be absolute and has to survive being opened days
- * later, so a preview deployment's URL is the wrong answer even when that is
- * where the code is running.
- */
-export function appBaseUrl(): string {
-  const explicit = process.env.NEXT_PUBLIC_APP_URL || process.env.APP_URL;
-  if (explicit) return explicit.replace(/\/+$/, '');
-  const production = process.env.VERCEL_PROJECT_PRODUCTION_URL;
-  if (production) return `https://${production}`;
-  return 'http://localhost:3000';
-}
-
 export async function sendEmails(messages: OutboundEmail[]): Promise<SendResult> {
   if (messages.length === 0) return { sent: 0, skipped: false };
 

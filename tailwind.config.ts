@@ -94,6 +94,31 @@ const config: Config = {
          */
         measure: '68ch',
       },
+      /**
+       * The entrance used by the landing hero and the headline ticker. CSS
+       * rather than Framer Motion, and a *transform only* — no fade — for
+       * one reason: Largest Contentful Paint. Rendered with
+       * `initial={{ opacity: 0 }}` the hero reached the browser as
+       * `style="opacity:0"` and was invisible until the JavaScript had
+       * downloaded and hydrated, so LCP was gated on the bundle; and Chrome
+       * never counts an element whose first paint is at opacity 0 as an LCP
+       * candidate even once a CSS animation fades it in — measured, that
+       * handed LCP to the ticker text at 6.3s. A slide needs no script,
+       * starts on the first frame the browser paints, leaves the text
+       * visible throughout, and the reduce-motion block in globals.css
+       * collapses it to an instant settle. `both` holds the final frame.
+       */
+      keyframes: {
+        rise: {
+          from: { transform: 'translateY(12px)' },
+          to: { transform: 'translateY(0)' },
+        },
+      },
+      animation: {
+        // 280ms, inside the 150–300ms band. Longer reads as the page
+        // assembling itself in front of you rather than as a settle.
+        rise: 'rise 280ms ease-out both',
+      },
       boxShadow: {
         /**
          * Boundaries come from the 1px hairline border on `.card` and from the

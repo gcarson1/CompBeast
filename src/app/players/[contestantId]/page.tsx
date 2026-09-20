@@ -1,14 +1,41 @@
+import type { Metadata } from 'next';
 import Link from 'next/link';
 import { notFound } from 'next/navigation';
+import { cache } from 'react';
 import { Avatar } from '@/components/Avatar';
+import { JsonLd } from '@/components/JsonLd';
 import { PlayerTabs } from '@/components/PlayerTabs';
+import { absoluteUrl, breadcrumbList } from '@/lib/seo';
 import { formatPoints, pointsTone } from '@/lib/ui';
 import { getContestantProfile } from '@/server/queries';
 
 export const dynamic = 'force-dynamic';
 
+// Shared between `generateMetadata` and the render via React's per-request
+// cache — one profile query per request. No loading boundary sits above
+// this route, so an unknown id is a real 404 (see the season page).
+const loadPlayer = cache((contestantId: string) => getContestantProfile(contestantId));
+
+export async function generateMetadata({
+  params,
+}: {
+  params: { contestantId: string };
+}): Promise<Metadata> {
+  const player = await loadPlayer(params.contestantId);
+  if (!player) notFound();
+
+  const status = player.isActive ? 'still in the house' : 'evicted';
+  return {
+    title: `${player.name} — ${player.season.name} fantasy points`,
+    description: `${player.name}'s Comp Beast fantasy scoring on ${player.season.name} (${player.season.show.name}): ${formatPoints(
+      player.totalPoints,
+    )} points from ${player.events.length} scored ${player.events.length === 1 ? 'event' : 'events'}, ${status}.`,
+    alternates: { canonical: absoluteUrl(`/players/${player.id}`) },
+  };
+}
+
 export default async function PlayerPage({ params }: { params: { contestantId: string } }) {
-  const player = await getContestantProfile(params.contestantId);
+  const player = await loadPlayer(params.contestantId);
   if (!player) notFound();
 
   const meta = player.metadata as
@@ -23,6 +50,13 @@ export default async function PlayerPage({ params }: { params: { contestantId: s
 
   return (
     <div className="pt-2">
+      <JsonLd
+        data={breadcrumbList([
+          { name: 'Seasons', path: '/seasons' },
+          { name: player.season.name, path: `/seasons/${player.season.slug}` },
+          { name: player.name, path: `/players/${player.id}` },
+        ])}
+      />
       <Link href={`/seasons/${player.season.slug}`} className="text-xs text-muted">
         ← {player.season.name}
       </Link>

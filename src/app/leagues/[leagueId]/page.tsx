@@ -1,5 +1,7 @@
+import type { Metadata } from 'next';
 import Link from 'next/link';
 import { notFound } from 'next/navigation';
+import { cache } from 'react';
 import { Avatar } from '@/components/Avatar';
 import { InviteCode } from '@/components/InviteCode';
 import { InviteFriends } from '@/components/InviteFriends';
@@ -20,8 +22,27 @@ import {
 
 export const dynamic = 'force-dynamic';
 
+// One overview query per request, shared with `generateMetadata` through
+// React's per-request cache.
+const loadLeague = cache((leagueId: string) => getLeagueOverview(leagueId));
+
+/**
+ * The title is for the tab; `noindex` is for the one league page a crawler
+ * might reach by link despite robots.ts, since anyone with the id can view
+ * it. Note what this does *not* do: this route streams its shell from
+ * loading.tsx before the page runs, so an unknown id still answers 200 —
+ * Next marks that not-found render `noindex` itself, and robots.ts keeps the
+ * route out of the crawl, which is why it is tolerated here and not on the
+ * public pages (see PageSkeleton.tsx).
+ */
+export async function generateMetadata({ params }: { params: { leagueId: string } }): Promise<Metadata> {
+  const league = await loadLeague(params.leagueId);
+  if (!league) notFound();
+  return { title: league.name, robots: { index: false, follow: false } };
+}
+
 export default async function LeaguePage({ params }: { params: { leagueId: string } }) {
-  const [user, league] = await Promise.all([getCurrentUser(), getLeagueOverview(params.leagueId)]);
+  const [user, league] = await Promise.all([getCurrentUser(), loadLeague(params.leagueId)]);
   if (!league) notFound();
 
   const [{ rows }, currentCycle, messages] = await Promise.all([

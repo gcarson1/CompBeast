@@ -1,7 +1,28 @@
+import type { Metadata } from 'next';
 import Link from 'next/link';
+import { cache } from 'react';
+import { JsonLd } from '@/components/JsonLd';
+import { absoluteUrl, breadcrumbList } from '@/lib/seo';
 import { getSeasonsByStatus } from '@/server/queries';
 
 export const dynamic = 'force-dynamic';
+
+// One query for both the metadata and the page: React's per-request cache
+// is what lets `generateMetadata` read the same rows the render does.
+const loadSeasons = cache(getSeasonsByStatus);
+
+export async function generateMetadata(): Promise<Metadata> {
+  const { open, archived } = await loadSeasons();
+  const shows = [...new Set([...open, ...archived].map((s) => s.show.name))];
+  const showList = shows.length > 0 ? shows.join(', ') : 'reality TV';
+  return {
+    title: `${showList} seasons`,
+    description: `${showList} seasons you can start a Comp Beast fantasy league for right now — ${open.length} open — plus a read-only archive of ${archived.length} finished ${
+      archived.length === 1 ? 'season' : 'seasons'
+    } with every houseguest ranked by fantasy points.`,
+    alternates: { canonical: absoluteUrl('/seasons') },
+  };
+}
 
 const STATUS_TONE: Record<string, string> = {
   ACTIVE: 'bg-brand-gold-soft text-brand-gold-deep',
@@ -16,10 +37,11 @@ const STATUS_LABEL: Record<string, string> = {
 };
 
 export default async function SeasonsPage() {
-  const { open, archived } = await getSeasonsByStatus();
+  const { open, archived } = await loadSeasons();
 
   return (
     <div className="pt-2">
+      <JsonLd data={breadcrumbList([{ name: 'Seasons', path: '/seasons' }])} />
       <h1 className="text-4xl font-semibold tracking-tight">Seasons</h1>
       <p className="mb-5 text-xs text-muted">
         Play along with a season that is still running, or look back at one that has wrapped.

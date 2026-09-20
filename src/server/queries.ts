@@ -398,7 +398,7 @@ export async function getContestantProfile(contestantId: string) {
       placement: true,
       seasonId: true,
       eliminatedCycle: { select: { label: true } },
-      season: { select: { slug: true, name: true, show: { select: { name: true } } } },
+      season: { select: { slug: true, name: true, show: { select: { name: true, slug: true } } } },
       scoredEvents: {
         where: { isVoided: false },
         orderBy: [{ cycle: { sequence: 'asc' } }, { createdAt: 'asc' }],
@@ -496,6 +496,7 @@ export async function getSeasonScoreboard(slug: string): Promise<{
     year: number;
     status: string;
     showName: string;
+    showSlug: string;
   };
   rulesetName: string;
   players: SeasonPlayerScore[];
@@ -509,7 +510,7 @@ export async function getSeasonScoreboard(slug: string): Promise<{
       year: true,
       status: true,
       showId: true,
-      show: { select: { name: true } },
+      show: { select: { name: true, slug: true } },
     },
   });
   if (!season) return null;
@@ -574,6 +575,7 @@ export async function getSeasonScoreboard(slug: string): Promise<{
       year: season.year,
       status: season.status,
       showName: season.show.name,
+      showSlug: season.show.slug,
     },
     rulesetName: ruleset?.name ?? 'Default',
     players,

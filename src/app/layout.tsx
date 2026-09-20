@@ -5,7 +5,10 @@ import { Toaster } from 'sonner';
 import './globals.css';
 import { AppHeader } from '@/components/AppHeader';
 import { BottomNav } from '@/components/BottomNav';
+import { JsonLd } from '@/components/JsonLd';
 import { getCurrentUser } from '@/lib/auth';
+import { SITE_DESCRIPTION, SITE_NAME, siteGraph } from '@/lib/seo';
+import { appBaseUrl } from '@/lib/site';
 import { getUnreadNotificationCount } from '@/server/notifications';
 
 /**
@@ -44,9 +47,20 @@ const textFont = Archivo({
   variable: '--font-text',
 });
 
+/**
+ * Site-wide defaults; each public page overrides title, description and
+ * canonical. `metadataBase` is what turns every relative canonical and
+ * Open Graph URL into the production address, on previews too — see
+ * `appBaseUrl`. Private pages inherit the default title, which is fine: they
+ * are kept out of the index by robots.ts rather than by their metadata.
+ */
 export const metadata: Metadata = {
-  title: 'Comp Beast',
-  description: 'Fantasy leagues for reality TV.',
+  metadataBase: new URL(appBaseUrl()),
+  title: { default: SITE_NAME, template: `%s · ${SITE_NAME}` },
+  description: SITE_DESCRIPTION,
+  applicationName: SITE_NAME,
+  openGraph: { siteName: SITE_NAME, type: 'website', locale: 'en_US' },
+  twitter: { card: 'summary' },
 };
 
 export const viewport: Viewport = {
@@ -67,6 +81,12 @@ export default async function RootLayout({ children }: { children: React.ReactNo
   return (
     <ClerkProvider>
       <html lang="en" className={`${displayFont.variable} ${textFont.variable}`}>
+        <head>
+          {/* The Organization and WebSite nodes every page shares. In the
+              head, not the body, so a crawler has the entity graph before it
+              reads any content; Next merges its own metadata tags in here. */}
+          <JsonLd data={siteGraph()} />
+        </head>
         <body>
           {/* First tab stop on every page: lets keyboard users past the header
               and nav instead of tabbing the same chrome on each navigation. */}

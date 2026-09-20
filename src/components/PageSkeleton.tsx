@@ -1,4 +1,6 @@
 /**
+ * The navigation skeleton.
+ *
  * Every route in this app is `force-dynamic` and queries the database, so
  * navigation always costs a round trip. Without a loading state the app just
  * sits on the previous screen with no acknowledgement that the tap registered
@@ -6,8 +8,19 @@
  *
  * A skeleton shaped like the content that is coming, rather than a spinner:
  * the layout does not jump when the real rows arrive.
+ *
+ * It is mounted by the `loading.tsx` of the app's *own* screens — league,
+ * team, draft, account, alerts, admin — and deliberately not at the root.
+ * A root boundary wraps every page in Suspense, and that has three costs a
+ * public page cannot pay: the shell streams first, so `notFound()` and
+ * `redirect()` fire after the status line has gone out and unknown slugs
+ * answer 200; the page's real content arrives in a hidden chunk that an
+ * inline script has to swap in, so anything reading the HTML without running
+ * JavaScript sees this skeleton; and the largest paint waits on that swap.
+ * The public pages render straight into the shell instead, and stream only
+ * the parts of themselves that are slow.
  */
-export default function Loading() {
+export function PageSkeleton() {
   return (
     <div className="pt-2" role="status" aria-label="Loading">
       <div className="h-8 w-40 animate-pulse rounded-pill bg-surface" />

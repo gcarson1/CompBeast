@@ -1,7 +1,22 @@
 'use client';
 
+import Image from 'next/image';
 import { useState } from 'react';
+import imageHosts from '../../image-hosts';
 import { avatarColor, cn, initials } from '@/lib/ui';
+
+/**
+ * Whether `next/image` may be used for this URL. The optimizer only accepts
+ * the hosts in image-hosts.js, and `next/image` throws — not falls back —
+ * on any other, so an unexpected host is drawn with a plain `<img>` instead.
+ */
+function isOptimizable(url: string): boolean {
+  try {
+    return imageHosts.includes(new URL(url).hostname);
+  } catch {
+    return false;
+  }
+}
 
 export function Avatar({
   name,
@@ -20,17 +35,35 @@ export function Avatar({
   const [broken, setBroken] = useState(false);
 
   if (photoUrl && !broken) {
+    const imgClassName = cn(
+      'inline-block shrink-0 rounded-full object-cover ring-2 ring-surface',
+      dimmed && 'opacity-40 grayscale',
+      className,
+    );
+
+    // Resized to what is drawn and re-encoded as WebP/AVIF by the optimizer
+    // — a headshot displayed at 56px was arriving as a 25 KB, 375px JPEG.
+    if (isOptimizable(photoUrl)) {
+      return (
+        <Image
+          src={photoUrl}
+          alt=""
+          width={size}
+          height={size}
+          onError={() => setBroken(true)}
+          className={imgClassName}
+          style={{ width: size, height: size }}
+        />
+      );
+    }
+
     return (
       <img
         src={photoUrl}
         alt=""
         loading="lazy"
         onError={() => setBroken(true)}
-        className={cn(
-          'inline-block shrink-0 rounded-full object-cover ring-2 ring-surface',
-          dimmed && 'opacity-40 grayscale',
-          className,
-        )}
+        className={imgClassName}
         style={{ width: size, height: size }}
       />
     );

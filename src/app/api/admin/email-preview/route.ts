@@ -1,6 +1,7 @@
 import type { NotificationType } from '@prisma/client';
 import { requirePlatformAdmin } from '@/lib/auth';
-import { appBaseUrl, emailFrom, isEmailConfigured } from '@/lib/email/send';
+import { emailFrom, isEmailConfigured } from '@/lib/email/send';
+import { appBaseUrl } from '@/lib/site';
 import { EMAIL_STYLES, renderNotificationEmail } from '@/lib/email/templates';
 
 export const dynamic = 'force-dynamic';

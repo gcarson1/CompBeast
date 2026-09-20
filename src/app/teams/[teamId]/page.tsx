@@ -1,13 +1,27 @@
+import type { Metadata } from 'next';
 import Link from 'next/link';
 import { notFound } from 'next/navigation';
+import { cache } from 'react';
 import { Avatar } from '@/components/Avatar';
 import { formatPoints, pointsTone } from '@/lib/ui';
 import { getTeamDetail } from '@/server/queries';
 
 export const dynamic = 'force-dynamic';
 
+// Shared with `generateMetadata` via React's per-request cache. As on the
+// league page, the metadata sets the tab title and `noindex`; an unknown id
+// under this route's loading boundary still answers 200, tolerated for the
+// same reasons given there.
+const loadTeam = cache((teamId: string) => getTeamDetail(teamId));
+
+export async function generateMetadata({ params }: { params: { teamId: string } }): Promise<Metadata> {
+  const detail = await loadTeam(params.teamId);
+  if (!detail) notFound();
+  return { title: detail.team.name, robots: { index: false, follow: false } };
+}
+
 export default async function TeamPage({ params }: { params: { teamId: string } }) {
-  const detail = await getTeamDetail(params.teamId);
+  const detail = await loadTeam(params.teamId);
   if (!detail) notFound();
 
   const { team, score, roster } = detail;

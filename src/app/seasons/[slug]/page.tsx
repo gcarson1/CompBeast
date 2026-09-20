@@ -1,13 +1,43 @@
+import type { Metadata } from 'next';
 import Link from 'next/link';
 import { notFound } from 'next/navigation';
+import { cache } from 'react';
 import { Avatar } from '@/components/Avatar';
+import { JsonLd } from '@/components/JsonLd';
+import { absoluteUrl, breadcrumbList, tvSeriesNode } from '@/lib/seo';
 import { formatPoints, pointsTone } from '@/lib/ui';
 import { getSeasonScoreboard } from '@/server/queries';
 
 export const dynamic = 'force-dynamic';
 
+// Deduplicated across `generateMetadata` and the render by React's
+// per-request cache, so the scoreboard is computed once per request.
+const loadSeason = cache((slug: string) => getSeasonScoreboard(slug));
+
+/**
+ * `notFound()` here as well as in the page, so the metadata step and the
+ * render agree about an unknown slug. This route has no loading boundary
+ * above it (see PageSkeleton.tsx), so nothing has streamed when either one
+ * throws and the response is a real 404 — not a page that says "not found"
+ * under a 200, which is the soft-404 that gets indexed as a page.
+ */
+export async function generateMetadata({ params }: { params: { slug: string } }): Promise<Metadata> {
+  const data = await loadSeason(params.slug);
+  if (!data) notFound();
+
+  const { season, players, rulesetName } = data;
+  const live = season.status !== 'COMPLETED';
+  return {
+    title: `${season.name} fantasy scores`,
+    description: `Every ${season.name} houseguest ranked by Comp Beast fantasy points${
+      live ? ' as the season airs' : ', beside where they actually placed'
+    } — ${players.length} players, scored with the ${rulesetName} ruleset. ${season.showName}, ${season.year}.`,
+    alternates: { canonical: absoluteUrl(`/seasons/${season.slug}`) },
+  };
+}
+
 export default async function SeasonPage({ params }: { params: { slug: string } }) {
-  const data = await getSeasonScoreboard(params.slug);
+  const data = await loadSeason(params.slug);
   if (!data) notFound();
 
   const { season, rulesetName, players } = data;
@@ -15,6 +45,28 @@ export default async function SeasonPage({ params }: { params: { slug: string } 
 
   return (
     <div className="pt-2">
+      <JsonLd
+        data={breadcrumbList([
+          { name: 'Seasons', path: '/seasons' },
+          { name: season.name, path: `/seasons/${season.slug}` },
+        ])}
+      />
+      {/* What the page is *about*, as an entity: this season of that series.
+          `partOfSeries` carries the sameAs links that pin "Big Brother" to
+          the CBS show rather than any of the other things called that. */}
+      <JsonLd
+        data={{
+          '@context': 'https://schema.org',
+          '@type': 'WebPage',
+          url: absoluteUrl(`/seasons/${season.slug}`),
+          name: `${season.name} fantasy scores`,
+          about: {
+            '@type': 'TVSeason',
+            name: season.name,
+            partOfSeries: tvSeriesNode(season.showSlug, season.showName),
+          },
+        }}
+      />
       <Link href="/seasons" className="text-xs text-muted">
         ← Seasons
       </Link>

@@ -67,8 +67,13 @@ export function CompBeastLogo({ className = 'h-8' }: { className?: string }) {
           <circle cx="53" cy="7" r="4.5" className="fill-danger" />
         </g>
       </svg>
+      {/* The literal space is for the text, not the layout — a flex container
+          drops whitespace between items, so it renders nothing, but without
+          it the wordmark reads "COMPBEAST" to anything that reads text: the
+          link's accessible name ("Comp Beast home") then no longer contains
+          its visible label, which is a WCAG 2.5.3 failure. */}
       <div className="flex items-baseline font-display tracking-wider text-2xl">
-        <span className="text-ink">COMP</span>
+        <span className="text-ink">COMP</span>{' '}
         <span className="ml-1 text-brand-gold">BEAST</span>
       </div>
     </div>

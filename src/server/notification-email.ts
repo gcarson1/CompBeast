@@ -1,7 +1,8 @@
 import { randomUUID } from 'node:crypto';
 import type { NotificationType } from '@prisma/client';
 import { prisma } from '../lib/db';
-import { appBaseUrl, isEmailConfigured, sendEmails, type OutboundEmail } from '../lib/email/send';
+import { isEmailConfigured, sendEmails, type OutboundEmail } from '../lib/email/send';
+import { appBaseUrl } from '../lib/site';
 import {
   CATEGORIES,
   categoryOf,
