@@ -3,6 +3,7 @@ import { join } from 'node:path';
 import { describe, expect, it } from 'vitest';
 import { bigBrotherJunkiesAdapter } from './sources/big-brother-junkies';
 import { mapBigBrotherSeason } from './mappers/big-brother';
+import { bootstrapSeasonFromSource, getMapper } from './pipeline';
 import { IngestionError } from './types';
 
 /**
@@ -202,5 +203,25 @@ describe('mapBigBrotherSeason', () => {
       'big-brother-27',
     );
     expect(again.map((c) => c.sourceRef)).toEqual(candidates.map((c) => c.sourceRef));
+  });
+});
+
+describe('pairing a source with a show', () => {
+  it('refuses to bootstrap a season under a show the source does not cover', async () => {
+    // Checked before any database call, so this never needs one.
+    await expect(
+      bootstrapSeasonFromSource({
+        sourceSlug: bigBrotherJunkiesAdapter.slug,
+        seasonExternalId: 'survivor-50',
+        showSlug: 'survivor',
+        year: 2026,
+        facts,
+      }),
+    ).rejects.toThrow(/covers big-brother, not survivor/);
+  });
+
+  it('has a mapper for every catalogued show and none for an unknown one', () => {
+    expect(getMapper('big-brother', 'x')).toBe(mapBigBrotherSeason);
+    expect(() => getMapper('the-traitors', 'x')).toThrow(IngestionError);
   });
 });
