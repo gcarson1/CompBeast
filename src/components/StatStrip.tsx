@@ -21,11 +21,16 @@ export function StatStrip({ items, className }: { items: StatItem[]; className?:
       style={{ gridTemplateColumns: `repeat(${items.length}, minmax(0, 1fr))` }}
     >
       {items.map((item) => (
-        <div key={item.label} className="min-w-0 px-1">
-          <dd className={cn('truncate font-display text-3xl leading-none tracking-wide', item.tone)}>
+        // Term before value in the DOM, as a definition list requires; the
+        // value is drawn first with `order`, the same trick the landing
+        // page's stat row uses.
+        <div key={item.label} className="flex min-w-0 flex-col px-1">
+          <dt className="order-2 mt-1.5 text-2xs font-bold uppercase tracking-wide text-muted">
+            {item.label}
+          </dt>
+          <dd className={cn('order-1 truncate font-display text-3xl leading-none tracking-wide', item.tone)}>
             {item.value}
           </dd>
-          <dt className="mt-1.5 text-2xs font-bold uppercase tracking-wide text-muted">{item.label}</dt>
         </div>
       ))}
     </dl>

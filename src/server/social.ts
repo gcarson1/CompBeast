@@ -126,7 +126,9 @@ export async function searchPeople(
   rawQuery: string,
   limit = 10,
 ): Promise<FriendSearchResult[]> {
-  const query = rawQuery.trim();
+  // Bounded at both ends: under two characters matches half the table, and
+  // nothing anyone is looking for is longer than an email address.
+  const query = rawQuery.trim().slice(0, 120);
   if (query.length < 2) return [];
 
   const users = await prisma.user.findMany({
