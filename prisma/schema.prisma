@@ -82,7 +82,6 @@ model PushSubscription {
   /// Client public key and auth secret, as the browser hands them over.
   p256dh     String
   auth       String
-  userAgent  String?
   createdAt  DateTime @default(now())
   lastSeenAt DateTime @default(now())
 

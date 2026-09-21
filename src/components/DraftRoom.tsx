@@ -157,7 +157,7 @@ export function DraftRoom(props: DraftRoomProps) {
           >
             {name}
             {name === 'Picks' && props.picks.length > 0 && (
-              <span className="ml-1.5 tabular-nums opacity-60">{props.picks.length}</span>
+              <span className="ml-1.5 tabular-nums text-muted">{props.picks.length}</span>
             )}
           </button>
         ))}
@@ -190,9 +190,12 @@ export function DraftRoom(props: DraftRoomProps) {
               <ul className="card divide-y divide-hairline">
                 {filtered.map((contestant) => (
                   <li key={contestant.id} className="flex items-center gap-3 p-3.5">
-                    <span className={cn('shrink-0', !contestant.isActive && 'opacity-50')}>
-                      <Avatar name={contestant.name} photoUrl={contestant.photoUrl} size={40} />
-                    </span>
+                    <Avatar
+                      name={contestant.name}
+                      photoUrl={contestant.photoUrl}
+                      size={40}
+                      dimmed={!contestant.isActive}
+                    />
                     <span className="min-w-0 flex-1">
                       <span className="flex items-baseline gap-2">
                         <span

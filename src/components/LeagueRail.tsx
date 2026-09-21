@@ -238,7 +238,15 @@ function RailButton({
       aria-label={direction === 'prev' ? 'Scroll to previous leagues' : 'Scroll to more leagues'}
       className="grid h-9 w-9 place-items-center rounded-full border border-hairline bg-surface text-muted transition duration-200 ease-spring hover:text-ink motion-safe:hover:scale-110 motion-safe:active:scale-90 disabled:opacity-30 disabled:hover:scale-100"
     >
-      <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+      <svg
+        width="16"
+        height="16"
+        viewBox="0 0 24 24"
+        fill="none"
+        stroke="currentColor"
+        strokeWidth="2"
+        aria-hidden
+      >
         <path
           d={direction === 'prev' ? 'M15 5 8 12l7 7' : 'M9 5l7 7-7 7'}
           strokeLinecap="round"
@@ -259,6 +267,7 @@ function BoltIcon({ className }: { className?: string }) {
       stroke="currentColor"
       strokeWidth="1.8"
       className={className}
+      aria-hidden
     >
       <path d="M13 3 5 13.5h6L10 21l8-10.5h-6L13 3Z" strokeLinejoin="round" />
     </svg>

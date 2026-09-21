@@ -46,7 +46,15 @@ export function BottomNav() {
 
 function HomeIcon() {
   return (
-    <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8">
+    <svg
+      width="20"
+      height="20"
+      viewBox="0 0 24 24"
+      fill="none"
+      stroke="currentColor"
+      strokeWidth="1.8"
+      aria-hidden
+    >
       <path d="M3 10.5 12 3l9 7.5" strokeLinecap="round" strokeLinejoin="round" />
       <path d="M5.5 9.5V20h13V9.5" strokeLinecap="round" strokeLinejoin="round" />
     </svg>
@@ -55,7 +63,15 @@ function HomeIcon() {
 
 function BoxIcon() {
   return (
-    <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8">
+    <svg
+      width="20"
+      height="20"
+      viewBox="0 0 24 24"
+      fill="none"
+      stroke="currentColor"
+      strokeWidth="1.8"
+      aria-hidden
+    >
       <path d="M12 3l8 4.5v9L12 21l-8-4.5v-9L12 3Z" strokeLinejoin="round" />
       <path d="M4 7.5 12 12l8-4.5M12 12v9" strokeLinejoin="round" />
     </svg>
@@ -64,7 +80,15 @@ function BoxIcon() {
 
 function PersonIcon() {
   return (
-    <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8">
+    <svg
+      width="20"
+      height="20"
+      viewBox="0 0 24 24"
+      fill="none"
+      stroke="currentColor"
+      strokeWidth="1.8"
+      aria-hidden
+    >
       <circle cx="12" cy="8" r="3.4" />
       <path d="M5 20c0-3.7 3.1-6.4 7-6.4s7 2.7 7 6.4" strokeLinecap="round" />
     </svg>
@@ -73,7 +97,15 @@ function PersonIcon() {
 
 function BookIcon() {
   return (
-    <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8">
+    <svg
+      width="20"
+      height="20"
+      viewBox="0 0 24 24"
+      fill="none"
+      stroke="currentColor"
+      strokeWidth="1.8"
+      aria-hidden
+    >
       <path d="M5 4.5h9a3 3 0 0 1 3 3V20a2.5 2.5 0 0 0-2.5-2.5H5Z" strokeLinejoin="round" />
       <path d="M19 6.5V20" strokeLinecap="round" />
     </svg>

@@ -2,6 +2,7 @@ import Link from 'next/link';
 import { redirect } from 'next/navigation';
 import { Avatar } from '@/components/Avatar';
 import { BadgeShelf } from '@/components/BadgeShelf';
+import { DeleteAccountPanel } from '@/components/DeleteAccountPanel';
 import { EmailPreferences } from '@/components/EmailPreferences';
 import { FriendsPanel } from '@/components/FriendsPanel';
 import { PointHistoryChart } from '@/components/PointHistoryChart';
@@ -10,6 +11,7 @@ import { Reveal, RevealGroup } from '@/components/motion/Reveal';
 import { PushToggle } from '@/components/PushToggle';
 import { Sticker } from '@/components/Sticker';
 import { getCurrentUser } from '@/lib/auth';
+import { prisma } from '@/lib/db';
 import { BADGES, earnedBadges, highestBadge } from '@/lib/badges';
 import { cn, formatPoints, pointsTone } from '@/lib/ui';
 import { getEmailPreferences } from '@/server/notification-email';
@@ -23,10 +25,11 @@ export default async function AccountPage() {
   const user = await getCurrentUser();
   if (!user) redirect('/leagues');
 
-  const [account, friends, emailPreferences] = await Promise.all([
+  const [account, friends, emailPreferences, leaguesCommissioned] = await Promise.all([
     getAccountOverview(user.id),
     getFriendOverview(user.id),
     getEmailPreferences(user.id),
+    prisma.league.count({ where: { commissionerId: user.id } }),
   ]);
 
   const displayName = user.name ?? user.handle ?? 'Manager';
@@ -213,6 +216,8 @@ export default async function AccountPage() {
           <EmailPreferences preferences={emailPreferences} />
         </Reveal>
       </RevealGroup>
+
+      <DeleteAccountPanel leaguesCommissioned={leaguesCommissioned} />
     </div>
   );
 }

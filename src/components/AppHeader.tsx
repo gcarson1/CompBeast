@@ -81,7 +81,15 @@ export function CompBeastLogo({ className = 'h-8' }: { className?: string }) {
 
 function FeedIcon() {
   return (
-    <svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8">
+    <svg
+      width="17"
+      height="17"
+      viewBox="0 0 24 24"
+      fill="none"
+      stroke="currentColor"
+      strokeWidth="1.8"
+      aria-hidden
+    >
       <path d="M4 11a9 9 0 0 1 9 9M4 4a16 16 0 0 1 16 16" strokeLinecap="round" />
       <circle cx="5" cy="19" r="1.4" fill="currentColor" stroke="none" />
     </svg>

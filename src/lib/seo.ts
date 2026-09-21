@@ -20,7 +20,7 @@ export const SITE_NAME = 'Comp Beast';
 export const HOME_PATH = '/leagues';
 
 export const SITE_DESCRIPTION =
-  'Comp Beast is a free fantasy league app for reality competition TV — Big Brother, Survivor and more. Snake-draft the real cast with friends, score every competition win, blindside and elimination as episodes air, and chase a live leaderboard all season.';
+  'Comp Beast is a free fantasy league app for reality competition TV — Big Brother and Survivor. Snake-draft the real cast with friends, score every competition win, blindside and elimination as episodes air, and chase a live leaderboard all season.';
 
 /**
  * The seed's demo season lives under the `demo-` slug namespace, which the

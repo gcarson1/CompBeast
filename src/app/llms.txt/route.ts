@@ -42,13 +42,14 @@ export async function GET() {
     '',
     `> ${SITE_DESCRIPTION}`,
     '',
-    `${SITE_NAME} is a web app; it is free to play and runs in any browser. Leagues hold 2 to 24 teams, each team drafts 1 to 12 contestants in a live snake draft, and every league scores with one of three rulesets (Classic, Balanced, Drama & Social). Results are captured from published season results and every point traces back to the aired event that produced it.`,
+    `${SITE_NAME} is a web app; it is free to play and runs in a modern web browser. Leagues hold 2 to 24 teams, each team drafts 1 to 12 contestants in a live snake draft, and every league scores with one of three rulesets (Classic, Balanced, Drama & Social). Big Brother results are captured from published season results; Survivor results are entered by administrators. Every point traces back to the aired event that produced it.`,
     '',
     '## Start here',
     '',
     `- [Home](${base}${HOME_PATH}): what Comp Beast is, how a league works, the scoring table, a comparison with a spreadsheet league, and the FAQ.`,
     `- [Scoring rules](${base}/rules): every scored event for every show — Big Brother, Survivor — with its point value under each of the three rulesets.`,
     `- [Seasons](${base}/seasons): the seasons open for leagues and the finished-season archive.`,
+    `- [Privacy policy](${base}/privacy), [Terms of service](${base}/terms) and [Cookie policy](${base}/cookies): what is collected, the rules of use, and why there is no cookie banner.`,
     '',
   ];
 

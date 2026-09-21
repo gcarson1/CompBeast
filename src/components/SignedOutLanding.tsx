@@ -504,7 +504,7 @@ function deriveFacts(season: LandingSeason | null, rulesets: RuleBook): Facts {
     comparisonRows: [
       {
         feature: 'Results',
-        compBeast: 'Captured from published season results, reviewed before publishing',
+        compBeast: 'Captured from published season results or entered by admins, reviewed before publishing',
         spreadsheet: 'Typed in by one person after each episode',
       },
       {
@@ -579,15 +579,15 @@ function buildFaq(facts: Facts, emailAlerts: boolean): FaqItem[] {
   return [
     {
       question: `What is ${SITE_NAME}?`,
-      answer: `${SITE_NAME} is a free fantasy league app for reality competition TV — Big Brother, Survivor and more. Friends form a league, snake-draft the real cast, and earn points every episode from what happens on the broadcast — competition wins, blindsides, eliminations and the finale — while a live leaderboard ranks every team in the league.`,
+      answer: `${SITE_NAME} is a free fantasy league app for reality competition TV — Big Brother and Survivor. Friends form a league, snake-draft the real cast, and earn points every episode from what happens on the broadcast — competition wins, blindsides, eliminations and the finale — while a live leaderboard ranks every team in the league.`,
     },
     {
       question: `Is ${SITE_NAME} free to play?`,
-      answer: `Yes. Creating a league, joining one and playing a whole season are free, and there is no paid tier. Sign in, create or join a league, and you are in. ${SITE_NAME} runs in the browser on any phone or computer, so there is nothing to install.`,
+      answer: `Yes. Creating a league, joining one and playing a whole season are free, and there is no paid tier. Sign in, create or join a league, and you are in. ${SITE_NAME} runs in a modern web browser on a phone or computer, so there is nothing to install.`,
     },
     {
       question: 'Which shows can I play?',
-      answer: `${showName} is fully supported${seasonClause}. Big Brother and Survivor each have their own rule book and vocabulary, and leagues can be created for any season that is upcoming or airing. Everything else — leagues, drafts, scoring, standings — works the same way for every show, so adding another is a matter of data, not a rebuild.`,
+      answer: `Big Brother and Survivor${seasonClause ? `${seasonClause.replace(/^, and /, ' — ')}` : ''}. Each has its own rule book and vocabulary, and leagues can be created for any season that is upcoming or airing. Big Brother results are captured automatically from published season results; Survivor results are entered by the site's administrators as episodes air. Leagues, drafts, scoring and standings work the same way for both.`,
     },
     {
       question: 'How does the draft work?',
@@ -616,6 +616,10 @@ function buildFaq(facts: Facts, emailAlerts: boolean): FaqItem[] {
           ? 'Alerts collect under the bell in the header and can also arrive by email, with per-category switches on your account page and one-click unsubscribe.'
           : 'Alerts collect under the bell in the header.'
       }`,
+    },
+    {
+      question: 'What data does it keep, and can I delete it?',
+      answer: `${SITE_NAME} keeps your email, display name and avatar from sign-in, the leagues you are in, your picks and the messages you post in a league; nothing is sold or used for advertising, and the only cookies are the ones that keep you signed in. You can delete your account and everything in it from your account page at any time. The privacy policy lists every item and every provider.`,
     },
   ];
 }

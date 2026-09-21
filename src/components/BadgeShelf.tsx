@@ -25,12 +25,14 @@ export function BadgeShelf({ points }: { points: number }) {
             <li
               key={badge.slug}
               // An earned tier is a moulded gold chip with a star stuck on its
-              // corner; a locked one is the same shape in slate, dimmed,
-              // threshold showing. Same layout either way so the ladder reads
-              // as one. The star is decoration: the word "Earned" is below.
+              // corner; a locked one is the same shape in slate, threshold
+              // showing. Same layout either way so the ladder reads as one.
+              // The chip carries the locked/earned difference on its own — a
+              // dimmed tile put the threshold text under 3:1. The star is
+              // decoration: the word "Earned" is below.
               className={cn(
                 'card relative flex flex-col items-center p-3 text-center',
-                has ? 'border-brand-gold/40' : 'opacity-60',
+                has && 'border-brand-gold/40',
               )}
               aria-label={`${badge.name}: ${has ? 'earned' : `locked, ${badge.threshold} points`}`}
             >

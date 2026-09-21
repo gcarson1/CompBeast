@@ -192,6 +192,32 @@
     @apply text-2xs font-bold uppercase tracking-[0.18em] text-muted;
   }
 
+  /*
+   * Running text on the legal pages. Paragraphs and lists are written as
+   * plain elements there, so the spacing lives here rather than as a class
+   * on every one of them. `strong` is set in ink so a defined term reads as
+   * a term and not as louder muted text.
+   */
+  .legal p + p,
+  .legal p + ul,
+  .legal ul + p,
+  .legal p + ol,
+  .legal ol + p {
+    @apply mt-3;
+  }
+
+  .legal ul {
+    @apply list-disc space-y-1.5 pl-5;
+  }
+
+  .legal ol {
+    @apply list-decimal space-y-1.5 pl-5;
+  }
+
+  .legal strong {
+    @apply font-semibold text-ink;
+  }
+
   /* Non-interactive status badge. Buttons deliberately do not build on this —
      they need a touch target, and a badge must not look tappable. */
   .pill {

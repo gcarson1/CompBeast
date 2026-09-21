@@ -40,7 +40,6 @@ export async function POST(request: Request) {
       p256dh: keys.p256dh,
       auth: keys.auth,
       userId: user.id,
-      userAgent: request.headers.get('user-agent')?.slice(0, 300) ?? null,
     },
     update: { p256dh: keys.p256dh, auth: keys.auth, userId: user.id, lastSeenAt: new Date() },
   });

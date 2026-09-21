@@ -12,6 +12,7 @@ import { JsonLd } from '@/components/JsonLd';
 import { AmbientStickers } from '@/components/motion/AmbientStickers';
 import { MotionProvider } from '@/components/motion/MotionProvider';
 import { ServiceWorkerRegistrar } from '@/components/ServiceWorkerRegistrar';
+import { SiteFooter } from '@/components/SiteFooter';
 import { getCurrentUser } from '@/lib/auth';
 import { clerkAppearance, clerkLocalization } from '@/lib/clerk-appearance';
 import { HOME_PATH, SITE_DESCRIPTION, SITE_NAME, siteGraph } from '@/lib/seo';
@@ -138,6 +139,7 @@ export default async function RootLayout({ children }: { children: React.ReactNo
             <main id="main" className="mx-auto w-full max-w-md flex-1 px-5 pb-6 sm:max-w-lg lg:max-w-3xl">
               <MotionProvider>{children}</MotionProvider>
             </main>
+            <SiteFooter />
             {user && <BottomNav />}
           </div>
           <Toaster theme="dark" position="top-center" richColors closeButton />

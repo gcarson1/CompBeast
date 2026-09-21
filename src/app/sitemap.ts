@@ -23,6 +23,9 @@ export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
     { url: `${base}${HOME_PATH}`, changeFrequency: 'daily', priority: 1 },
     { url: `${base}/seasons`, changeFrequency: 'weekly', priority: 0.8 },
     { url: `${base}/rules`, changeFrequency: 'monthly', priority: 0.7 },
+    { url: `${base}/privacy`, changeFrequency: 'yearly', priority: 0.3 },
+    { url: `${base}/terms`, changeFrequency: 'yearly', priority: 0.3 },
+    { url: `${base}/cookies`, changeFrequency: 'yearly', priority: 0.2 },
   ];
 
   let seasons: Array<{ slug: string; status: string; contestants: Array<{ id: string }> }>;
