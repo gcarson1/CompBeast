@@ -20,7 +20,7 @@ export const SITE_NAME = 'Comp Beast';
 export const HOME_PATH = '/leagues';
 
 export const SITE_DESCRIPTION =
-  "Comp Beast is a free fantasy league app for CBS's Big Brother. Snake-draft real houseguests with friends, score every Head of Household win, Power of Veto, nomination and eviction as episodes air, and chase a live leaderboard all season.";
+  'Comp Beast is a free fantasy league app for reality competition TV — Big Brother, Survivor and more. Snake-draft the real cast with friends, score every competition win, blindside and elimination as episodes air, and chase a live leaderboard all season.';
 
 /**
  * The seed's demo season lives under the `demo-` slug namespace, which the
@@ -59,6 +59,13 @@ const SHOW_ENTITIES: Record<string, { name: string; sameAs: string[] }> = {
     sameAs: [
       'https://en.wikipedia.org/wiki/Big_Brother_(American_TV_series)',
       'https://www.cbs.com/shows/big_brother/',
+    ],
+  },
+  survivor: {
+    name: 'Survivor',
+    sameAs: [
+      'https://en.wikipedia.org/wiki/Survivor_(American_TV_series)',
+      'https://www.cbs.com/shows/survivor/',
     ],
   },
 };

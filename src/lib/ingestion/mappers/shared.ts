@@ -21,9 +21,20 @@ export type PushCandidate = (
   refSuffix?: string,
 ) => void;
 
-export function candidateCollector(seasonExternalId: string): { candidates: CandidateEvent[]; push: PushCandidate } {
+export function candidateCollector(seasonExternalId: string): {
+  candidates: CandidateEvent[];
+  push: PushCandidate;
+} {
   const candidates: CandidateEvent[] = [];
-  const push: PushCandidate = (code, player, weekNumber, weekLabel, confidence = 'HIGH', reasons = [], refSuffix) => {
+  const push: PushCandidate = (
+    code,
+    player,
+    weekNumber,
+    weekLabel,
+    confidence = 'HIGH',
+    reasons = [],
+    refSuffix,
+  ) => {
     candidates.push({
       sourceRef: `${seasonExternalId}:${weekLabel.toLowerCase()}:${code}:${player.externalId}${refSuffix ? `:${refSuffix}` : ''}`,
       eventCode: code,
@@ -51,7 +62,8 @@ export function collectPlayers<TCycle extends RawCycleResult>(
   for (const week of facts.weeks) {
     if (!week.aired) continue;
     for (const column of columns(week)) {
-      for (const player of column) if (!players.has(player.externalId)) players.set(player.externalId, player);
+      for (const player of column)
+        if (!players.has(player.externalId)) players.set(player.externalId, player);
     }
   }
   return players;

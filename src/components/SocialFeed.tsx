@@ -13,8 +13,8 @@ import type { SocialBuzz } from '@/lib/social-feed';
  * people somewhere else, and taking over their tab mid-season to do it would
  * lose their place.
  */
-export function SocialFeed({ buzz, hashtag }: { buzz: SocialBuzz; hashtag: string }) {
-  const xSearchUrl = `https://x.com/search?q=%23${encodeURIComponent(hashtag)}&f=live`;
+export function SocialFeed({ buzz, hashtag }: { buzz: SocialBuzz; hashtag: string | null }) {
+  const xSearchUrl = hashtag ? `https://x.com/search?q=%23${encodeURIComponent(hashtag)}&f=live` : null;
 
   return (
     <section aria-labelledby="buzz-heading">
@@ -26,24 +26,29 @@ export function SocialFeed({ buzz, hashtag }: { buzz: SocialBuzz; hashtag: strin
         {/* The hashtag stays one tap away even when the feed itself is not X —
             plenty of people want the live replies, and we can link there
             honestly without pretending to have embedded them. */}
-        <a
-          href={xSearchUrl}
-          target="_blank"
-          rel="noopener noreferrer"
-          className="shrink-0 text-2xs text-brand-gold-deep"
-        >
-          #{hashtag} on X →
-        </a>
+        {xSearchUrl && (
+          <a
+            href={xSearchUrl}
+            target="_blank"
+            rel="noopener noreferrer"
+            className="shrink-0 text-2xs text-brand-gold-deep"
+          >
+            #{hashtag} on X →
+          </a>
+        )}
       </div>
 
       {buzz.posts.length === 0 ? (
         <div className="rounded-card border border-dashed border-hairline p-5">
           <p className="max-w-measure text-xs leading-relaxed text-muted">
-            Couldn&apos;t reach the news feeds just now. The conversation is still going on X.
+            Couldn&apos;t reach the news feeds just now.
+            {xSearchUrl && ' The conversation is still going on X.'}
           </p>
-          <a href={xSearchUrl} target="_blank" rel="noopener noreferrer" className="btn-ghost btn-sm mt-3">
-            Open #{hashtag} on X
-          </a>
+          {xSearchUrl && (
+            <a href={xSearchUrl} target="_blank" rel="noopener noreferrer" className="btn-ghost btn-sm mt-3">
+              Open #{hashtag} on X
+            </a>
+          )}
         </div>
       ) : (
         <>

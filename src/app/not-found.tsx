@@ -13,9 +13,9 @@ export default function NotFound() {
           404
         </span>
 
-        <h1 className="headline mt-3 text-2xl">Evicted</h1>
+        <h1 className="headline mt-3 text-2xl">Eliminated</h1>
         <p className="mx-auto mt-2 max-w-xs text-sm leading-relaxed text-muted">
-          This page isn&apos;t in the house. It may have been removed, or the link may be wrong.
+          This page didn&apos;t survive the vote. It may have been removed, or the link may be wrong.
         </p>
 
         <div className="mt-5 flex flex-col gap-2 sm:flex-row sm:justify-center">

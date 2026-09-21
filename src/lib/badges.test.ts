@@ -13,7 +13,7 @@ describe('badge ladder', () => {
   it('awards nothing at zero and the first badge on the first point', () => {
     expect(earnedBadges(0)).toEqual([]);
     expect(highestBadge(0)).toBeNull();
-    expect(earnedBadges(1).map((b) => b.slug)).toEqual(['houseguest']);
+    expect(earnedBadges(1).map((b) => b.slug)).toEqual(['castmate']);
     // Fractional totals are real: point values carry two decimals.
     expect(earnedBadges(0.5)).toEqual([]);
   });
@@ -35,7 +35,7 @@ describe('badge ladder', () => {
   });
 
   it('measures the first tier from zero and reports nothing past the last', () => {
-    expect(nextBadge(0)).toMatchObject({ badge: { slug: 'houseguest' }, remaining: 1, fraction: 0 });
+    expect(nextBadge(0)).toMatchObject({ badge: { slug: 'castmate' }, remaining: 1, fraction: 0 });
     expect(nextBadge(BADGES.at(-1)!.threshold)).toBeNull();
   });
 });

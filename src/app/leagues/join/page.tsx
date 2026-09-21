@@ -6,6 +6,7 @@ import { JoinLeagueForm } from '@/components/LeagueForms';
 import { Sticker } from '@/components/Sticker';
 import { getCurrentUser } from '@/lib/auth';
 import { absoluteUrl } from '@/lib/seo';
+import { lower } from '@/lib/shows/lexicon';
 import { getLeagueInvite, type LeagueInvite } from '@/server/queries';
 
 export const dynamic = 'force-dynamic';
@@ -140,7 +141,8 @@ function InviteCard({ invite }: { invite: LeagueInvite }) {
       </Sticker>
       <h1 className="headline mt-4 text-5xl">{invite.name}</h1>
       <p className="mt-3 text-xs text-muted">
-        {invite.showName} · {invite.seasonName} · {invite.rosterSize} houseguests per team
+        {invite.showName} · {invite.seasonName} · {invite.rosterSize}{' '}
+        {lower(invite.showLexicon.contestantPlural)} per team
       </p>
       <div className="mt-3 flex flex-wrap items-center gap-2">
         <Sticker tone="ink" size="sm">

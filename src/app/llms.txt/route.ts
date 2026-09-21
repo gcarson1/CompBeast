@@ -34,7 +34,7 @@ export async function GET() {
 
   const seasonLine = (s: (typeof seasons)[number]) => {
     const state = s.status === 'ACTIVE' ? 'airing now' : s.status === 'UPCOMING' ? 'upcoming' : 'finished';
-    return `- [${s.name}](${base}/seasons/${s.slug}): ${s.show.name}, ${s.year}, ${state}. Every houseguest ranked by fantasy points, with how they actually placed.`;
+    return `- [${s.name}](${base}/seasons/${s.slug}): ${s.show.name}, ${s.year}, ${state}. Every contestant ranked by fantasy points, with how they actually placed.`;
   };
 
   const lines = [
@@ -42,12 +42,12 @@ export async function GET() {
     '',
     `> ${SITE_DESCRIPTION}`,
     '',
-    `${SITE_NAME} is a web app; it is free to play and runs in any browser. Leagues hold 2 to 24 teams, each team drafts 1 to 12 houseguests in a live snake draft, and every league scores with one of three rulesets (Classic, Balanced, Drama & Social). Results are captured from published season results and every point traces back to the aired event that produced it.`,
+    `${SITE_NAME} is a web app; it is free to play and runs in any browser. Leagues hold 2 to 24 teams, each team drafts 1 to 12 contestants in a live snake draft, and every league scores with one of three rulesets (Classic, Balanced, Drama & Social). Results are captured from published season results and every point traces back to the aired event that produced it.`,
     '',
     '## Start here',
     '',
     `- [Home](${base}${HOME_PATH}): what Comp Beast is, how a league works, the scoring table, a comparison with a spreadsheet league, and the FAQ.`,
-    `- [Scoring rules](${base}/rules): every scored Big Brother event with its point value under each of the three rulesets.`,
+    `- [Scoring rules](${base}/rules): every scored event for every show — Big Brother, Survivor — with its point value under each of the three rulesets.`,
     `- [Seasons](${base}/seasons): the seasons open for leagues and the finished-season archive.`,
     '',
   ];
@@ -62,7 +62,7 @@ export async function GET() {
   lines.push(
     '## Optional',
     '',
-    `- [Sitemap](${base}/sitemap.xml): every public URL, including one page per houseguest.`,
+    `- [Sitemap](${base}/sitemap.xml): every public URL, including one page per contestant.`,
     '',
     '## Not for indexing',
     '',

@@ -36,8 +36,8 @@ export const createLeagueSchema = z.object({
   rosterSize: z.coerce
     .number({ invalid_type_error: 'Roster size must be a number' })
     .int('Roster size must be a whole number')
-    .min(LEAGUE_LIMITS.minRoster, `Each team needs at least ${LEAGUE_LIMITS.minRoster} houseguest`)
-    .max(LEAGUE_LIMITS.maxRoster, `Rosters cap at ${LEAGUE_LIMITS.maxRoster} houseguests`),
+    .min(LEAGUE_LIMITS.minRoster, `Each team needs at least ${LEAGUE_LIMITS.minRoster} contestant`)
+    .max(LEAGUE_LIMITS.maxRoster, `Rosters cap at ${LEAGUE_LIMITS.maxRoster} contestants`),
   maxTeams: z.coerce
     .number({ invalid_type_error: 'Max teams must be a number' })
     .int('Max teams must be a whole number')
@@ -90,8 +90,8 @@ export const updateLeagueSchema = z.object({
   rosterSize: z.coerce
     .number({ invalid_type_error: 'Roster size must be a number' })
     .int('Roster size must be a whole number')
-    .min(LEAGUE_LIMITS.minRoster, `Each team needs at least ${LEAGUE_LIMITS.minRoster} houseguest`)
-    .max(LEAGUE_LIMITS.maxRoster, `Rosters cap at ${LEAGUE_LIMITS.maxRoster} houseguests`),
+    .min(LEAGUE_LIMITS.minRoster, `Each team needs at least ${LEAGUE_LIMITS.minRoster} contestant`)
+    .max(LEAGUE_LIMITS.maxRoster, `Rosters cap at ${LEAGUE_LIMITS.maxRoster} contestants`),
   maxTeams: z.coerce
     .number({ invalid_type_error: 'Max teams must be a number' })
     .int('Max teams must be a whole number')

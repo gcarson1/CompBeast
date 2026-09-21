@@ -1,4 +1,6 @@
 import { prisma } from '../lib/db';
+import { lexiconFor, type ShowLexicon } from '../lib/shows/lexicon';
+import { FLAGSHIP_SHOW_SLUG } from '../lib/shows/registry';
 import { type PointHistoryPoint, parseStoredHistory, playedHistory } from '../lib/career';
 import { effectiveLockAt, isCycleLocked } from '../lib/cycles';
 import { DRAFT_TEAM_ORDER } from '../lib/draft/snake';
@@ -17,7 +19,9 @@ async function getLeaguesForUser(userId: string) {
       maxTeams: true,
       inviteCode: true,
       lockOffsetMinutes: true,
-      season: { select: { id: true, name: true, show: { select: { name: true, slug: true } } } },
+      season: {
+        select: { id: true, name: true, show: { select: { name: true, slug: true, lexicon: true } } },
+      },
       scoringRuleset: { select: { name: true, slug: true } },
       // Filtered relation count: `members` below is capped at 4 for avatars,
       // so the true size has to come from a count, not from that sample.
@@ -308,6 +312,8 @@ export async function getLeagueLeaderboard(leagueId: string): Promise<{
 
 export interface TeamDetail {
   team: { id: string; name: string; leagueId: string; ownerName: string | null };
+  showSlug: string;
+  showLexicon: ShowLexicon;
   score: TeamScore | null;
   roster: Array<{
     contestantId: string;
@@ -328,6 +334,7 @@ export async function getTeamDetail(teamId: string): Promise<TeamDetail | null> 
       name: true,
       leagueId: true,
       owner: { select: { name: true } },
+      league: { select: { season: { select: { show: { select: { slug: true, lexicon: true } } } } } },
       draftPicks: {
         orderBy: { pickNumber: 'asc' },
         select: {
@@ -351,8 +358,11 @@ export async function getTeamDetail(teamId: string): Promise<TeamDetail | null> 
   const score = snapshot.teams[0] ?? null;
   const pointsByContestant = new Map((score?.contestants ?? []).map((c) => [c.contestantId, c.points]));
 
+  const show = team.league.season.show;
   return {
     team: { id: team.id, name: team.name, leagueId: team.leagueId, ownerName: team.owner?.name ?? null },
+    showSlug: show.slug,
+    showLexicon: lexiconFor(show.slug, show.lexicon),
     score,
     roster: team.draftPicks.map((pick) => ({
       contestantId: pick.contestant.id,
@@ -445,7 +455,9 @@ export async function getContestantProfile(contestantId: string) {
       placement: true,
       seasonId: true,
       eliminatedCycle: { select: { label: true } },
-      season: { select: { slug: true, name: true, show: { select: { name: true, slug: true } } } },
+      season: {
+        select: { slug: true, name: true, show: { select: { name: true, slug: true, lexicon: true } } },
+      },
       scoredEvents: {
         where: { isVoided: false },
         orderBy: [{ cycle: { sequence: 'asc' } }, { createdAt: 'asc' }],
@@ -482,6 +494,7 @@ export async function getContestantProfile(contestantId: string) {
 
   return {
     ...contestant,
+    showLexicon: lexiconFor(contestant.season.show.slug, contestant.season.show.lexicon),
     events,
     totalPoints: events.reduce((sum, e) => sum + e.points, 0),
     gameLog: [...byCycle.entries()].sort((a, b) => a[0] - b[0]).map(([sequence, v]) => ({ sequence, ...v })),
@@ -532,7 +545,7 @@ export async function getSeasonsByStatus() {
       status: true,
       // slug as well as name: the buzz feed keys its show-specific source off
       // the slug, and builds its universal query from the name.
-      show: { select: { name: true, slug: true } },
+      show: { select: { name: true, slug: true, lexicon: true } },
       _count: { select: { contestants: true, leagues: true } },
     },
   });
@@ -570,6 +583,7 @@ export async function getSeasonScoreboard(slug: string): Promise<{
     status: string;
     showName: string;
     showSlug: string;
+    showLexicon: ShowLexicon;
   };
   rulesetName: string;
   players: SeasonPlayerScore[];
@@ -583,7 +597,7 @@ export async function getSeasonScoreboard(slug: string): Promise<{
       year: true,
       status: true,
       showId: true,
-      show: { select: { name: true, slug: true } },
+      show: { select: { name: true, slug: true, lexicon: true } },
     },
   });
   if (!season) return null;
@@ -649,10 +663,35 @@ export async function getSeasonScoreboard(slug: string): Promise<{
       status: season.status,
       showName: season.show.name,
       showSlug: season.show.slug,
+      showLexicon: lexiconFor(season.show.slug, season.show.lexicon),
     },
     rulesetName: ruleset?.name ?? 'Default',
     players,
   };
+}
+
+/**
+ * Every show's rule book, for the public rules page. Ordered with the
+ * flagship first so the page opens on the show most visitors came for.
+ */
+export async function getRuleBooks() {
+  const shows = await prisma.show.findMany({
+    where: { scoringRulesets: { some: {} } },
+    select: { slug: true, name: true, lexicon: true },
+  });
+  const books = await Promise.all(
+    shows.map(async (show) => ({
+      slug: show.slug,
+      name: show.name,
+      lexicon: lexiconFor(show.slug, show.lexicon),
+      rulesets: await getRuleBook(show.slug),
+    })),
+  );
+  return books.sort((a, b) => {
+    if (a.slug === FLAGSHIP_SHOW_SLUG) return -1;
+    if (b.slug === FLAGSHIP_SHOW_SLUG) return 1;
+    return a.name.localeCompare(b.name);
+  });
 }
 
 export async function getRuleBook(showSlug: string) {
@@ -752,7 +791,7 @@ export async function getHomeLeagues(userId: string): Promise<HomeLeagueCard[]> 
         totalPoints: mine?.totalPoints ?? 0,
         lastCyclePoints: mine?.lastCyclePoints ?? 0,
         nearMiss: myTeam ? nearMissMessage(rows, myTeam.id) : null,
-        atRisk: atRiskMessage(atRiskNames),
+        atRisk: atRiskMessage(atRiskNames, lexiconFor(league.season.show.slug, league.season.show.lexicon)),
         currentCycleLabel: currentCycle?.label ?? null,
         locksAt: currentCycle ? effectiveLockAt(currentCycle, league.lockOffsetMinutes) : null,
         cycleLocked,
@@ -918,6 +957,8 @@ export interface LeagueInvite {
   name: string;
   commissionerName: string | null;
   showName: string;
+  showSlug: string;
+  showLexicon: ShowLexicon;
   seasonName: string;
   seasonStatus: 'UPCOMING' | 'ACTIVE' | 'COMPLETED';
   draftStatus: 'NOT_STARTED' | 'IN_PROGRESS' | 'COMPLETED';
@@ -943,7 +984,9 @@ export async function getLeagueInvite(inviteCode: string): Promise<LeagueInvite 
       maxTeams: true,
       draftStatus: true,
       commissioner: { select: { name: true, handle: true } },
-      season: { select: { name: true, status: true, show: { select: { name: true } } } },
+      season: {
+        select: { name: true, status: true, show: { select: { name: true, slug: true, lexicon: true } } },
+      },
       _count: { select: { teams: true } },
     },
   });
@@ -953,6 +996,8 @@ export async function getLeagueInvite(inviteCode: string): Promise<LeagueInvite 
     name: league.name,
     commissionerName: league.commissioner.name ?? league.commissioner.handle ?? null,
     showName: league.season.show.name,
+    showSlug: league.season.show.slug,
+    showLexicon: lexiconFor(league.season.show.slug, league.season.show.lexicon),
     seasonName: league.season.name,
     seasonStatus: league.season.status,
     draftStatus: league.draftStatus,

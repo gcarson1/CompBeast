@@ -84,9 +84,9 @@ export function BadgeShelf({ points }: { points: number }) {
 }
 
 /**
- * One glyph per tier, in the app's stroke style: a door for moving in, a
- * flag for a comp win, a key for HOH, a gavel for the jury, a podium for the
- * finale, and the wordmark's climbing bars for the top.
+ * One glyph per tier, in the app's stroke style: a door for making the
+ * cast, a flag for a comp win, a bolt for running the game, a gavel for the
+ * jury, a podium for the finale, and the wordmark's climbing bars for the top.
  */
 function BadgeIcon({ slug }: { slug: Badge['slug'] }) {
   const common = {
@@ -100,7 +100,7 @@ function BadgeIcon({ slug }: { slug: Badge['slug'] }) {
     strokeLinejoin: 'round' as const,
   };
   switch (slug) {
-    case 'houseguest':
+    case 'castmate':
       return (
         <svg {...common}>
           <path d="M4 21V5.5A1.5 1.5 0 0 1 5.5 4h9A1.5 1.5 0 0 1 16 5.5V21" />
@@ -115,11 +115,10 @@ function BadgeIcon({ slug }: { slug: Badge['slug'] }) {
           <path d="M6 4h11l-2 4 2 4H6" />
         </svg>
       );
-    case 'head-of-household':
+    case 'power-player':
       return (
         <svg {...common}>
-          <circle cx="8" cy="8" r="4.5" />
-          <path d="M11.2 11.2 20 20M17 17l2-2M14.5 14.5l2-2" />
+          <path d="M13 2 4.5 13.5H11L10 22l8.5-11.5H12.5L13 2Z" />
         </svg>
       );
     case 'jury-member':

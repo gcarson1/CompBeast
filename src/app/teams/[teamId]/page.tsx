@@ -6,6 +6,7 @@ import { Avatar } from '@/components/Avatar';
 import { Doodle } from '@/components/doodles/Doodle';
 import { Reveal } from '@/components/motion/Reveal';
 import { StatStrip } from '@/components/StatStrip';
+import { ShowTheme } from '@/components/ShowTheme';
 import { Sticker } from '@/components/Sticker';
 import { getCurrentUser } from '@/lib/auth';
 import { formatPoints, pointsTone } from '@/lib/ui';
@@ -29,7 +30,7 @@ export default async function TeamPage({ params }: { params: { teamId: string } 
   const [detail, user] = await Promise.all([loadTeam(params.teamId), getCurrentUser()]);
   if (!detail) notFound();
 
-  const { team, score, roster } = detail;
+  const { team, score, roster, showSlug, showLexicon: lexicon } = detail;
   // A private league's rosters are its members'. The league page explains
   // why and offers the way in, so send them there rather than 404-ing a
   // link a friend sent them.
@@ -39,116 +40,120 @@ export default async function TeamPage({ params }: { params: { teamId: string } 
   const stillIn = roster.filter((player) => player.isActive).length;
 
   return (
-    <div className="pt-2">
-      <Link href={`/leagues/${team.leagueId}`} className="text-xs text-muted">
-        ← League
-      </Link>
+    <ShowTheme showSlug={showSlug}>
+      <div className="pt-2">
+        <Link href={`/leagues/${team.leagueId}`} className="text-xs text-muted">
+          ← League
+        </Link>
 
-      <header className="relative mt-4 flex items-center gap-4">
-        <span className="relative shrink-0">
-          <Avatar name={team.ownerName ?? team.name} size={56} />
-          {rank === 1 && <Doodle kind="crown" className="absolute -right-2.5 -top-2.5 h-7 w-7 rotate-12" />}
-        </span>
-        <div className="min-w-0">
-          <h1 className="headline truncate text-4xl">{team.name}</h1>
-          <p className="mt-1.5 flex min-w-0 items-center gap-2 text-xs text-muted">
-            <span className="truncate">{team.ownerName ?? 'Unclaimed'}</span>
-            {rank > 0 && (
-              <Sticker tone={rank === 1 ? 'gold' : 'ink'} size="sm" className="shrink-0">
-                #{rank}
-              </Sticker>
-            )}
-          </p>
-        </div>
-      </header>
-
-      <StatStrip
-        className="mt-6"
-        items={[
-          { label: 'Total', value: `${score?.totalPoints ?? 0}` },
-          { label: 'Rank', value: rank ? `#${rank}` : '—' },
-          {
-            label: 'Last week',
-            value: formatPoints(score?.lastCyclePoints ?? 0),
-            tone: pointsTone(score?.lastCyclePoints ?? 0),
-          },
-        ]}
-      />
-
-      <Reveal as="section" className="mt-8" aria-labelledby="roster-heading">
-        <div className="mb-3 flex items-end justify-between gap-3">
-          <h2 id="roster-heading" className="section-title">
-            Roster
-          </h2>
-          <span className="text-2xs text-muted">
-            {stillIn}/{roster.length} still in
+        <header className="relative mt-4 flex items-center gap-4">
+          <span className="relative shrink-0">
+            <Avatar name={team.ownerName ?? team.name} size={56} />
+            {rank === 1 && <Doodle kind="crown" className="absolute -right-2.5 -top-2.5 h-7 w-7 rotate-12" />}
           </span>
-        </div>
-        <ul className="card divide-y divide-hairline">
-          {roster.map((player) => (
-            <li key={player.contestantId}>
-              <Link
-                href={`/players/${player.contestantId}`}
-                className="flex items-center gap-3 p-4 transition duration-200 ease-soft hover:bg-surface-raised"
-              >
-                <Avatar name={player.name} photoUrl={player.photoUrl} size={42} dimmed={!player.isActive} />
-                <span className="min-w-0 flex-1">
-                  <span className="block truncate text-base font-semibold">{player.name}</span>
-                  <span className="mt-0.5 block text-2xs text-muted">
-                    {player.isActive ? 'In the house' : `Evicted · ${player.eliminatedLabel ?? '—'}`}
-                  </span>
-                </span>
-                <span className={`text-md font-semibold tabular-nums ${pointsTone(player.points)}`}>
-                  {formatPoints(player.points)}
-                </span>
-              </Link>
-            </li>
-          ))}
-        </ul>
-      </Reveal>
+          <div className="min-w-0">
+            <h1 className="headline truncate text-4xl">{team.name}</h1>
+            <p className="mt-1.5 flex min-w-0 items-center gap-2 text-xs text-muted">
+              <span className="truncate">{team.ownerName ?? 'Unclaimed'}</span>
+              {rank > 0 && (
+                <Sticker tone={rank === 1 ? 'gold' : 'ink'} size="sm" className="shrink-0">
+                  #{rank}
+                </Sticker>
+              )}
+            </p>
+          </div>
+        </header>
 
-      {score && score.cycles.length > 0 && (
-        <Reveal as="section" className="mt-8" aria-labelledby="weeks-heading">
-          <h2 id="weeks-heading" className="eyebrow mb-3">
-            Week by week
-          </h2>
-          <div className="card divide-y divide-hairline">
-            {/*
+        <StatStrip
+          className="mt-6"
+          items={[
+            { label: 'Total', value: `${score?.totalPoints ?? 0}` },
+            { label: 'Rank', value: rank ? `#${rank}` : '—' },
+            {
+              label: 'Last week',
+              value: formatPoints(score?.lastCyclePoints ?? 0),
+              tone: pointsTone(score?.lastCyclePoints ?? 0),
+            },
+          ]}
+        />
+
+        <Reveal as="section" className="mt-8" aria-labelledby="roster-heading">
+          <div className="mb-3 flex items-end justify-between gap-3">
+            <h2 id="roster-heading" className="section-title">
+              Roster
+            </h2>
+            <span className="text-2xs text-muted">
+              {stillIn}/{roster.length} still in
+            </span>
+          </div>
+          <ul className="card divide-y divide-hairline">
+            {roster.map((player) => (
+              <li key={player.contestantId}>
+                <Link
+                  href={`/players/${player.contestantId}`}
+                  className="flex items-center gap-3 p-4 transition duration-200 ease-soft hover:bg-surface-raised"
+                >
+                  <Avatar name={player.name} photoUrl={player.photoUrl} size={42} dimmed={!player.isActive} />
+                  <span className="min-w-0 flex-1">
+                    <span className="block truncate text-base font-semibold">{player.name}</span>
+                    <span className="mt-0.5 block text-2xs text-muted">
+                      {player.isActive
+                        ? lexicon.activeLabel
+                        : `${lexicon.eliminationVerb} · ${player.eliminatedLabel ?? '—'}`}
+                    </span>
+                  </span>
+                  <span className={`text-md font-semibold tabular-nums ${pointsTone(player.points)}`}>
+                    {formatPoints(player.points)}
+                  </span>
+                </Link>
+              </li>
+            ))}
+          </ul>
+        </Reveal>
+
+        {score && score.cycles.length > 0 && (
+          <Reveal as="section" className="mt-8" aria-labelledby="weeks-heading">
+            <h2 id="weeks-heading" className="eyebrow mb-3">
+              Week by week
+            </h2>
+            <div className="card divide-y divide-hairline">
+              {/*
               Newest week first. Copied before reversing because `reverse()`
               mutates, and this same array is read elsewhere with `.at(-1)` to
               mean "the latest cycle" — reversing it in place would quietly
               turn the at-risk banner into an at-risk-three-weeks-ago banner.
               That is also why this is not done in the query.
             */}
-            {[...score.cycles].reverse().map((cycle) => (
-              <details key={cycle.cycleId} className="group">
-                <summary className="flex cursor-pointer list-none items-center justify-between p-4 text-muted transition hover:text-ink">
-                  <span className="text-base font-medium text-ink">{cycle.label}</span>
-                  <span className="flex items-center gap-2">
-                    <span className={`text-base font-semibold tabular-nums ${pointsTone(cycle.points)}`}>
-                      {formatPoints(cycle.points)}
-                    </span>
-                    <ChevronIcon />
-                  </span>
-                </summary>
-                <ul className="space-y-1.5 border-t border-hairline bg-canvas/60 px-4 py-3">
-                  {/* Lines arrive oldest-first by occurredAt; the last thing
-                      that happened belongs at the top of the week too. */}
-                  {[...cycle.lines].reverse().map((line) => (
-                    <li key={line.scoredEventId} className="flex items-center justify-between gap-3">
-                      <span className="min-w-0 flex-1 truncate text-xs text-muted">{line.label}</span>
-                      <span className={`text-xs font-medium tabular-nums ${pointsTone(line.points)}`}>
-                        {formatPoints(line.points)}
+              {[...score.cycles].reverse().map((cycle) => (
+                <details key={cycle.cycleId} className="group">
+                  <summary className="flex cursor-pointer list-none items-center justify-between p-4 text-muted transition hover:text-ink">
+                    <span className="text-base font-medium text-ink">{cycle.label}</span>
+                    <span className="flex items-center gap-2">
+                      <span className={`text-base font-semibold tabular-nums ${pointsTone(cycle.points)}`}>
+                        {formatPoints(cycle.points)}
                       </span>
-                    </li>
-                  ))}
-                </ul>
-              </details>
-            ))}
-          </div>
-        </Reveal>
-      )}
-    </div>
+                      <ChevronIcon />
+                    </span>
+                  </summary>
+                  <ul className="space-y-1.5 border-t border-hairline bg-canvas/60 px-4 py-3">
+                    {/* Lines arrive oldest-first by occurredAt; the last thing
+                      that happened belongs at the top of the week too. */}
+                    {[...cycle.lines].reverse().map((line) => (
+                      <li key={line.scoredEventId} className="flex items-center justify-between gap-3">
+                        <span className="min-w-0 flex-1 truncate text-xs text-muted">{line.label}</span>
+                        <span className={`text-xs font-medium tabular-nums ${pointsTone(line.points)}`}>
+                          {formatPoints(line.points)}
+                        </span>
+                      </li>
+                    ))}
+                  </ul>
+                </details>
+              ))}
+            </div>
+          </Reveal>
+        )}
+      </div>
+    </ShowTheme>
   );
 }
 

@@ -18,7 +18,9 @@ const p = (externalId: string): RawPlayerRef => ({
 
 const [ana, ben, cal, dee, eli, fay] = ['ana', 'ben', 'cal', 'dee', 'eli', 'fay'].map(p);
 
-function episode(overrides: Partial<SurvivorEpisodeResult> & Pick<SurvivorEpisodeResult, 'weekNumber'>): SurvivorEpisodeResult {
+function episode(
+  overrides: Partial<SurvivorEpisodeResult> & Pick<SurvivorEpisodeResult, 'weekNumber'>,
+): SurvivorEpisodeResult {
   return {
     weekLabel: `E${overrides.weekNumber}`,
     aired: true,
@@ -124,14 +126,16 @@ describe('mapSurvivorSeason', () => {
   });
 
   it('awards survival only through aired episodes and only to those still in', () => {
-    expect(forWeek(1, 'EPISODE_SURVIVED').map((c) => c.player.externalId).sort()).toEqual([
-      'ana',
-      'ben',
-      'cal',
-      'dee',
-      'eli',
-    ]);
-    expect(forWeek(3, 'EPISODE_SURVIVED').map((c) => c.player.externalId).sort()).toEqual(['ana', 'dee', 'eli']);
+    expect(
+      forWeek(1, 'EPISODE_SURVIVED')
+        .map((c) => c.player.externalId)
+        .sort(),
+    ).toEqual(['ana', 'ben', 'cal', 'dee', 'eli']);
+    expect(
+      forWeek(3, 'EPISODE_SURVIVED')
+        .map((c) => c.player.externalId)
+        .sort(),
+    ).toEqual(['ana', 'dee', 'eli']);
     expect(forWeek(4, 'EPISODE_SURVIVED')).toHaveLength(0);
   });
 

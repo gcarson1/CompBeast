@@ -96,14 +96,14 @@ export function validatePick({
     return {
       ok: false,
       reason: 'CONTESTANT_INELIGIBLE',
-      message: 'That houseguest is not part of this season.',
+      message: 'That contestant is not part of this season.',
     };
   }
   if (picksMade.some((p) => p.contestantId === contestantId)) {
     return {
       ok: false,
       reason: 'CONTESTANT_TAKEN',
-      message: 'That houseguest has already been drafted.',
+      message: 'That contestant has already been drafted.',
     };
   }
   return { ok: true, slot };

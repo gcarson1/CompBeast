@@ -80,7 +80,11 @@ export const mapSurvivorSeason: SeasonMapper<SurvivorSeasonFacts> = (facts, seas
 
       // Every vote on one name is a unanimous boot, but only when the source
       // recorded the whole tribal.
-      if (hasVoteData && wasVotedOut && episode.votes.every((v) => v.count === 0 || eliminatedIds.has(v.player.externalId))) {
+      if (
+        hasVoteData &&
+        wasVotedOut &&
+        episode.votes.every((v) => v.count === 0 || eliminatedIds.has(v.player.externalId))
+      ) {
         push('VOTED_OUT_UNANIMOUS', player, weekNumber, weekLabel);
       }
     }

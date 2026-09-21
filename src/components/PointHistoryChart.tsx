@@ -22,7 +22,7 @@ export function PointHistoryChart({ history, caption }: { history: PointHistoryP
   if (history.length === 0) {
     return (
       <p className="rounded-btn border border-dashed border-hairline p-4 text-2xs text-muted">
-        No weeks have been scored yet. The chart fills in as the season airs.
+        Nothing has been scored yet. The chart fills in as the season airs.
       </p>
     );
   }
@@ -63,7 +63,7 @@ export function PointHistoryChart({ history, caption }: { history: PointHistoryP
         className="h-auto w-full overflow-visible"
         role="img"
         aria-describedby={tableId}
-        aria-label={`${caption}: ${formatPoints(latest.cumulativePoints)} points after ${history.length} ${history.length === 1 ? 'week' : 'weeks'}`}
+        aria-label={`${caption}: ${formatPoints(latest.cumulativePoints)} points after ${history.length} ${history.length === 1 ? 'round' : 'rounds'}`}
         preserveAspectRatio="none"
       >
         <defs>
@@ -126,11 +126,11 @@ export function PointHistoryChart({ history, caption }: { history: PointHistoryP
           the same data here. */}
       <figcaption id={tableId} className="sr-only">
         <table>
-          <caption>{caption} week by week</caption>
+          <caption>{caption} round by round</caption>
           <thead>
             <tr>
-              <th scope="col">Week</th>
-              <th scope="col">Points that week</th>
+              <th scope="col">Round</th>
+              <th scope="col">Points that round</th>
               <th scope="col">Running total</th>
               <th scope="col">Rank</th>
             </tr>

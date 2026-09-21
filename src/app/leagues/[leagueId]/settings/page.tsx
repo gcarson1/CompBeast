@@ -3,6 +3,7 @@ import { notFound, redirect } from 'next/navigation';
 import { DeleteLeaguePanel, LeagueSettingsForm } from '@/components/LeagueSettingsForm';
 import { getCurrentUser } from '@/lib/auth';
 import { prisma } from '@/lib/db';
+import { lexiconFor } from '@/lib/shows/lexicon';
 
 export const dynamic = 'force-dynamic';
 
@@ -23,7 +24,9 @@ export default async function LeagueSettingsPage({ params }: { params: { leagueI
       lockOffsetMinutes: true,
       chatWebhookUrl: true,
       draftStatus: true,
-      season: { select: { showId: true, name: true, show: { select: { name: true } } } },
+      season: {
+        select: { showId: true, name: true, show: { select: { name: true, slug: true, lexicon: true } } },
+      },
       _count: { select: { teams: true, members: true } },
     },
   });
@@ -63,6 +66,7 @@ export default async function LeagueSettingsPage({ params }: { params: { leagueI
           chatWebhookUrl: league.chatWebhookUrl,
           draftStarted: league.draftStatus !== 'NOT_STARTED',
           teamCount: league._count.teams,
+          contestantPlural: lexiconFor(league.season.show.slug, league.season.show.lexicon).contestantPlural,
         }}
         rulesets={rulesets}
       />

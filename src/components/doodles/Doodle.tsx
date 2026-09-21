@@ -1,7 +1,6 @@
 import { cn } from '@/lib/ui';
 
-export type DoodleKind =
-  'key' | 'veto' | 'crown' | 'tally' | 'camera' | 'door' | 'star' | 'alert' | 'lock' | 'lock-open';
+export type DoodleKind = 'crown' | 'tally' | 'camera' | 'door' | 'star' | 'alert' | 'lock' | 'lock-open';
 
 const TONE = {
   gold: '#F59E0B',
@@ -16,16 +15,16 @@ const INK = '#1A1206';
 const EDGE = '#FFFFFF';
 
 /**
- * The sticker set. Every glyph is something from the game or from the
- * app's own marks — the HOH key, the veto medallion, the crown, the
- * wordmark's climbing tally, the house camera, the front door, a star, a
- * warning, and the roster lock open and shut — drawn in the same 2px
+ * The sticker set. Every glyph is something any reality competition has,
+ * or one of the app's own marks — the crown, the wordmark's climbing tally,
+ * the camera, the door, a star, a warning, and the roster lock open and
+ * shut — drawn in the same 2px
  * rounded stroke as every icon in the app, filled in a tile tone and cut
  * out with a white edge. No generic bursts or sparkles: a sticker that
  * could be on any app is a sticker that says nothing about this one.
  *
  * Silhouettes are filled with `paint-order: stroke`, so a glyph built from
- * several overlapping pieces (a key's bow, shaft and teeth) shows one
+ * several overlapping pieces (the camera body and its lens hood) shows one
  * outline and no seams — the fill covers whatever stroke falls inside it.
  * That needs every piece wound the same way (clockwise on screen), which
  * the paths below are. Pieces that are lines rather than shapes (a
@@ -114,16 +113,6 @@ interface Glyph {
 }
 
 const GLYPHS: Record<DoodleKind, Glyph> = {
-  // The Head of Household key: bow, shaft, two teeth.
-  key: {
-    body: 'M10 9a6 6 0 1 1 12 0a6 6 0 1 1-12 0Z M14 13h4v16h-4Z M18 20h4v3h-4Z M18 25h3v3h-3Z',
-    detail: 'M13.8 9a2.2 2.2 0 1 0 4.4 0a2.2 2.2 0 1 0-4.4 0Z',
-  },
-  // The Power of Veto medallion on its chain.
-  veto: {
-    body: 'M7.5 19a8.5 8.5 0 1 1 17 0a8.5 8.5 0 1 1-17 0Z M13.2 7a2.8 2.8 0 1 1 5.6 0a2.8 2.8 0 1 1-5.6 0Z M15 9.5h2v1.5h-2Z',
-    detail: 'M12 15.5L16 23.5L20 15.5 M15 7a1 1 0 1 0 2 0a1 1 0 1 0-2 0Z',
-  },
   crown: {
     body: 'M5 27V10l6 5.5L16 6.5l5 9 6-5.5v17Z',
     detail: 'M7 22.5h18',

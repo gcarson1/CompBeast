@@ -5,6 +5,8 @@
 // from src/server/queries.ts — these types are structural, not imported, to
 // avoid a lib -> server import for what is otherwise a leaf module.
 
+import { lower, type ShowLexicon } from './shows/lexicon';
+
 export interface RankedTeam {
   teamId: string;
   teamName: string;
@@ -37,17 +39,21 @@ export function nearMissMessage(rows: RankedTeam[], myTeamId: string, threshold 
 /**
  * Event codes that mean "at risk of elimination this cycle" for the
  * loss-aversion banner. `getTeamAtRiskNames` in src/server/queries.ts is the
- * one reader.
+ * one reader. Big Brother is the only show with a mid-cycle danger signal —
+ * nominations — so the codes are its; a show without one simply never fires
+ * the banner.
  */
 export const AT_RISK_EVENT_CODES = ['NOMINATED', 'ON_THE_BLOCK', 'REPLACEMENT_NOMINEE'] as const;
 
 /**
- * Loss aversion framing for the houseguests a team has on the block this
- * cycle. Takes already-deduped names (a houseguest nominated then
- * backdoored should only be counted once) so this stays a pure formatter.
+ * Loss aversion framing for the contestants a team has at risk this cycle,
+ * in the show's own words. Takes already-deduped names (a houseguest
+ * nominated then backdoored should only be counted once) so this stays a
+ * pure formatter.
  */
-export function atRiskMessage(names: string[]): string | null {
+export function atRiskMessage(names: string[], lexicon: ShowLexicon): string | null {
   if (names.length === 0) return null;
-  if (names.length === 1) return `${names[0]} is on the block this week.`;
-  return `${names.length} of your houseguests are on the block this week.`;
+  const cycle = lower(lexicon.cycleSingular);
+  if (names.length === 1) return `${names[0]} is ${lexicon.atRiskLabel} this ${cycle}.`;
+  return `${names.length} of your ${lower(lexicon.contestantPlural)} are ${lexicon.atRiskLabel} this ${cycle}.`;
 }

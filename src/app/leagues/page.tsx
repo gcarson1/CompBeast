@@ -5,12 +5,13 @@ import { BeastDoodle } from '@/components/doodles/BeastDoodle';
 import { Doodle } from '@/components/doodles/Doodle';
 import { LeagueRail } from '@/components/LeagueRail';
 import { Reveal } from '@/components/motion/Reveal';
-import { LIVE_HASHTAG, LiveSection, type FeaturedCast } from '@/components/LiveSection';
+import { LiveSection, type FeaturedCast } from '@/components/LiveSection';
 import { getSocialBuzz } from '@/lib/social-feed';
 import { SignedOutLanding, type LandingSeason } from '@/components/SignedOutLanding';
 import { getCurrentUser } from '@/lib/auth';
 import { isEmailConfigured } from '@/lib/email/send';
 import { HOME_PATH, SITE_DESCRIPTION, SITE_NAME, absoluteUrl } from '@/lib/seo';
+import { FLAGSHIP_SHOW_NAME, FLAGSHIP_SHOW_SLUG, hashtagFor } from '@/lib/shows/registry';
 import {
   getHomeLeagues,
   getRecentHeadlines,
@@ -28,11 +29,11 @@ export const dynamic = 'force-dynamic';
  * every signal pointed at the domain should settle on the page that answers.
  */
 export const metadata: Metadata = {
-  title: { absolute: `${SITE_NAME}: Free Fantasy Leagues for Big Brother` },
+  title: { absolute: `${SITE_NAME}: Free Fantasy Leagues for Reality TV` },
   description: SITE_DESCRIPTION,
   alternates: { canonical: absoluteUrl(HOME_PATH) },
   openGraph: {
-    title: `${SITE_NAME}: Free Fantasy Leagues for Big Brother`,
+    title: `${SITE_NAME}: Free Fantasy Leagues for Reality TV`,
     description: SITE_DESCRIPTION,
     url: absoluteUrl(HOME_PATH),
     // Named explicitly: a page-level `openGraph` replaces the inherited one
@@ -105,9 +106,10 @@ export default async function HomePage() {
           contestantCount: lead._count.contestants,
           showName: lead.show.name,
           showSlug: lead.show.slug,
+          showLexicon: lead.show.lexicon,
         }
       : null;
-    const rulesets = await getRuleBook(season?.showSlug ?? 'big-brother');
+    const rulesets = await getRuleBook(season?.showSlug ?? FLAGSHIP_SHOW_SLUG);
 
     return (
       <SignedOutLanding live={live} season={season} rulesets={rulesets} emailAlerts={isEmailConfigured()} />
@@ -155,16 +157,19 @@ async function HomeRail({ userId }: { userId: string }) {
 
 async function LiveBlock({ featured: pending }: { featured: Promise<FeaturedCast | null> }) {
   const featured = await pending;
+  // With nothing airing there is no season to tag, so the buzz falls back to
+  // the flagship show's news rather than a hashtag nobody is using.
+  const hashtag = featured ? hashtagFor(featured.showSlug, featured.seasonSlug) : null;
   const [headlines, buzz] = await Promise.all([
     featured ? getRecentHeadlines(featured.seasonId) : Promise.resolve([]),
     getSocialBuzz({
-      showName: featured?.showName ?? 'Big Brother',
-      showSlug: featured?.showSlug ?? 'big-brother',
-      hashtag: LIVE_HASHTAG,
+      showName: featured?.showName ?? FLAGSHIP_SHOW_NAME,
+      showSlug: featured?.showSlug ?? FLAGSHIP_SHOW_SLUG,
+      hashtag,
     }),
   ]);
 
-  return <LiveSection featured={featured} headlines={headlines} buzz={buzz} />;
+  return <LiveSection featured={featured} headlines={headlines} buzz={buzz} hashtag={hashtag} />;
 }
 
 /**

@@ -17,27 +17,61 @@ export function CreateLeagueForm({
   seasons,
   rulesets,
 }: {
-  seasons: Array<{ id: string; name: string; showName: string }>;
-  rulesets: Array<{ id: string; name: string; description: string | null; isDefault: boolean }>;
+  seasons: Array<{ id: string; name: string; showId: string; showName: string }>;
+  rulesets: Array<{
+    id: string;
+    showId: string;
+    name: string;
+    description: string | null;
+    isDefault: boolean;
+  }>;
 }) {
   const [state, formAction] = useFormState<ActionState, FormData>(createLeagueAction, {});
-  const defaultRuleset = rulesets.find((r) => r.isDefault) ?? rulesets[0];
+
+  // Rulesets belong to a show, and the server refuses a pairing across shows
+  // (`RULESET_MISMATCH`). The list offered follows the season chosen, and
+  // the selection snaps to that show's default whenever the season moves to
+  // a different show — otherwise a Survivor season would submit with Big
+  // Brother's "Classic" still selected and fail.
+  const rulesetsFor = (showId: string | undefined) => rulesets.filter((r) => r.showId === showId);
+  const defaultFor = (showId: string | undefined) => {
+    const own = rulesetsFor(showId);
+    return own.find((r) => r.isDefault) ?? own[0];
+  };
+  const firstShowId = seasons[0]?.showId;
 
   // Reuses the server's own Zod schema (src/server/mutations.ts) so client-side
   // validation can never drift out of sync with what the server will accept.
   const {
     register,
+    watch,
+    setValue,
     formState: { errors },
   } = useForm<CreateLeagueFields>({
     resolver: zodResolver(createLeagueSchema),
     mode: 'onChange',
     defaultValues: {
+      seasonId: seasons[0]?.id ?? '',
       rosterSize: 4,
       maxTeams: 8,
       isPublic: false,
-      scoringRulesetId: defaultRuleset?.id ?? '',
+      scoringRulesetId: defaultFor(firstShowId)?.id ?? '',
     },
   });
+
+  const seasonId = watch('seasonId');
+  const scoringRulesetId = watch('scoringRulesetId');
+  const showId = seasons.find((s) => s.id === seasonId)?.showId;
+  const offered = rulesetsFor(showId);
+  const selectedRuleset = offered.find((r) => r.id === scoringRulesetId) ?? defaultFor(showId);
+
+  useEffect(() => {
+    if (!offered.some((r) => r.id === scoringRulesetId)) {
+      setValue('scoringRulesetId', defaultFor(showId)?.id ?? '', { shouldValidate: true });
+    }
+    // `offered`/`defaultFor` are derived from `showId`; listing them would re-run this on every render.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [showId, scoringRulesetId, setValue]);
 
   useEffect(() => {
     if (state.error) toast.error(state.error);
@@ -52,7 +86,7 @@ export function CreateLeagueForm({
         <input
           id="name"
           className="field"
-          placeholder="First Eviction Club"
+          placeholder="Blindside Club"
           required
           minLength={3}
           maxLength={60}
@@ -100,15 +134,15 @@ export function CreateLeagueForm({
           Scoring
         </label>
         <select id="scoringRulesetId" className="field" required {...register('scoringRulesetId')}>
-          {rulesets.map((ruleset) => (
+          {offered.map((ruleset) => (
             <option key={ruleset.id} value={ruleset.id}>
               {ruleset.name}
             </option>
           ))}
         </select>
         <FieldError id="scoringRulesetId-error" message={errors.scoringRulesetId?.message} />
-        {defaultRuleset?.description && (
-          <p className="mt-1.5 text-2xs leading-relaxed text-muted">{defaultRuleset.description}</p>
+        {selectedRuleset?.description && (
+          <p className="mt-1.5 text-2xs leading-relaxed text-muted">{selectedRuleset.description}</p>
         )}
       </div>
 
@@ -217,7 +251,7 @@ export function JoinLeagueForm({ defaultCode = '' }: { defaultCode?: string }) {
         <input
           id="teamName"
           className="field"
-          placeholder="Veto Villains"
+          placeholder="Blindside Bandits"
           required
           minLength={2}
           maxLength={40}
@@ -228,7 +262,7 @@ export function JoinLeagueForm({ defaultCode = '' }: { defaultCode?: string }) {
         <FieldError id="teamName-error" message={errors.teamName?.message} />
       </div>
       {state.error && <p className="text-xs text-danger-deep">{state.error}</p>}
-      <SubmitButton label="Enter the House" />
+      <SubmitButton label="Enter the arena" />
     </form>
   );
 }

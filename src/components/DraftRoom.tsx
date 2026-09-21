@@ -7,6 +7,7 @@ import { toast } from 'sonner';
 import { Avatar } from '@/components/Avatar';
 import { Sticker } from '@/components/Sticker';
 import { useLeaguePulse, type PulseStatus } from '@/lib/live';
+import { lower, type ShowLexicon } from '@/lib/shows/lexicon';
 import { cn } from '@/lib/ui';
 import { draftPickAction, startDraftAction, type ActionState } from '@/server/actions';
 
@@ -35,9 +36,10 @@ export interface DraftRoomProps {
     name: string;
     photoUrl: string | null;
     occupation: string | null;
-    /** False once they have been evicted — still draftable, rarely wise. */
+    /** False once they have been eliminated — still draftable, rarely wise. */
     isActive: boolean;
   }>;
+  lexicon: ShowLexicon;
 }
 
 const TAB_TRANSITION = { duration: 0.15 };
@@ -80,7 +82,7 @@ export function DraftRoom(props: DraftRoomProps) {
   }, [state]);
 
   useAnnounceNewPicks(props.picks, props.myTeamId);
-  useAnnounceMyTurn(myTurn, props.currentPickNumber);
+  useAnnounceMyTurn(myTurn, props.currentPickNumber, lower(props.lexicon.contestantSingular));
 
   const filtered = useMemo(() => {
     const q = query.trim().toLowerCase();
@@ -104,8 +106,8 @@ export function DraftRoom(props: DraftRoomProps) {
           <StartDraftPanel leagueId={props.leagueId} isCommissioner={props.isCommissioner} />
         ) : props.draftStatus === 'COMPLETED' ? (
           <p className="text-sm font-medium">
-            <span className="text-brand-gold-deep">Houseguests locked in</span> — all {props.totalPicks} picks
-            are in.
+            <span className="text-brand-gold-deep">{props.lexicon.contestantPlural} locked in</span> — all{' '}
+            {props.totalPicks} picks are in.
           </p>
         ) : (
           <>
@@ -132,7 +134,7 @@ export function DraftRoom(props: DraftRoomProps) {
               {status === 'reconnecting'
                 ? 'Reconnecting — this board may be behind'
                 : myTurn
-                  ? 'Your pick. Choose a houseguest below.'
+                  ? `Your pick. Choose a ${lower(props.lexicon.contestantSingular)} below.`
                   : `Waiting on ${onTheClock?.ownerName ?? onTheClock?.name ?? 'the next manager'}`}
             </p>
           </>
@@ -174,9 +176,9 @@ export function DraftRoom(props: DraftRoomProps) {
             <input
               value={query}
               onChange={(e) => setQuery(e.target.value)}
-              placeholder="Search houseguests"
+              placeholder={`Search ${lower(props.lexicon.contestantPlural)}`}
               className="field mb-3"
-              aria-label="Search houseguests"
+              aria-label={`Search ${lower(props.lexicon.contestantPlural)}`}
             />
             {filtered.length === 0 ? (
               <p className="card p-4 text-xs text-muted">
@@ -203,12 +205,12 @@ export function DraftRoom(props: DraftRoomProps) {
                         </span>
                         {!contestant.isActive && (
                           <Sticker tone="red" size="sm" className="shrink-0">
-                            evicted
+                            {lower(props.lexicon.eliminationVerb)}
                           </Sticker>
                         )}
                       </span>
                       <span className="mt-0.5 block truncate text-2xs text-muted">
-                        {contestant.occupation ?? 'Houseguest'}
+                        {contestant.occupation ?? props.lexicon.contestantSingular}
                       </span>
                     </span>
                     {myTurn && props.myTeamId && (
@@ -331,14 +333,14 @@ function useAnnounceNewPicks(picks: DraftPickView[], myTeamId: string | null) {
 }
 
 /** The moment that actually matters: it is your turn and you are looking elsewhere. */
-function useAnnounceMyTurn(myTurn: boolean, pickNumber: number) {
+function useAnnounceMyTurn(myTurn: boolean, pickNumber: number, contestantWord: string) {
   const announced = useRef<number | null>(null);
 
   useEffect(() => {
     if (!myTurn) return;
     if (announced.current === pickNumber) return;
     announced.current = pickNumber;
-    toast.success("You're on the clock", { description: 'Pick a houseguest to lock in.' });
+    toast.success("You're on the clock", { description: `Pick a ${contestantWord} to lock in.` });
 
     // A bonus on the platforms that have it, never the mechanism — iOS has no
     // vibrate at all. The activation check is not optional: calling this
@@ -346,7 +348,7 @@ function useAnnounceMyTurn(myTurn: boolean, pickNumber: number) {
     // error, which would mean a red line in the console on every draft page
     // that loads on your turn.
     if (navigator.userActivation?.hasBeenActive) navigator.vibrate?.(180);
-  }, [myTurn, pickNumber]);
+  }, [myTurn, pickNumber, contestantWord]);
 }
 
 function LiveDot({ status, syncing }: { status: PulseStatus; syncing: boolean }) {

@@ -22,7 +22,7 @@ export async function generateMetadata(): Promise<Metadata> {
     title: `${showList} seasons`,
     description: `${showList} seasons you can start a Comp Beast fantasy league for right now — ${open.length} open — plus a read-only archive of ${archived.length} finished ${
       archived.length === 1 ? 'season' : 'seasons'
-    } with every houseguest ranked by fantasy points.`,
+    } with every contestant ranked by fantasy points.`,
     alternates: { canonical: absoluteUrl('/seasons') },
   };
 }

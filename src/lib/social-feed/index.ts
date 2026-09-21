@@ -166,10 +166,12 @@ const EMPTY: SocialBuzz = { posts: [], source: null, sourceLabel: null, sourceUr
 export async function getSocialBuzz(input: {
   showName: string;
   showSlug: string;
-  hashtag: string;
+  /** Null when nothing is airing, which skips the X search outright. */
+  hashtag: string | null;
 }): Promise<SocialBuzz> {
+  const { hashtag } = input;
   const attempts = [
-    () => fromX(input.hashtag),
+    ...(hashtag ? [() => fromX(hashtag)] : []),
     () => fromShowFeed(input.showSlug),
     () => fromNews(input.showName),
   ];

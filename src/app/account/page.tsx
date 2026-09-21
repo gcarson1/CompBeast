@@ -56,7 +56,7 @@ export default async function AccountPage() {
           <Avatar name={displayName} photoUrl={user.avatarUrl} size={56} />
           {/* The highest badge, stuck to the avatar's corner; named again
               in text right after, so the sticker is never the only copy. */}
-          {badge && <Doodle kind="key" className="absolute -right-2.5 -top-2.5 h-7 w-7 rotate-[18deg]" />}
+          {badge && <Doodle kind="star" className="absolute -right-2.5 -top-2.5 h-7 w-7 rotate-[18deg]" />}
         </span>
         <div className="min-w-0">
           <h1 className="headline truncate text-3xl">{displayName}</h1>

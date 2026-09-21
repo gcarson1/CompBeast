@@ -3,6 +3,7 @@
 import Link from 'next/link';
 import { useState } from 'react';
 import { AnimatePresence, m } from 'framer-motion';
+import { lower, type ShowLexicon } from '@/lib/shows/lexicon';
 import { cn, formatPoints, pointsTone } from '@/lib/ui';
 import type { ContestantLeagueLine } from '@/server/queries';
 
@@ -32,12 +33,14 @@ export function PlayerTabs({
   gameLog,
   leagues,
   signedIn,
+  lexicon,
 }: {
   events: PlayerEvent[];
   gameLog: PlayerGameLogRow[];
   /** The viewer's leagues that drafted this player; always empty signed out. */
   leagues: ContestantLeagueLine[];
   signedIn: boolean;
+  lexicon: ShowLexicon;
 }) {
   const [tab, setTab] = useState<Tab>('Summary');
 
@@ -67,7 +70,7 @@ export function PlayerTabs({
         >
           {tab === 'Summary' && <SummaryTab events={events} />}
           {tab === 'Game log' && <GameLogTab gameLog={gameLog} events={events} />}
-          {tab === 'Leagues' && <LeaguesTab leagues={leagues} signedIn={signedIn} />}
+          {tab === 'Leagues' && <LeaguesTab leagues={leagues} signedIn={signedIn} lexicon={lexicon} />}
         </m.div>
       </AnimatePresence>
     </div>
@@ -85,7 +88,7 @@ function SummaryTab({ events }: { events: PlayerEvent[] }) {
 
   const labels: Record<string, string> = {
     COMPETITION_GAMEPLAY: 'Competition & gameplay',
-    ELIMINATION_ENDGAME: 'Eviction & endgame',
+    ELIMINATION_ENDGAME: 'Elimination & endgame',
     SOCIAL_DRAMA: 'Social & drama',
   };
 
@@ -167,11 +170,19 @@ function GameLogTab({ gameLog, events }: { gameLog: PlayerGameLogRow[]; events: 
   );
 }
 
-function LeaguesTab({ leagues, signedIn }: { leagues: ContestantLeagueLine[]; signedIn: boolean }) {
+function LeaguesTab({
+  leagues,
+  signedIn,
+  lexicon,
+}: {
+  leagues: ContestantLeagueLine[];
+  signedIn: boolean;
+  lexicon: ShowLexicon;
+}) {
   if (!signedIn) {
     return (
       <p className="card p-4 text-xs text-muted">
-        Sign in to see which of your leagues drafted this houseguest.
+        Sign in to see which of your leagues drafted this {lower(lexicon.contestantSingular)}.
       </p>
     );
   }

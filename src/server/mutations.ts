@@ -495,7 +495,7 @@ export async function startDraft(leagueId: string, userId: string) {
   const available = await prisma.contestant.count({ where: { seasonId: league.seasonId } });
   if (needed > available) {
     throw new DomainError(
-      `This draft needs ${needed} houseguests (${league._count.teams} teams × ${league.rosterSize}) ` +
+      `This draft needs ${needed} contestants (${league._count.teams} teams × ${league.rosterSize}) ` +
         `but the season only has ${available}. Lower the roster size in league settings and try again.`,
       'NOT_ENOUGH_CONTESTANTS',
     );

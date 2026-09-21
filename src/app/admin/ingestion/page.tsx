@@ -4,6 +4,7 @@ import { StatStrip } from '@/components/StatStrip';
 import { Sticker } from '@/components/Sticker';
 import { getCurrentUser } from '@/lib/auth';
 import { prisma } from '@/lib/db';
+import { adaptersForShow } from '@/lib/ingestion/pipeline';
 import { relativeTime } from '@/lib/ui';
 
 export const dynamic = 'force-dynamic';
@@ -129,16 +130,22 @@ export default async function IngestionPage() {
           </p>
         ) : (
           <div className="space-y-2">
-            {seasons.map((season) => (
-              <SeasonSourceCard
-                key={season.slug}
-                sourceSlug="big-brother-junkies"
-                seasonSlug={season.slug}
-                seasonName={season.name}
-                showSlug={season.show.slug}
-                year={season.year}
-              />
-            ))}
+            {/* One card per season per source that covers its show. A season
+                whose show has no adapter yet shows nothing here; its
+                candidates can still be reviewed above once something else
+                writes them. */}
+            {seasons.flatMap((season) =>
+              adaptersForShow(season.show.slug).map((adapter) => (
+                <SeasonSourceCard
+                  key={`${season.slug}:${adapter.slug}`}
+                  sourceSlug={adapter.slug}
+                  seasonSlug={season.slug}
+                  seasonName={season.name}
+                  showSlug={season.show.slug}
+                  year={season.year}
+                />
+              )),
+            )}
           </div>
         )}
       </section>

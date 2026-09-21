@@ -16,6 +16,13 @@ import {
   tvSeriesNode,
   websiteId,
 } from '@/lib/seo';
+import { lexiconFor, lower, type ShowLexicon } from '@/lib/shows/lexicon';
+import {
+  FLAGSHIP_SHOW_NAME,
+  FLAGSHIP_SHOW_SLUG,
+  HEADLINE_EVENT_COUNT,
+  showcaseEventsFor,
+} from '@/lib/shows/registry';
 import { formatPoints, pointsTone } from '@/lib/ui';
 import { LEAGUE_LIMITS } from '@/lib/validation';
 import type { getRuleBook } from '@/server/queries';
@@ -30,6 +37,8 @@ export interface LandingSeason {
   contestantCount: number;
   showName: string;
   showSlug: string;
+  /** `Show.lexicon` as stored, resolved by `lexiconFor`. */
+  showLexicon: unknown;
 }
 
 /**
@@ -46,9 +55,11 @@ export interface LandingSeason {
  * gets the display headline and one paragraph per section. A crawler or a
  * language model gets the same paragraphs as self-contained answers: each
  * one opens its section, says the whole thing in 40–60 words, and is dense
- * with the names it needs to know what this is about — Comp Beast, Big
- * Brother, CBS, Head of Household, Power of Veto — because that is how a
- * model decides whether a page answers the question it was asked.
+ * with the names it needs to know what this is about — Comp Beast, the
+ * featured show, its competitions and its vocabulary — because that is how
+ * a model decides whether a page answers the question it was asked. The
+ * show's words come from its lexicon and its headline events from the show
+ * registry, so the same page pitches whichever show is airing.
  *
  * Every number on the page is read from the same place the app enforces it:
  * the scoring table and the point values in the prose come from the live
@@ -76,8 +87,7 @@ export function SignedOutLanding({
 }) {
   const facts = deriveFacts(season, rulesets);
   const faq = buildFaq(facts, emailAlerts);
-  const showName = season?.showName ?? 'Big Brother';
-  const showSlug = season?.showSlug ?? 'big-brother';
+  const { showName, showSlug } = facts;
 
   return (
     <div className="pt-6">
@@ -100,7 +110,7 @@ export function SignedOutLanding({
         />
 
         <h1 className="mt-3 animate-rise font-display text-5xl leading-[0.92] tracking-wide [animation-delay:60ms] sm:text-[64px] lg:text-[76px]">
-          DRAFT THE HOUSE.
+          DRAFT THE CAST.
           <br />
           <span className="text-brand-gold">OWN THE LEADERBOARD.</span>
         </h1>
@@ -133,7 +143,7 @@ export function SignedOutLanding({
             shape every generated landing page reaches for, and it flattens the
             claims into decoration instead of letting them read in order. */}
         <ol className="mt-5 divide-y divide-hairline border-y border-hairline">
-          {CLAIMS.map((claim) => (
+          {facts.claims.map((claim) => (
             <li
               key={claim.step}
               className="grid grid-cols-[2.5rem_1fr] gap-x-4 py-5 sm:grid-cols-[4rem_1fr] sm:gap-x-6"
@@ -335,52 +345,40 @@ function Section({
 // Spelled out for Tailwind's content scan.
 const STAT_TONES = ['card-pop-gold', 'card-pop-lavender', 'card-pop-mint', 'card-pop-sky'] as const;
 
-const CLAIMS = [
-  {
-    step: '01',
-    title: 'Draft real houseguests',
-    body: 'Snake-draft the live cast before the season locks in.',
-  },
-  {
-    step: '02',
-    title: 'Score every move',
-    body: 'HOH wins, vetos, blindsides and blowups all count toward your team.',
-  },
-  {
-    step: '03',
-    title: 'Live leaderboard',
-    body: 'Ranks update episode by episode, all season long.',
-  },
-];
-
-/**
- * The events the scoring table shows, in this order: the ones every Big
- * Brother viewer already knows, then one that only the drama ruleset scores,
- * so the dash column is visibly *a choice* and not missing data. Rows whose
- * code is absent from the rule book are skipped, so a show without a jury
- * simply has a shorter table.
- */
-const SHOWCASE_EVENTS = [
-  'HOH_WIN',
-  'VETO_WIN',
-  'NOMINATED',
-  'WEEK_SURVIVED',
-  'REACHED_JURY',
-  'JURY_VOTE_RECEIVED',
-  'PLACEMENT_WINNER',
-  'CONFRONTATION_WIN',
-  'CRIED',
-];
+function buildClaims(lexicon: ShowLexicon) {
+  return [
+    {
+      step: '01',
+      title: `Draft the real ${lower(lexicon.contestantPlural)}`,
+      body: 'Snake-draft the live cast before the season locks in.',
+    },
+    {
+      step: '02',
+      title: 'Score every move',
+      body: 'Competition wins, blindsides, eliminations and blowups all count toward your team.',
+    },
+    {
+      step: '03',
+      title: 'Live leaderboard',
+      body: 'Ranks update episode by episode, all season long.',
+    },
+  ];
+}
 
 interface Facts {
   season: LandingSeason | null;
   showName: string;
+  showSlug: string;
+  lexicon: ShowLexicon;
+  claims: ReturnType<typeof buildClaims>;
   eventCount: number;
   rulesetCount: number;
   rulesetNames: string[];
   defaultRulesetName: string | null;
   /** Point value under the default ruleset, by event code. */
   defaultPoints: Map<string, number>;
+  /** The headline events as "label points" pairs, for the prose. */
+  headline: Array<{ label: string; points: number }>;
   lede: string;
   howItWorks: string;
   scoring: {
@@ -395,7 +393,11 @@ interface Facts {
 }
 
 function deriveFacts(season: LandingSeason | null, rulesets: RuleBook): Facts {
-  const showName = season?.showName ?? 'Big Brother';
+  const showName = season?.showName ?? FLAGSHIP_SHOW_NAME;
+  const showSlug = season?.showSlug ?? FLAGSHIP_SHOW_SLUG;
+  const lexicon = lexiconFor(showSlug, season?.showLexicon);
+  const contestants = lower(lexicon.contestantPlural);
+  const cycle = lower(lexicon.cycleSingular);
   const eventIds = new Set(rulesets.flatMap((r) => r.eventDefinitions.map((l) => l.eventDefinition.id)));
   const eventCount = eventIds.size;
   const rulesetNames = rulesets.map((r) => r.name);
@@ -420,38 +422,41 @@ function deriveFacts(season: LandingSeason | null, rulesets: RuleBook): Facts {
     ? 'New seasons open for leagues as soon as their cast is announced.'
     : season.status === 'ACTIVE'
       ? season.contestantCount > 0
-        ? `${season.name} is airing now with a ${season.contestantCount}-houseguest cast.`
+        ? `${season.name} is airing now with a ${season.contestantCount}-${lower(lexicon.contestantSingular)} cast.`
         : `${season.name} is airing now.`
       : `${season.name} is open for leagues ahead of its premiere.`;
 
   const { minTeams, maxTeams, minRoster, maxRoster } = LEAGUE_LIMITS;
   const maxLockHours = MAX_LOCK_OFFSET_MINUTES / 60;
 
+  const showcase = showcaseEventsFor(showSlug);
+  const labelFor = (code: string) =>
+    rulesets.flatMap((r) => r.eventDefinitions).find((l) => l.eventDefinition.code === code)?.eventDefinition
+      .label;
+
+  // "Win Head of Household +10, Win Power of Veto +5, …": the show's own
+  // headline events, read from the rule book so the numbers can never drift
+  // from what the app enforces. Only codes the rule book has make the cut.
+  const headline = showcase.slice(0, HEADLINE_EVENT_COUNT).flatMap((code) => {
+    const label = labelFor(code);
+    const points = defaultPoints.get(code);
+    return label && points !== undefined ? [{ label, points }] : [];
+  });
+  const headlineSentence = headline.map((h) => `${h.label} ${formatPoints(h.points)}`).join(', ');
+
   let scoring: Facts['scoring'] = null;
   if (defaultRuleset && eventCount > 0) {
-    const rows = SHOWCASE_EVENTS.flatMap((code) => {
-      const def = rulesets
-        .flatMap((r) => r.eventDefinitions)
-        .find((l) => l.eventDefinition.code === code)?.eventDefinition;
-      if (!def) return [];
-      return [{ label: def.label, points: rulesets.map((r) => pointsIn(r, code)) }];
+    const rows = showcase.flatMap((code) => {
+      const label = labelFor(code);
+      if (!label) return [];
+      return [{ label, points: rulesets.map((r) => pointsIn(r, code)) }];
     });
 
-    const example = [
-      'HOH_WIN',
-      'VETO_WIN',
-      'NOMINATED',
-      'WEEK_SURVIVED',
-      'REACHED_JURY',
-      'PLACEMENT_WINNER',
-    ].map((code) => defaultPoints.get(code));
-    const hasExample = example.every((p) => p !== undefined);
-    const [hoh, veto, nominated, survived, jury, winner] = example.map((p) => formatPoints(p ?? 0));
-
     scoring = {
-      lede: hasExample
-        ? `${SITE_NAME} scores ${eventCount} ${showName} events across ${rulesets.length} rulesets, each with a fixed point value. Under the default ${defaultRuleset.name} rules a Head of Household win is ${hoh}, a Power of Veto win ${veto}, a nomination ${nominated}, surviving the week ${survived}, reaching the jury ${jury} and winning the season ${winner}. Every point traces to the aired result that produced it.`
-        : `${SITE_NAME} scores ${eventCount} ${showName} events across ${rulesets.length} rulesets, each with a fixed point value. Every league picks its ruleset before the draft, and every point on the leaderboard traces back to the aired result that produced it.`,
+      lede:
+        headline.length >= 3
+          ? `${SITE_NAME} scores ${eventCount} ${showName} events across ${rulesets.length} rulesets, each with a fixed point value. Under the default ${defaultRuleset.name} rules: ${headlineSentence}. Every point traces to the aired result that produced it.`
+          : `${SITE_NAME} scores ${eventCount} ${showName} events across ${rulesets.length} rulesets, each with a fixed point value. Every league picks its ruleset before the draft, and every point on the leaderboard traces back to the aired result that produced it.`,
       columns: rulesets.map((r) => ({ id: r.id, name: r.name })),
       rows,
     };
@@ -459,7 +464,7 @@ function deriveFacts(season: LandingSeason | null, rulesets: RuleBook): Facts {
 
   const stats = [
     { value: `${minTeams}–${maxTeams}`, label: 'teams per league' },
-    { value: `${minRoster}–${maxRoster}`, label: 'houseguests per roster' },
+    { value: `${minRoster}–${maxRoster}`, label: `${contestants} per roster` },
     ...(eventCount > 0 ? [{ value: String(eventCount), label: 'scored events' }] : []),
     ...(rulesets.length > 0
       ? [
@@ -481,15 +486,19 @@ function deriveFacts(season: LandingSeason | null, rulesets: RuleBook): Facts {
   return {
     season,
     showName,
+    showSlug,
+    lexicon,
+    claims: buildClaims(lexicon),
     eventCount,
     rulesetCount: rulesets.length,
     rulesetNames,
     defaultRulesetName: defaultRuleset?.name ?? null,
     defaultPoints,
+    headline,
     lede: `${SITE_DESCRIPTION} ${seasonSentence}`,
-    howItWorks: `A league lasts one season. A commissioner creates it, picks a scoring ruleset and opens between ${minTeams} and ${maxTeams} team seats, shared by invite code or QR code. Every team snake-drafts houseguests onto a roster of up to ${maxRoster}, each week's results are scored as they air, and the leaderboard ranks every team live until the finale.`,
+    howItWorks: `A league lasts one season. A commissioner creates it, picks a scoring ruleset and opens between ${minTeams} and ${maxTeams} team seats, shared by invite code or QR code. Every team snake-drafts ${contestants} onto a roster of up to ${maxRoster}, each ${cycle}'s results are scored as they air, and the leaderboard ranks every team live until the finale.`,
     scoring,
-    leagueSetup: `Leagues hold between ${minTeams} and ${maxTeams} teams, and each roster carries ${minRoster} to ${maxRoster} houseguests, both set by the commissioner before the draft. Rosters are drafted once and stay fixed for the season. Each week shows a roster lock time — ${DEFAULT_LOCK_OFFSET_MINUTES} minutes before airtime by default, and a commissioner can move it up to ${maxLockHours} hours earlier.`,
+    leagueSetup: `Leagues hold between ${minTeams} and ${maxTeams} teams, and each roster carries ${minRoster} to ${maxRoster} ${contestants}, both set by the commissioner before the draft. Rosters are drafted once and stay fixed for the season. Each ${cycle} shows a roster lock time — ${DEFAULT_LOCK_OFFSET_MINUTES} minutes before airtime by default, and a commissioner can move it up to ${maxLockHours} hours earlier.`,
     stats,
     comparison: `Most fantasy leagues for reality TV still live in a spreadsheet and a group chat, where one person keys in every result and settles every dispute. ${SITE_NAME} replaces that with an auditable ledger: results are captured from published season results, every correction is recorded, and standings recompute from the ledger rather than from a formula somebody edited.`,
     comparisonRows: [
@@ -515,7 +524,7 @@ function deriveFacts(season: LandingSeason | null, rulesets: RuleBook): Facts {
       },
       {
         feature: 'Standings',
-        compBeast: 'Live leaderboard with week-by-week breakdowns',
+        compBeast: `Live leaderboard with ${cycle}-by-${cycle} breakdowns`,
         spreadsheet: 'Recalculated by hand',
       },
       { feature: 'Cost', compBeast: 'Free', spreadsheet: 'Free' },
@@ -533,7 +542,10 @@ interface FaqItem {
  * hand the reader the whole answer, not half of it and a link.
  */
 function buildFaq(facts: Facts, emailAlerts: boolean): FaqItem[] {
-  const { season, showName } = facts;
+  const { season, showName, lexicon } = facts;
+  const contestant = lower(lexicon.contestantSingular);
+  const contestants = lower(lexicon.contestantPlural);
+  const cycle = lower(lexicon.cycleSingular);
   const { minTeams, maxTeams, minRoster, maxRoster } = LEAGUE_LIMITS;
   const maxLockHours = MAX_LOCK_OFFSET_MINUTES / 60;
 
@@ -543,9 +555,7 @@ function buildFaq(facts: Facts, emailAlerts: boolean): FaqItem[] {
       ? `, and ${season.name} is airing now`
       : `, and ${season.name} is open for leagues`;
 
-  const hoh = facts.defaultPoints.get('HOH_WIN');
-  const nominated = facts.defaultPoints.get('NOMINATED');
-  const winner = facts.defaultPoints.get('PLACEMENT_WINNER');
+  const examples = facts.headline.slice(0, 3);
   const rulesetList =
     facts.rulesetNames.length > 1
       ? `${facts.rulesetNames.slice(0, -1).join(', ')} or ${facts.rulesetNames.at(-1)}`
@@ -557,17 +567,19 @@ function buildFaq(facts: Facts, emailAlerts: boolean): FaqItem[] {
           `Each league picks one of ${facts.rulesetCount} ${
             facts.rulesetCount === 1 ? 'ruleset' : 'rulesets'
           } before its draft: ${rulesetList}.`,
-          facts.defaultRulesetName && hoh !== undefined && nominated !== undefined && winner !== undefined
-            ? `Every event has a fixed value — under ${facts.defaultRulesetName} a Head of Household win is ${formatPoints(hoh)}, a nomination ${formatPoints(nominated)} and winning the season ${formatPoints(winner)}.`
+          facts.defaultRulesetName && examples.length === 3
+            ? `Every event has a fixed value — under ${facts.defaultRulesetName}: ${examples
+                .map((e) => `${e.label} ${formatPoints(e.points)}`)
+                .join(', ')}.`
             : 'Every scorable event has a fixed point value.',
-          "Results are recorded as each week airs, and a team earns a houseguest's points for every week it rostered them.",
+          `Results are recorded as each ${cycle} airs, and a team earns a ${contestant}'s points for every ${cycle} it rostered them.`,
         ].join(' ')
-      : "Every scorable event has a fixed point value. Results are recorded as each week airs, and a team earns a houseguest's points for every week it rostered them.";
+      : `Every scorable event has a fixed point value. Results are recorded as each ${cycle} airs, and a team earns a ${contestant}'s points for every ${cycle} it rostered them.`;
 
   return [
     {
       question: `What is ${SITE_NAME}?`,
-      answer: `${SITE_NAME} is a free fantasy league app for reality TV, starting with CBS's Big Brother. Friends form a league, snake-draft the real houseguests, and earn points every week from what happens on the broadcast — competition wins, nominations, vetoes, evictions and the finale — while a live leaderboard ranks every team in the league.`,
+      answer: `${SITE_NAME} is a free fantasy league app for reality competition TV — Big Brother, Survivor and more. Friends form a league, snake-draft the real cast, and earn points every episode from what happens on the broadcast — competition wins, blindsides, eliminations and the finale — while a live leaderboard ranks every team in the league.`,
     },
     {
       question: `Is ${SITE_NAME} free to play?`,
@@ -575,11 +587,11 @@ function buildFaq(facts: Facts, emailAlerts: boolean): FaqItem[] {
     },
     {
       question: 'Which shows can I play?',
-      answer: `${showName} is fully supported${seasonClause}. The platform itself is show-agnostic — shows, seasons, contestants and scoring rules are all data — so other reality competitions such as Survivor or The Traitors can be added without changing how leagues, drafts or scoring work.`,
+      answer: `${showName} is fully supported${seasonClause}. Big Brother and Survivor each have their own rule book and vocabulary, and leagues can be created for any season that is upcoming or airing. Everything else — leagues, drafts, scoring, standings — works the same way for every show, so adding another is a matter of data, not a rebuild.`,
     },
     {
       question: 'How does the draft work?',
-      answer: `Every league runs a live snake draft. The commissioner sets the roster size, from ${minRoster} to ${maxRoster} houseguests per team, and starts the draft once at least two teams are seated. Pick order reverses each round, the board updates for everyone within seconds, and each manager gets an alert when their pick is due.`,
+      answer: `Every league runs a live snake draft. The commissioner sets the roster size, from ${minRoster} to ${maxRoster} ${contestants} per team, and starts the draft once at least two teams are seated. Pick order reverses each round, the board updates for everyone within seconds, and each manager gets an alert when their pick is due.`,
     },
     {
       question: 'How is scoring calculated?',
@@ -591,12 +603,11 @@ function buildFaq(facts: Facts, emailAlerts: boolean): FaqItem[] {
     },
     {
       question: 'Can I change my roster during the season?',
-      answer: `Not yet. Rosters are set at the draft and stay fixed for the season, so every point is attributable to exactly one team. Each league still shows a weekly lock time — ${DEFAULT_LOCK_OFFSET_MINUTES} minutes before airtime by default, adjustable by the commissioner up to ${maxLockHours} hours earlier — so everyone can see when a week closes.`,
+      answer: `Not yet. Rosters are set at the draft and stay fixed for the season, so every point is attributable to exactly one team. Each league still shows a lock time every ${cycle} — ${DEFAULT_LOCK_OFFSET_MINUTES} minutes before airtime by default, adjustable by the commissioner up to ${maxLockHours} hours earlier — so everyone can see when a week closes.`,
     },
     {
       question: 'Can I play a season that has already finished?',
-      answer:
-        'No. Leagues can only be created or joined for seasons that are upcoming or currently airing; drafting a cast whose results are already known is not a game. Finished seasons stay online as read-only archives that rank every houseguest by fantasy points beside where they actually placed.',
+      answer: `No. Leagues can only be created or joined for seasons that are upcoming or currently airing; drafting a cast whose results are already known is not a game. Finished seasons stay online as read-only archives that rank every ${contestant} by fantasy points beside where they actually placed.`,
     },
     {
       question: 'How do I know when something happens in my league?',
@@ -627,11 +638,11 @@ function applicationNode(facts: Facts, showSlug: string, showName: string) {
     about: tvSeriesNode(showSlug, showName),
     featureList: [
       `Live snake draft for ${minTeams}–${maxTeams} teams`,
-      `Rosters of ${minRoster}–${maxRoster} houseguests`,
+      `Rosters of ${minRoster}–${maxRoster} ${lower(facts.lexicon.contestantPlural)}`,
       ...(facts.eventCount > 0
         ? [`${facts.eventCount} scored events across ${facts.rulesetCount} rulesets`]
         : []),
-      'Live leaderboard with week-by-week breakdowns',
+      `Live leaderboard with ${lower(facts.lexicon.cycleSingular)}-by-${lower(facts.lexicon.cycleSingular)} breakdowns`,
       'Invite codes, QR codes and friend invites',
       'In-app notifications for draft turns and league changes',
       'Finished-season archives ranked by fantasy points',

@@ -118,8 +118,8 @@ export async function runBootstrapAction(
     revalidatePath('/admin/ingestion');
     return {
       message:
-        `${result.photosBackfilled} photos · ${result.contestantsCreated} new houseguests · ` +
-        `${result.cyclesCreated} new weeks`,
+        `${result.photosBackfilled} photos · ${result.contestantsCreated} new contestants · ` +
+        `${result.cyclesCreated} new cycles`,
     };
   } catch (error) {
     return { error: messageFor(error) };

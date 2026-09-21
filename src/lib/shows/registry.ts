@@ -15,6 +15,7 @@
  * the choice is made in one place rather than as a scattered string literal.
  */
 export const FLAGSHIP_SHOW_SLUG = 'big-brother';
+export const FLAGSHIP_SHOW_NAME = 'Big Brother';
 
 export interface ShowTheme {
   /** Fill for stickers and small accents. Dark ink (`on-gold`) goes on it. */

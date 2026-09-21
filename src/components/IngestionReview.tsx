@@ -123,7 +123,8 @@ export function CandidateCard({ candidate }: { candidate: PendingCandidate }) {
 
       {!candidate.resolvable && (
         <p className="mt-3 text-2xs text-danger-deep">
-          Missing a matched houseguest or week — this cannot be published until the season is re-bootstrapped.
+          Missing a matched contestant or cycle — this cannot be published until the season is
+          re-bootstrapped.
         </p>
       )}
 

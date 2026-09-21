@@ -126,7 +126,11 @@ async function installShow(spec: ShowSpec) {
   for (const rulesetSpec of spec.rulesets) {
     const ruleset = await prisma.scoringRuleset.upsert({
       where: { showId_slug: { showId: show.id, slug: rulesetSpec.slug } },
-      update: { name: rulesetSpec.name, description: rulesetSpec.description, isDefault: rulesetSpec.isDefault },
+      update: {
+        name: rulesetSpec.name,
+        description: rulesetSpec.description,
+        isDefault: rulesetSpec.isDefault,
+      },
       create: {
         showId: show.id,
         slug: rulesetSpec.slug,

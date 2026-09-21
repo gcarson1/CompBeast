@@ -1,4 +1,5 @@
 import { OG_SIZE, renderOgCard } from '@/lib/og/card';
+import { lower } from '@/lib/shows/lexicon';
 import { formatPoints } from '@/lib/ui';
 import { getSeasonScoreboard } from '@/server/queries';
 
@@ -13,20 +14,21 @@ export default async function Image({ params }: { params: { slug: string } }) {
     return renderOgCard({ eyebrow: 'Comp Beast', title: 'Season not found' });
   }
   const { season, players } = data;
+  const lexicon = season.showLexicon;
   const live = season.status !== 'COMPLETED';
   const leader = players[0];
   return renderOgCard({
     eyebrow: `${season.showName} · ${season.year} · ${live ? 'airing now' : 'finished'}`,
     title: season.name,
-    subtitle: `Every houseguest ranked by fantasy points${live ? ' as the season airs' : ', beside where they actually placed'}.`,
+    subtitle: `Every ${lower(lexicon.contestantSingular)} ranked by fantasy points${live ? ' as the season airs' : ', beside where they actually placed'}.`,
     stats: [
-      { value: String(players.length), label: 'houseguests' },
+      { value: String(players.length), label: lower(lexicon.contestantPlural) },
       ...(leader
         ? [{ value: formatPoints(leader.points), label: `${leader.name.split(' ')[0]} leads` }]
         : []),
       {
         value: String(players.filter((p) => p.isActive).length),
-        label: live ? 'still in the house' : 'made the finale',
+        label: live ? lower(lexicon.activeLabel) : 'made the finale',
       },
     ],
   });

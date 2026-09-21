@@ -20,6 +20,8 @@ export interface LeagueSettingsValues {
   /** Drives which fields are frozen; the server enforces the same rule. */
   draftStarted: boolean;
   teamCount: number;
+  /** The show's word for a drafted player, for the roster-size help text. */
+  contestantPlural: string;
 }
 
 export function LeagueSettingsForm({
@@ -100,7 +102,7 @@ export function LeagueSettingsForm({
           <p id="rosterSize-help" className="mt-1.5 text-2xs text-muted">
             {values.draftStarted
               ? 'Locked — it sets how many picks the draft has.'
-              : 'Houseguests each manager drafts.'}
+              : `${values.contestantPlural} each manager drafts.`}
           </p>
         </div>
       </div>

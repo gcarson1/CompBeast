@@ -1,5 +1,6 @@
 import { renderOgCard } from '@/lib/og/card';
 import { getLeagueInvite } from '@/server/queries';
+import { lower } from '@/lib/shows/lexicon';
 
 export const runtime = 'nodejs';
 export const dynamic = 'force-dynamic';
@@ -21,7 +22,7 @@ export async function GET(request: Request) {
     return renderOgCard({
       eyebrow: 'Comp Beast',
       title: 'Join a league',
-      subtitle: 'Free fantasy leagues for Big Brother. Ask your commissioner for the invite code.',
+      subtitle: 'Free fantasy leagues for reality competition TV. Ask your commissioner for the invite code.',
     });
   }
 
@@ -29,7 +30,7 @@ export async function GET(request: Request) {
   return renderOgCard({
     eyebrow: invite.commissionerName ? `${invite.commissionerName} invited you to` : "You're invited to",
     title: invite.name,
-    subtitle: `${invite.showName} · ${invite.seasonName} · ${invite.rosterSize} houseguests per team. Tap to create a free account and take a seat.`,
+    subtitle: `${invite.showName} · ${invite.seasonName} · ${invite.rosterSize} ${lower(invite.showLexicon.contestantPlural)} per team. Tap to create a free account and take a seat.`,
     stats: [
       { value: `${invite.teamCount}/${invite.maxTeams}`, label: 'seats filled' },
       { value: String(seatsLeft), label: seatsLeft === 1 ? 'seat open' : 'seats open' },

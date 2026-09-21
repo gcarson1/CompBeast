@@ -9,12 +9,14 @@
  * earned.
  *
  * The thresholds are set against real numbers, not round ones. In the
- * completed Big Brother 27 season the average houseguest scored about 52
- * points under Classic rules, so a default five-houseguest roster comes out
+ * completed Big Brother 27 season the average contestant scored about 52
+ * points under Classic rules, so a default five-player roster comes out
  * near 260 for a season and a very good one near 600. The ladder is: your
  * first points, a third of a season, a full season, two seasons, four, and a
- * decade of play at the top. Names follow the game itself, so someone who
- * watches the show reads the ladder without a legend.
+ * decade of play at the top. The names are the arc of any reality
+ * competition — make the cast, win a comp, run the game, reach the jury,
+ * make the finale — so they read the same to a Big Brother fan and a
+ * Survivor fan, and no show's word is borrowed for an account-wide ladder.
  */
 
 export interface Badge {
@@ -29,10 +31,10 @@ export interface Badge {
 /** Ascending by threshold; the order the shelf renders in. */
 export const BADGES: readonly Badge[] = [
   {
-    slug: 'houseguest',
-    name: 'Houseguest',
+    slug: 'castmate',
+    name: 'Castmate',
     threshold: 1,
-    blurb: 'You moved in. Your first points are on the board.',
+    blurb: "You're on the cast. Your first points are on the board.",
   },
   {
     slug: 'comp-winner',
@@ -41,8 +43,8 @@ export const BADGES: readonly Badge[] = [
     blurb: 'A hundred lifetime points — about a third of a season.',
   },
   {
-    slug: 'head-of-household',
-    name: 'Head of Household',
+    slug: 'power-player',
+    name: 'Power Player',
     threshold: 250,
     blurb: 'A full season of scoring, or one very good roster.',
   },
