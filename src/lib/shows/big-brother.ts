@@ -1,4 +1,4 @@
-import type { EventCategory } from '../scoring/types';
+import type { EventDefinitionSpec, RulesetSpec } from './catalogue';
 
 /**
  * Big Brother rule catalogue.
@@ -6,26 +6,9 @@ import type { EventCategory } from '../scoring/types';
  * This file is the *only* place Big Brother's rules are expressed. Nothing in
  * the scoring engine, the API layer, or the UI imports from it — the seed
  * script turns it into EventDefinition rows and everything downstream reads
- * those rows. Supporting Survivor means adding a sibling file, not touching
- * any of the code that consumes it.
+ * those rows. Supporting another show means adding a sibling file (see
+ * survivor.ts), not touching any of the code that consumes it.
  */
-
-export interface EventDefinitionSpec {
-  code: string;
-  label: string;
-  category: EventCategory;
-  /** Point value used by the "Classic" ruleset. */
-  points: number;
-  /**
-   * Alternate value for the lower-variance "Balanced" ruleset. Several rules
-   * in the league spec were authored as "+10 or +5"; rather than forcing one,
-   * both live here and each ruleset picks via pointsOverride.
-   */
-  balancedPoints?: number;
-  isRepeatable?: boolean;
-  isPerCycleAward?: boolean;
-  description?: string;
-}
 
 export const BIG_BROTHER_EVENTS: EventDefinitionSpec[] = [
   // --- Competition & gameplay ----------------------------------------------
@@ -287,16 +270,6 @@ export const BIG_BROTHER_EVENTS: EventDefinitionSpec[] = [
   },
 ];
 
-export interface RulesetSpec {
-  slug: string;
-  name: string;
-  description: string;
-  isDefault: boolean;
-  categories: EventCategory[];
-  /** Use `balancedPoints` where a rule defines one. */
-  useBalancedPoints: boolean;
-}
-
 export const BIG_BROTHER_RULESETS: RulesetSpec[] = [
   {
     slug: 'classic-measurable',
@@ -327,10 +300,4 @@ export const BIG_BROTHER_RULESETS: RulesetSpec[] = [
   },
 ];
 
-export const BIG_BROTHER_LEXICON = {
-  cycleSingular: 'Week',
-  cyclePlural: 'Weeks',
-  contestantSingular: 'Houseguest',
-  contestantPlural: 'Houseguests',
-  eliminationVerb: 'Evicted',
-};
+export { BIG_BROTHER_LEXICON } from './lexicon';

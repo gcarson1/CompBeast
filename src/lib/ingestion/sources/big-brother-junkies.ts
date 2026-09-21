@@ -2,11 +2,11 @@ import * as cheerio from 'cheerio';
 import type { Element } from 'domhandler';
 import {
   IngestionError,
+  type BigBrotherSeasonFacts,
+  type BigBrotherWeekResult,
   type RawCastMember,
-  type RawEvictionEntry,
+  type RawPlacementEntry,
   type RawPlayerRef,
-  type RawSeasonFacts,
-  type RawWeekResult,
   type SeasonSourceAdapter,
 } from '../types';
 
@@ -25,7 +25,7 @@ const USER_AGENT = 'CompBeastBot/0.1 (+https://github.com/gcarson1/CompBeast)';
  * The weekly grid renders four cells per row in a fixed column order. There is
  * no per-cell class to key off, so position is the only signal available.
  */
-const WEEK_COLUMNS = ['hoh', 'veto', 'nominees', 'evicted'] as const;
+const WEEK_COLUMNS = ['hoh', 'veto', 'nominees', 'eliminated'] as const;
 
 /** Extracts the source's player slug from an href. */
 function playerIdFromHref(href: string | undefined): string | null {
@@ -73,14 +73,15 @@ function playersInCell($: cheerio.CheerioAPI, cell: Element): RawPlayerRef[] {
   return players;
 }
 
-export const bigBrotherJunkiesAdapter: SeasonSourceAdapter = {
+export const bigBrotherJunkiesAdapter: SeasonSourceAdapter<BigBrotherSeasonFacts> = {
   slug: SLUG,
+  showSlug: 'big-brother',
 
   seasonUrl(seasonExternalId: string): string {
     return `${BASE_URL}/bigbrother-seasons/${seasonExternalId}`;
   },
 
-  parseSeason(html: string, sourceUrl: string): RawSeasonFacts {
+  parseSeason(html: string, sourceUrl: string): BigBrotherSeasonFacts {
     const $ = cheerio.load(html);
 
     const seasonLabel = $('h1').first().text().trim();
@@ -103,7 +104,7 @@ export const bigBrotherJunkiesAdapter: SeasonSourceAdapter = {
     // --- Weekly results ----------------------------------------------------
     // The first grid row is the header; data rows follow. Each row is
     // [week label, HoH cell, Veto cell, Noms cell, Evicted cell].
-    const weeks: RawWeekResult[] = [];
+    const weeks: BigBrotherWeekResult[] = [];
     const weeklySection = $('section#weekly-results');
 
     weeklySection.find('div.grid').each((_, row) => {
@@ -112,13 +113,14 @@ export const bigBrotherJunkiesAdapter: SeasonSourceAdapter = {
       if (!match) return; // header row, or not a week row
 
       const cells = $(row).children('div').toArray();
-      const week: RawWeekResult = {
+      const week: BigBrotherWeekResult = {
         weekLabel,
         weekNumber: Number(match[1]),
+        aired: false,
         hoh: [],
         veto: [],
         nominees: [],
-        evicted: [],
+        eliminated: [],
       };
 
       WEEK_COLUMNS.forEach((column, index) => {
@@ -126,13 +128,17 @@ export const bigBrotherJunkiesAdapter: SeasonSourceAdapter = {
         if (cell) week[column] = playersInCell($, cell);
       });
 
+      // A live season's grid includes scheduled weeks that have not aired;
+      // they parse as an entirely empty row.
+      week.aired = WEEK_COLUMNS.some((column) => week[column].length > 0);
+
       weeks.push(week);
     });
 
     weeks.sort((a, b) => a.weekNumber - b.weekNumber);
 
     // --- Eviction order ----------------------------------------------------
-    const evictionOrder: RawEvictionEntry[] = [];
+    const placements: RawPlacementEntry[] = [];
     $('section#evictions tbody tr').each((_, row) => {
       const cells = $(row).find('td');
       const anchor = $(cells[1]).find(`a[href*="${PLAYER_PATH}"]`).first();
@@ -142,7 +148,7 @@ export const bigBrotherJunkiesAdapter: SeasonSourceAdapter = {
       // Houseguests still in the house occupy rows with no number.
       const rawOrder = Number($(cells[0]).text().trim());
 
-      evictionOrder.push({
+      placements.push({
         order: Number.isFinite(rawOrder) ? rawOrder : null,
         player: { externalId, name: anchor.text().trim() },
         dateLabel: $(cells[2]).text().trim(),
@@ -181,13 +187,13 @@ export const bigBrotherJunkiesAdapter: SeasonSourceAdapter = {
       premiereDate: parseDate(facts.get('premiere')),
       finaleDate: parseDate(facts.get('finale')),
       weeks,
-      evictionOrder,
+      placements,
       cast,
       fetchedAt: new Date(),
     };
   },
 
-  async fetchSeason(seasonExternalId: string): Promise<RawSeasonFacts> {
+  async fetchSeason(seasonExternalId: string): Promise<BigBrotherSeasonFacts> {
     const url = this.seasonUrl(seasonExternalId);
     const response = await fetch(url, {
       headers: { 'User-Agent': USER_AGENT, Accept: 'text/html' },

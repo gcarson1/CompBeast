@@ -1,24 +1,64 @@
 import type { Prisma } from '@prisma/client';
 import { prisma } from '../db';
 import { recalculateLeaguesForCycle, recalculateSeasonLeagues } from '../scoring/repository';
+import { lexiconFor } from '../shows/lexicon';
 import { bigBrotherJunkiesAdapter } from './sources/big-brother-junkies';
 import { mapBigBrotherSeason } from './mappers/big-brother';
+import { mapSurvivorSeason } from './mappers/survivor';
 import {
   IngestionError,
-  isEmptyWeek,
+  placementFromLabel,
   type CandidateEvent,
   type RawSeasonFacts,
+  type SeasonMapper,
   type SeasonSourceAdapter,
 } from './types';
 
+/**
+ * The two registries. Adapters are keyed by the site they parse; mappers by
+ * the show whose rules they know. An adapter's facts are typed to its show,
+ * and the pipeline pairs the two through the season's show — which is why
+ * both are widened to the generic facts here: the pairing is checked at
+ * runtime (`assertAdapterServes`), not by the type system across the map.
+ */
 const ADAPTERS: Record<string, SeasonSourceAdapter> = {
   [bigBrotherJunkiesAdapter.slug]: bigBrotherJunkiesAdapter,
+};
+
+const MAPPERS: Record<string, SeasonMapper> = {
+  'big-brother': mapBigBrotherSeason as SeasonMapper,
+  survivor: mapSurvivorSeason as SeasonMapper,
 };
 
 export function getAdapter(slug: string): SeasonSourceAdapter {
   const adapter = ADAPTERS[slug];
   if (!adapter) throw new IngestionError(`No adapter registered for "${slug}"`, slug);
   return adapter;
+}
+
+export function getMapper(showSlug: string, sourceSlug: string): SeasonMapper {
+  const mapper = MAPPERS[showSlug];
+  if (!mapper) throw new IngestionError(`No mapper registered for show "${showSlug}"`, sourceSlug);
+  return mapper;
+}
+
+/** The sources that can feed a show, for the admin page's sync controls. */
+export function adaptersForShow(showSlug: string): SeasonSourceAdapter[] {
+  return Object.values(ADAPTERS).filter((adapter) => adapter.showSlug === showSlug);
+}
+
+/**
+ * A Big Brother site cannot populate a Survivor season: the mapper would read
+ * columns the facts do not have. Refused up front rather than left to produce
+ * an empty run that looks like a parser failure.
+ */
+function assertAdapterServes(adapter: SeasonSourceAdapter, showSlug: string): void {
+  if (adapter.showSlug !== showSlug) {
+    throw new IngestionError(
+      `Source "${adapter.slug}" covers ${adapter.showSlug}, not ${showSlug}.`,
+      adapter.slug,
+    );
+  }
 }
 
 // ---------------------------------------------------------------------------
@@ -49,16 +89,18 @@ export async function bootstrapSeasonFromSource(input: {
   facts?: RawSeasonFacts;
 }): Promise<BootstrapResult> {
   const adapter = getAdapter(input.sourceSlug);
+  assertAdapterServes(adapter, input.showSlug);
   const facts = input.facts ?? (await adapter.fetchSeason(input.seasonExternalId));
 
   const show = await prisma.show.findUnique({ where: { slug: input.showSlug } });
   if (!show) throw new IngestionError(`Unknown show "${input.showSlug}"`, input.sourceSlug);
+  const lexicon = lexiconFor(show.slug, show.lexicon);
 
   const name = input.seasonName ?? facts.seasonLabel;
 
   // A season with a crowned winner is over; anything else is still in play.
   // Air dates would be a flimsier signal — sources often omit them entirely.
-  const hasWinner = facts.evictionOrder.some((e) => /winner/i.test(e.placeLabel));
+  const hasWinner = facts.placements.some((e) => /winner|sole survivor/i.test(e.placeLabel));
   const status = hasWinner ? 'COMPLETED' : 'ACTIVE';
 
   const season = await prisma.season.upsert({
@@ -78,18 +120,17 @@ export async function bootstrapSeasonFromSource(input: {
   let cyclesCreated = 0;
   for (const week of facts.weeks) {
     const isFinale = week.weekNumber === facts.weeks.at(-1)?.weekNumber;
-    const aired = !isEmptyWeek(week);
     const airsAt = schedule.get(week.weekNumber) ?? null;
     // Rosters lock 30 minutes before the episode airs.
     const locksAt = airsAt ? new Date(airsAt.getTime() - 30 * 60 * 1000) : new Date();
 
     const data = {
-      label: isFinale ? 'Finale' : `Week ${week.weekNumber}`,
+      label: isFinale ? 'Finale' : `${lexicon.cycleSingular} ${week.weekNumber}`,
       airsAt,
       locksAt,
       // An unaired week must stay UPCOMING or its roster lock is meaningless
       // and the app will present a future week as already settled.
-      status: aired ? ('SCORED' as const) : ('UPCOMING' as const),
+      status: week.aired ? ('SCORED' as const) : ('UPCOMING' as const),
     };
 
     const existingId = cycleBySequence.get(week.weekNumber);
@@ -155,25 +196,26 @@ export async function bootstrapSeasonFromSource(input: {
 }
 
 /**
- * Works out when each week aired.
+ * Works out when each cycle aired.
  *
- * Eviction dates are the only real dates the results page carries, so weeks
- * with an eviction are pinned to theirs and everything else is interpolated a
- * week apart from the premiere. Without this every cycle would lock at import
- * time and a live season would have no future deadline to play against.
+ * Elimination dates are the only real dates a results page carries, so cycles
+ * with an elimination are pinned to theirs and everything else is
+ * interpolated a week apart from the premiere. Without this every cycle would
+ * lock at import time and a live season would have no future deadline to
+ * play against.
  */
 function buildCycleSchedule(facts: RawSeasonFacts): Map<number, Date> {
   const schedule = new Map<number, Date>();
   const year = facts.premiereDate?.getFullYear() ?? new Date().getFullYear();
 
-  const evictionDateByPlayer = new Map<string, string>();
-  for (const entry of facts.evictionOrder) {
-    if (entry.dateLabel) evictionDateByPlayer.set(entry.player.externalId, entry.dateLabel);
+  const eliminationDateByPlayer = new Map<string, string>();
+  for (const entry of facts.placements) {
+    if (entry.dateLabel) eliminationDateByPlayer.set(entry.player.externalId, entry.dateLabel);
   }
 
   for (const week of facts.weeks) {
-    for (const evicted of week.evicted) {
-      const label = evictionDateByPlayer.get(evicted.externalId);
+    for (const player of week.eliminated) {
+      const label = eliminationDateByPlayer.get(player.externalId);
       if (!label) continue;
       // Labels read "Sep 17" with no year; the season supplies it.
       const parsed = new Date(`${label} ${year}`);
@@ -249,17 +291,19 @@ export async function ingestSeason(input: {
 
   try {
     const adapter = getAdapter(sourceSlug);
-    const facts = input.facts ?? (await adapter.fetchSeason(seasonExternalId));
 
     const season = await prisma.season.findUnique({
       where: { slug: seasonExternalId },
-      select: { id: true, showId: true },
+      select: { id: true, showId: true, show: { select: { slug: true } } },
     });
     if (!season) {
       throw new IngestionError(`Season "${seasonExternalId}" has not been bootstrapped yet.`, sourceSlug);
     }
+    assertAdapterServes(adapter, season.show.slug);
+    const mapSeason = getMapper(season.show.slug, sourceSlug);
 
-    const candidates = mapBigBrotherSeason(facts, seasonExternalId);
+    const facts = input.facts ?? (await adapter.fetchSeason(seasonExternalId));
+    const candidates = mapSeason(facts, seasonExternalId);
 
     const [links, cycles, definitions] = await Promise.all([
       prisma.contestantExternalRef.findMany({
@@ -398,11 +442,11 @@ export async function ingestSeason(input: {
 }
 
 /**
- * Syncs who is still in the house, when they left, and where they finished.
+ * Syncs who is still in the game, when they left, and where they finished.
  *
  * Scored events alone do not carry this: a contestant row created at bootstrap
- * stays `isActive` forever otherwise, and a live season would show evicted
- * houseguests as still playing.
+ * stays `isActive` forever otherwise, and a live season would show eliminated
+ * contestants as still playing.
  */
 async function reconcileContestantState(
   facts: RawSeasonFacts,
@@ -420,21 +464,18 @@ async function reconcileContestantState(
   const contestantByExternalId = new Map(links.map((l) => [l.externalId, l.contestantId]));
   const currentState = new Map(links.map((l) => [l.contestantId, l.contestant]));
 
-  // The cycle each houseguest was evicted in, from the weekly grid.
-  const evictionCycleByPlayer = new Map<string, string>();
+  // The cycle each contestant left in, from the weekly grid.
+  const eliminationCycleByPlayer = new Map<string, string>();
   for (const week of facts.weeks) {
     const cycleId = cycleBySequence.get(week.weekNumber);
     if (!cycleId) continue;
-    for (const player of week.evicted) evictionCycleByPlayer.set(player.externalId, cycleId);
+    for (const player of week.eliminated) eliminationCycleByPlayer.set(player.externalId, cycleId);
   }
 
   const placementByPlayer = new Map<string, number>();
-  for (const entry of facts.evictionOrder) {
-    const value = entry.placeLabel.trim().toLowerCase();
-    if (!value) continue;
-    const placement =
-      value === 'winner' ? 1 : value.startsWith('runner') ? 2 : Number(/^(\d+)/.exec(value)?.[1]);
-    if (Number.isFinite(placement)) placementByPlayer.set(entry.player.externalId, placement);
+  for (const entry of facts.placements) {
+    const placement = placementFromLabel(entry.placeLabel);
+    if (placement !== null) placementByPlayer.set(entry.player.externalId, placement);
   }
 
   // Only write rows that actually changed, in one batch. A re-sync of an
@@ -442,7 +483,7 @@ async function reconcileContestantState(
   const updates: Prisma.PrismaPromise<unknown>[] = [];
 
   for (const [externalId, contestantId] of contestantByExternalId) {
-    const eliminatedCycleId = evictionCycleByPlayer.get(externalId) ?? null;
+    const eliminatedCycleId = eliminationCycleByPlayer.get(externalId) ?? null;
     const placement = placementByPlayer.get(externalId) ?? null;
     const isActive = eliminatedCycleId === null;
 

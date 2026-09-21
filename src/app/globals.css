@@ -7,6 +7,18 @@
     -webkit-tap-highlight-color: transparent;
   }
 
+  /*
+   * The show accent at rest is the brand gold, so `bg-show-accent` and
+   * `text-show-deep` are safe anywhere. A `<ShowTheme>` wrapper overrides
+   * these for the pages that belong to one show.
+   */
+  :root {
+    --show-accent: #f59e0b;
+    --show-accent-deep: #fbbf24;
+    --show-accent-soft: rgba(245, 158, 11, 0.16);
+    --show-glow: rgba(245, 158, 11, 0.45);
+  }
+
   body {
     @apply bg-canvas font-sans text-base text-ink antialiased;
   }
@@ -326,6 +338,11 @@
 
   .sticker-red {
     @apply bg-danger-strong text-white;
+  }
+
+  /* The show's own colour. Every show accent is a light fill, so dark ink. */
+  .sticker-show {
+    @apply bg-show-accent text-on-gold;
   }
 
   /*

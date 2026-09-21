@@ -1,14 +1,16 @@
 import { PrismaClient } from '@prisma/client';
-import { BIG_BROTHER_EVENTS, BIG_BROTHER_LEXICON, BIG_BROTHER_RULESETS } from '../src/lib/shows/big-brother';
+import { BIG_BROTHER_EVENTS } from '../src/lib/shows/big-brother';
+import { SHOW_CATALOGUE, type ShowSpec } from '../src/lib/shows/catalogue';
 import { buildDraftOrder } from '../src/lib/draft/snake';
 import { recalculateLeague } from '../src/lib/scoring/repository';
 
 const prisma = new PrismaClient();
 
 /**
- * Houseguests are fictional. Comp Beast is show-agnostic by design, and seeding
- * invented players keeps the demo data free of real people's names while still
- * exercising a realistic 16-player Big Brother season.
+ * Every cast here is fictional. Comp Beast is show-agnostic by design, and
+ * seeding invented players keeps the demo data free of real people's names
+ * while still exercising a realistic 16-player Big Brother season and an
+ * 18-castaway Survivor season.
  */
 const HOUSEGUESTS = [
   { name: 'Marisol Vega', occupation: 'ER Nurse', hometown: 'Tucson, AZ', age: 29 },
@@ -27,6 +29,27 @@ const HOUSEGUESTS = [
   { name: 'Cassandra Hale', occupation: 'Real Estate Agent', hometown: 'Charlotte, NC', age: 36 },
   { name: 'Javier Solis', occupation: 'Line Cook', hometown: 'Albuquerque, NM', age: 28 },
   { name: 'Rowan Fitzgerald', occupation: 'Grad Student', hometown: 'Boston, MA', age: 22 },
+];
+
+const CASTAWAYS = [
+  { name: 'Theo Marchetti', occupation: 'Rock Climbing Guide', hometown: 'Boulder, CO', tribe: 'Vatu' },
+  { name: 'Imani Okafor', occupation: 'Pediatric Nurse', hometown: 'Baltimore, MD', tribe: 'Vatu' },
+  { name: 'Reed Halvorsen', occupation: 'Commercial Fisherman', hometown: 'Kodiak, AK', tribe: 'Vatu' },
+  { name: 'Lucía Ferrer', occupation: 'Poker Player', hometown: 'Las Vegas, NV', tribe: 'Vatu' },
+  { name: 'Dev Ramaswamy', occupation: 'Robotics Engineer', hometown: 'Pittsburgh, PA', tribe: 'Vatu' },
+  { name: 'Maggie Doyle', occupation: 'Bartender', hometown: 'Boston, MA', tribe: 'Vatu' },
+  { name: 'Kofi Asante', occupation: 'Track Coach', hometown: 'Newark, NJ', tribe: 'Lalo' },
+  { name: 'Brynn Whitfield', occupation: 'Wedding Planner', hometown: 'Savannah, GA', tribe: 'Lalo' },
+  { name: 'Santiago Cruz', occupation: 'Paramedic', hometown: 'El Paso, TX', tribe: 'Lalo' },
+  { name: 'Harriet Lindqvist', occupation: 'Marine Biologist', hometown: 'Monterey, CA', tribe: 'Lalo' },
+  { name: 'Jamal Whitaker', occupation: 'Youth Pastor', hometown: 'Memphis, TN', tribe: 'Lalo' },
+  { name: 'Noor Haddad', occupation: 'Immigration Attorney', hometown: 'Dearborn, MI', tribe: 'Lalo' },
+  { name: 'Wes Callahan', occupation: 'Rodeo Clown', hometown: 'Cheyenne, WY', tribe: 'Moana' },
+  { name: 'Penelope Ashworth', occupation: 'Hedge Fund Analyst', hometown: 'Greenwich, CT', tribe: 'Moana' },
+  { name: 'Rafael Mendes', occupation: 'Capoeira Instructor', hometown: 'Newark, NJ', tribe: 'Moana' },
+  { name: 'Odette Beaulieu', occupation: 'Sommelier', hometown: 'New Orleans, LA', tribe: 'Moana' },
+  { name: 'Grady Pruitt', occupation: 'Long-Haul Trucker', hometown: 'Tulsa, OK', tribe: 'Moana' },
+  { name: 'Suki Nakamura', occupation: 'Escape Room Designer', hometown: 'Honolulu, HI', tribe: 'Moana' },
 ];
 
 const DEMO_USERS = [
@@ -62,68 +85,63 @@ function cycleDates(sequence: number) {
   return { airsAt, locksAt };
 }
 
-async function main() {
-  console.log('Seeding Comp Beast…');
-
+/**
+ * Installs one show from the catalogue: the Show row, its rule dictionary and
+ * its rulesets. Idempotent, so re-seeding refreshes labels and point values
+ * without touching any league's recorded history.
+ */
+async function installShow(spec: ShowSpec) {
+  const lexicon = { ...spec.lexicon };
   const show = await prisma.show.upsert({
-    where: { slug: 'big-brother' },
-    update: { lexicon: BIG_BROTHER_LEXICON },
+    where: { slug: spec.slug },
+    update: { name: spec.name, lexicon },
     create: {
-      slug: 'big-brother',
-      name: 'Big Brother',
+      slug: spec.slug,
+      name: spec.name,
       format: 'TRADITIONAL_FANTASY_SPORT',
-      lexicon: BIG_BROTHER_LEXICON,
+      lexicon,
     },
   });
 
-  // --- Rule dictionary ------------------------------------------------------
   const eventDefinitions = new Map<string, string>();
-  for (const spec of BIG_BROTHER_EVENTS) {
+  for (const event of spec.events) {
+    const data = {
+      label: event.label,
+      category: event.category,
+      points: event.points,
+      isRepeatable: event.isRepeatable ?? true,
+      isPerCycleAward: event.isPerCycleAward ?? false,
+      description: event.description,
+    };
     const def = await prisma.eventDefinition.upsert({
-      where: { showId_code: { showId: show.id, code: spec.code } },
-      update: {
-        label: spec.label,
-        category: spec.category,
-        points: spec.points,
-        isRepeatable: spec.isRepeatable ?? true,
-        isPerCycleAward: spec.isPerCycleAward ?? false,
-        description: spec.description,
-      },
-      create: {
-        showId: show.id,
-        code: spec.code,
-        label: spec.label,
-        category: spec.category,
-        points: spec.points,
-        isRepeatable: spec.isRepeatable ?? true,
-        isPerCycleAward: spec.isPerCycleAward ?? false,
-        description: spec.description,
-      },
+      where: { showId_code: { showId: show.id, code: event.code } },
+      update: data,
+      create: { showId: show.id, code: event.code, ...data },
     });
-    eventDefinitions.set(spec.code, def.id);
+    eventDefinitions.set(event.code, def.id);
   }
-  console.log(`  ${eventDefinitions.size} event definitions`);
+  console.log(`  ${spec.name}: ${eventDefinitions.size} event definitions`);
 
   const rulesets = new Map<string, string>();
-  for (const spec of BIG_BROTHER_RULESETS) {
+  for (const rulesetSpec of spec.rulesets) {
     const ruleset = await prisma.scoringRuleset.upsert({
-      where: { showId_slug: { showId: show.id, slug: spec.slug } },
-      update: { name: spec.name, description: spec.description, isDefault: spec.isDefault },
+      where: { showId_slug: { showId: show.id, slug: rulesetSpec.slug } },
+      update: { name: rulesetSpec.name, description: rulesetSpec.description, isDefault: rulesetSpec.isDefault },
       create: {
         showId: show.id,
-        slug: spec.slug,
-        name: spec.name,
-        description: spec.description,
-        isDefault: spec.isDefault,
+        slug: rulesetSpec.slug,
+        name: rulesetSpec.name,
+        description: rulesetSpec.description,
+        isDefault: rulesetSpec.isDefault,
       },
     });
-    rulesets.set(spec.slug, ruleset.id);
+    rulesets.set(rulesetSpec.slug, ruleset.id);
 
-    const included = BIG_BROTHER_EVENTS.filter((e) => spec.categories.includes(e.category));
-    for (const eventSpec of included) {
-      const eventDefinitionId = eventDefinitions.get(eventSpec.code)!;
+    const included = spec.events.filter((e) => rulesetSpec.categories.includes(e.category));
+    for (const event of included) {
+      const eventDefinitionId = eventDefinitions.get(event.code)!;
       const override =
-        spec.useBalancedPoints && eventSpec.balancedPoints !== undefined ? eventSpec.balancedPoints : null;
+        rulesetSpec.useBalancedPoints && event.balancedPoints !== undefined ? event.balancedPoints : null;
       await prisma.scoringRulesetEventDefinition.upsert({
         where: {
           scoringRulesetId_eventDefinitionId: { scoringRulesetId: ruleset.id, eventDefinitionId },
@@ -132,10 +150,72 @@ async function main() {
         create: { scoringRulesetId: ruleset.id, eventDefinitionId, pointsOverride: override },
       });
     }
-    console.log(`  ruleset "${spec.name}" → ${included.length} rules`);
+    console.log(`  ${spec.name}: ruleset "${rulesetSpec.name}" → ${included.length} rules`);
   }
 
-  // --- Season, houseguests, cycles -----------------------------------------
+  return { show, eventDefinitions, rulesets };
+}
+
+async function main() {
+  console.log('Seeding Comp Beast…');
+
+  const installed = new Map<string, Awaited<ReturnType<typeof installShow>>>();
+  for (const spec of SHOW_CATALOGUE) {
+    installed.set(spec.slug, await installShow(spec));
+  }
+  const { show, eventDefinitions, rulesets } = installed.get('big-brother')!;
+
+  // --- Survivor: an upcoming demo season, open for leagues -----------------
+  // Cast and cycles only — nothing has aired, so there is nothing to score.
+  // Enough to draft against and to see the show's vocabulary and colours.
+  const survivor = installed.get('survivor')!.show;
+  const survivorStart = new Date();
+  survivorStart.setUTCDate(survivorStart.getUTCDate() + 14);
+  survivorStart.setUTCHours(0, 0, 0, 0);
+
+  const survivorSeason = await prisma.season.upsert({
+    where: { slug: 'demo-survivor' },
+    update: {},
+    create: {
+      showId: survivor.id,
+      slug: 'demo-survivor',
+      name: 'Demo Season',
+      year: 2026,
+      status: 'UPCOMING',
+      startDate: survivorStart,
+    },
+  });
+
+  for (const castaway of CASTAWAYS) {
+    const existing = await prisma.contestant.findFirst({
+      where: { seasonId: survivorSeason.id, name: castaway.name },
+      select: { id: true },
+    });
+    if (existing) continue;
+    await prisma.contestant.create({
+      data: {
+        seasonId: survivorSeason.id,
+        name: castaway.name,
+        metadata: { occupation: castaway.occupation, hometown: castaway.hometown, tribe: castaway.tribe },
+      },
+    });
+  }
+
+  for (let sequence = 1; sequence <= CYCLE_COUNT; sequence += 1) {
+    const airsAt = new Date(survivorStart);
+    airsAt.setUTCDate(airsAt.getUTCDate() + (sequence - 1) * 7);
+    airsAt.setUTCHours(1, 0, 0, 0);
+    const locksAt = new Date(airsAt.getTime() - 30 * 60 * 1000);
+    const label = sequence === CYCLE_COUNT ? 'Finale' : `Episode ${sequence}`;
+    await prisma.cycle.upsert({
+      where: { seasonId_sequence: { seasonId: survivorSeason.id, sequence } },
+      update: { label, airsAt, locksAt },
+      create: { seasonId: survivorSeason.id, sequence, label, airsAt, locksAt, status: 'UPCOMING' },
+    });
+  }
+  console.log(`  ${CASTAWAYS.length} castaways, ${CYCLE_COUNT} episodes (upcoming)`);
+
+  // --- Big Brother: season, houseguests, cycles ----------------------------
   // Deliberately namespaced away from real season slugs (`big-brother-27`):
   // ingestion claims those, and demo data must never squat on a real season's
   // identifier or the two casts merge into one.

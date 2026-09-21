@@ -28,7 +28,7 @@ describe('bigBrotherJunkiesAdapter.parseSeason', () => {
     expect(week1.hoh.map((p) => p.name)).toEqual(['Vince Panaro']);
     expect(week1.veto.map((p) => p.name)).toEqual(['Ashley Hollis']);
     expect(week1.nominees).toHaveLength(3);
-    expect(week1.evicted.map((p) => p.externalId)).toEqual(['isaiah-zae-frederich']);
+    expect(week1.eliminated.map((p) => p.externalId)).toEqual(['isaiah-zae-frederich']);
   });
 
   it('identifies players by source slug rather than display name', () => {
@@ -50,8 +50,8 @@ describe('bigBrotherJunkiesAdapter.parseSeason', () => {
   });
 
   it('parses the eviction order with placements', () => {
-    expect(facts.evictionOrder).toHaveLength(17);
-    expect(facts.evictionOrder[0]).toMatchObject({
+    expect(facts.placements).toHaveLength(17);
+    expect(facts.placements[0]).toMatchObject({
       order: 1,
       placeLabel: 'Winner',
       player: { externalId: 'ashley-hollis' },
@@ -80,11 +80,11 @@ describe('in-progress season', () => {
   });
 
   it('has no winner while the season is running', () => {
-    expect(liveFacts.evictionOrder.some((e) => /winner/i.test(e.placeLabel))).toBe(false);
+    expect(liveFacts.placements.some((e) => /winner/i.test(e.placeLabel))).toBe(false);
   });
 
   it('records a null order for houseguests still in the house', () => {
-    const active = liveFacts.evictionOrder.filter((e) => e.order === null);
+    const active = liveFacts.placements.filter((e) => e.order === null);
     expect(active).toHaveLength(5);
     expect(active.every((e) => Number.isNaN(e.order as unknown as number))).toBe(false);
   });
@@ -92,7 +92,8 @@ describe('in-progress season', () => {
   it('does not score weeks that have not aired', () => {
     const scheduled = liveFacts.weeks.at(-1)!;
     expect(scheduled.hoh).toEqual([]);
-    expect(scheduled.evicted).toEqual([]);
+    expect(scheduled.eliminated).toEqual([]);
+    expect(scheduled.aired).toBe(false);
 
     const candidates = mapBigBrotherSeason(liveFacts, 'big-brother-28');
     expect(candidates.some((c) => c.weekNumber === scheduled.weekNumber)).toBe(false);

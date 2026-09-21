@@ -1,7 +1,7 @@
 import { Children, type CSSProperties, type HTMLAttributes, type ReactNode } from 'react';
 import { cn } from '@/lib/ui';
 
-type Tone = 'paper' | 'gold' | 'lavender' | 'mint' | 'sky' | 'ink' | 'red';
+type Tone = 'paper' | 'gold' | 'lavender' | 'mint' | 'sky' | 'ink' | 'red' | 'show';
 
 // Spelled out so Tailwind's content scan finds every class; a template
 // string here would leave the unused tones out of the stylesheet.
@@ -13,6 +13,8 @@ const TONE_CLASS: Record<Tone, string> = {
   sky: 'sticker-sky',
   ink: 'sticker-ink',
   red: 'sticker-red',
+  /** The accent of whichever show the page belongs to (see `ShowTheme`). */
+  show: 'sticker-show',
 };
 
 /**

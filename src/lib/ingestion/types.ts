@@ -3,13 +3,16 @@
  *
  * Three layers, deliberately kept apart:
  *
- *   adapter  → parses one site's markup into `RawSeasonFacts`. Knows HTML,
- *              knows nothing about EventDefinitions or our database.
- *   mapper   → turns `RawSeasonFacts` into `CandidateEvent[]` using a show's
+ *   adapter  → parses one site's markup into that show's `RawSeasonFacts`.
+ *              Knows HTML, knows nothing about EventDefinitions or our
+ *              database. Declares which show it serves.
+ *   mapper   → turns a show's facts into `CandidateEvent[]` using that show's
  *              rule codes. Knows the show, knows nothing about HTML.
  *   pipeline → resolves candidates against the database and publishes them.
+ *              Reads only the show-agnostic part of the facts.
  *
- * A new site needs only a new adapter. A new show needs only a new mapper.
+ * A new site needs only a new adapter. A new show needs a facts shape, a
+ * mapper, and a registry entry in pipeline.ts — never a pipeline change.
  */
 
 /** A player as the source identifies them. */
@@ -20,21 +23,31 @@ export interface RawPlayerRef {
   photoUrl?: string;
 }
 
-export interface RawWeekResult {
+/**
+ * What the pipeline needs to know about one cycle of any show: which one it
+ * is, whether it has happened, and who left the game in it. Everything a
+ * show adds on top (who won what, who was in danger) is that show's own
+ * extension, read only by its mapper.
+ */
+export interface RawCycleResult {
   /** The source's own label, e.g. "W3". */
   weekLabel: string;
   weekNumber: number;
-  hoh: RawPlayerRef[];
-  veto: RawPlayerRef[];
-  nominees: RawPlayerRef[];
-  evicted: RawPlayerRef[];
+  /**
+   * False for a scheduled cycle that has not aired. Decided by the adapter,
+   * which knows what an empty row on its site looks like; the pipeline must
+   * not guess, or a future week gets created as already settled.
+   */
+  aired: boolean;
+  /** Everyone who left the game this cycle, whatever the show calls it. */
+  eliminated: RawPlayerRef[];
 }
 
-export interface RawEvictionEntry {
+export interface RawPlacementEntry {
   /**
    * The source's row number, which is NOT a finish position — a completed
    * season lists the winner first, an in-progress one lists the most recent
-   * eviction first. Use `placeLabel` for placement; never infer from this.
+   * elimination first. Use `placeLabel` for placement; never infer from this.
    */
   order: number | null;
   player: RawPlayerRef;
@@ -49,34 +62,65 @@ export interface RawCastMember extends RawPlayerRef {
   placeLabel: string | null;
 }
 
-export interface RawSeasonFacts {
+export interface RawSeasonFacts<TCycle extends RawCycleResult = RawCycleResult> {
   sourceSlug: string;
   sourceUrl: string;
   seasonLabel: string;
   premiereDate: Date | null;
   finaleDate: Date | null;
-  weeks: RawWeekResult[];
-  evictionOrder: RawEvictionEntry[];
+  weeks: TCycle[];
+  /** The elimination table: who left, when, and where they finished. */
+  placements: RawPlacementEntry[];
   cast: RawCastMember[];
   fetchedAt: Date;
 }
 
-/** True when a week's grid is entirely empty — a scheduled week that has not aired. */
-export function isEmptyWeek(week: RawWeekResult): boolean {
-  return (
-    week.hoh.length === 0 && week.veto.length === 0 && week.nominees.length === 0 && week.evicted.length === 0
-  );
+// ---------------------------------------------------------------------------
+// Per-show facts. Each is the generic cycle plus what that show's results
+// grid actually reports.
+// ---------------------------------------------------------------------------
+
+export interface BigBrotherWeekResult extends RawCycleResult {
+  hoh: RawPlayerRef[];
+  veto: RawPlayerRef[];
+  nominees: RawPlayerRef[];
 }
 
-export interface SeasonSourceAdapter {
+export type BigBrotherSeasonFacts = RawSeasonFacts<BigBrotherWeekResult>;
+
+export interface SurvivorEpisodeResult extends RawCycleResult {
+  /** Individual immunity winners (post-merge, or a tribe swap twist). */
+  immunity: RawPlayerRef[];
+  /** Every member of a tribe that won immunity (pre-merge). */
+  tribalImmunity: RawPlayerRef[];
+  /** Everyone who won or shared a reward. */
+  reward: RawPlayerRef[];
+  /** Idols played at tribal, and whether each one actually cancelled votes. */
+  idolsPlayed: Array<{ player: RawPlayerRef; negatedVotes: boolean }>;
+  /** Votes received at tribal council, per player. */
+  votes: Array<{ player: RawPlayerRef; count: number }>;
+}
+
+export type SurvivorSeasonFacts = RawSeasonFacts<SurvivorEpisodeResult>;
+
+// ---------------------------------------------------------------------------
+
+export interface SeasonSourceAdapter<TFacts extends RawSeasonFacts = RawSeasonFacts> {
   slug: string;
+  /** `Show.slug` of the show this site covers. The pipeline refuses a mismatch. */
+  showSlug: string;
   /** Builds the page URL for a season's id on this source. */
   seasonUrl(seasonExternalId: string): string;
   /** Pure: parse already-fetched markup. Unit tested against fixtures. */
-  parseSeason(html: string, sourceUrl: string): RawSeasonFacts;
+  parseSeason(html: string, sourceUrl: string): TFacts;
   /** Fetches and parses. The only method that touches the network. */
-  fetchSeason(seasonExternalId: string): Promise<RawSeasonFacts>;
+  fetchSeason(seasonExternalId: string): Promise<TFacts>;
 }
+
+export type SeasonMapper<TFacts extends RawSeasonFacts = RawSeasonFacts> = (
+  facts: TFacts,
+  seasonExternalId: string,
+) => CandidateEvent[];
 
 export type Confidence = 'HIGH' | 'MEDIUM' | 'LOW';
 
@@ -93,6 +137,25 @@ export interface CandidateEvent {
   /** Why confidence is below HIGH. Empty for clean matches. */
   reasons: string[];
 }
+
+/** "Winner" → 1, "Runner-Up" → 2, "9th Place" → 9. Null when unplaced. */
+export function placementFromLabel(label: string): number | null {
+  const value = label.trim().toLowerCase();
+  if (!value) return null;
+  if (value === 'winner' || value === 'sole survivor') return 1;
+  if (value.startsWith('runner')) return 2;
+  const match = /^(\d+)(st|nd|rd|th)/.exec(value);
+  return match ? Number(match[1]) : null;
+}
+
+export const PLACEMENT_CODE_BY_LABEL: Record<string, string> = {
+  winner: 'PLACEMENT_WINNER',
+  'sole survivor': 'PLACEMENT_WINNER',
+  'runner-up': 'PLACEMENT_RUNNER_UP',
+  'runner up': 'PLACEMENT_RUNNER_UP',
+  '2nd place': 'PLACEMENT_RUNNER_UP',
+  '3rd place': 'PLACEMENT_THIRD',
+};
 
 export class IngestionError extends Error {
   constructor(

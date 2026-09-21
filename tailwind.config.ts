@@ -98,6 +98,18 @@ const config: Config = {
         },
         /** Sticker paper: the off-white a die-cut badge is printed on. */
         paper: '#FFF8EC',
+        /**
+         * The show accent. `<ShowTheme>` sets these custom properties on a
+         * league, season, team or player page from the show's entry in
+         * `src/lib/shows/registry.ts`; outside one they hold the brand gold
+         * (`:root` in globals.css). `accent` is a fill that takes `on-gold`
+         * ink, `deep` is the hue as text on the dark surfaces.
+         */
+        show: {
+          accent: 'var(--show-accent)',
+          deep: 'var(--show-accent-deep)',
+          soft: 'var(--show-accent-soft)',
+        },
       },
       fontFamily: {
         // Anton (display) and Archivo (text) are both Omnibus-Type grotesques,
