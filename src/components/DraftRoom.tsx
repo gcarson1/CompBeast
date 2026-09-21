@@ -2,7 +2,7 @@
 
 import { useFormState } from 'react-dom';
 import { useEffect, useMemo, useRef, useState } from 'react';
-import { AnimatePresence, motion } from 'framer-motion';
+import { AnimatePresence, m } from 'framer-motion';
 import { toast } from 'sonner';
 import { Avatar } from '@/components/Avatar';
 import { Sticker } from '@/components/Sticker';
@@ -163,7 +163,7 @@ export function DraftRoom(props: DraftRoomProps) {
 
       <AnimatePresence mode="wait" initial={false}>
         {tab === 'Board' && (
-          <motion.div
+          <m.div
             key="Board"
             initial={{ opacity: 0, y: 6 }}
             animate={{ opacity: 1, y: 0 }}
@@ -238,11 +238,11 @@ export function DraftRoom(props: DraftRoomProps) {
                 ))}
               </ul>
             )}
-          </motion.div>
+          </m.div>
         )}
 
         {tab === 'Picks' && (
-          <motion.div
+          <m.div
             key="Picks"
             initial={{ opacity: 0, y: 6 }}
             animate={{ opacity: 1, y: 0 }}
@@ -275,11 +275,11 @@ export function DraftRoom(props: DraftRoomProps) {
                 ))}
               </ul>
             )}
-          </motion.div>
+          </m.div>
         )}
 
         {tab === 'Teams' && (
-          <motion.ul
+          <m.ul
             key="Teams"
             initial={{ opacity: 0, y: 6 }}
             animate={{ opacity: 1, y: 0 }}
@@ -300,7 +300,7 @@ export function DraftRoom(props: DraftRoomProps) {
                 )}
               </li>
             ))}
-          </motion.ul>
+          </m.ul>
         )}
       </AnimatePresence>
     </div>

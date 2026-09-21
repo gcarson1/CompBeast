@@ -2,7 +2,7 @@
 
 import Link from 'next/link';
 import { useState } from 'react';
-import { AnimatePresence, motion } from 'framer-motion';
+import { AnimatePresence, m } from 'framer-motion';
 import { cn, formatPoints, pointsTone } from '@/lib/ui';
 import type { ContestantLeagueLine } from '@/server/queries';
 
@@ -57,7 +57,7 @@ export function PlayerTabs({
       </div>
 
       <AnimatePresence mode="wait" initial={false}>
-        <motion.div
+        <m.div
           key={tab}
           initial={{ opacity: 0, y: 6 }}
           animate={{ opacity: 1, y: 0 }}
@@ -68,7 +68,7 @@ export function PlayerTabs({
           {tab === 'Summary' && <SummaryTab events={events} />}
           {tab === 'Game log' && <GameLogTab gameLog={gameLog} events={events} />}
           {tab === 'Leagues' && <LeaguesTab leagues={leagues} signedIn={signedIn} />}
-        </motion.div>
+        </m.div>
       </AnimatePresence>
     </div>
   );

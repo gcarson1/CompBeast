@@ -2,7 +2,7 @@
 
 import { useEffect, useRef, useState } from 'react';
 import { useFormState, useFormStatus } from 'react-dom';
-import { AnimatePresence, motion, useReducedMotion } from 'framer-motion';
+import { AnimatePresence, m, useReducedMotion } from 'framer-motion';
 import { toast } from 'sonner';
 import { Avatar } from '@/components/Avatar';
 import { useLeaguePulse } from '@/lib/live';
@@ -144,7 +144,7 @@ export function LeagueFeed({
         <ul className="mt-3 space-y-2">
           <AnimatePresence initial={false}>
             {messages.map((message) => (
-              <motion.li
+              <m.li
                 key={message.id}
                 layout={!reduceMotion}
                 initial={reduceMotion ? false : { opacity: 0, y: -8 }}
@@ -189,7 +189,7 @@ export function LeagueFeed({
                     </div>
                   </div>
                 </div>
-              </motion.li>
+              </m.li>
             ))}
           </AnimatePresence>
         </ul>

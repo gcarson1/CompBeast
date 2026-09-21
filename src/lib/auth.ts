@@ -1,5 +1,16 @@
 import { currentUser } from '@clerk/nextjs/server';
+import * as React from 'react';
 import { prisma } from './db';
+
+/**
+ * React's per-request memo where it exists. React 18 only exports `cache`
+ * under the `react-server` condition — the build Next uses for server
+ * components, actions and route handlers. Under Node's default condition
+ * (the test runner) it is undefined, and there is no request to scope to
+ * anyway, so the function is used as is.
+ */
+const perRequest: <T extends (...args: never[]) => unknown>(fn: T) => T =
+  typeof React.cache === 'function' ? React.cache : (fn) => fn;
 
 /**
  * Auth boundary.
@@ -34,8 +45,12 @@ const SELECT = {
  * There's no webhook — the row is created lazily, the first time a signed-in
  * visitor hits a page that asks who they are, which is simpler than standing
  * up webhook signature verification for an app this size.
+ *
+ * Wrapped in React's per-request `cache`: the root layout asks who this is
+ * for the header, and then every page asks again for itself, which was two
+ * identical user lookups on every request.
  */
-export async function getCurrentUser(): Promise<SessionUser | null> {
+export const getCurrentUser = perRequest(async function getCurrentUser(): Promise<SessionUser | null> {
   const clerkUser = await currentUser();
   if (!clerkUser) return null;
 
@@ -73,7 +88,7 @@ export async function getCurrentUser(): Promise<SessionUser | null> {
     },
     select: SELECT,
   });
-}
+});
 
 /**
  * Emails this deploy grants platform admin to, from `PLATFORM_ADMIN_EMAILS`.

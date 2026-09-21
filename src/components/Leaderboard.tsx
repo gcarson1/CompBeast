@@ -3,7 +3,7 @@
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
 import { useEffect, useRef, useState, useTransition } from 'react';
-import { motion } from 'framer-motion';
+import { m } from 'framer-motion';
 import { Avatar } from '@/components/Avatar';
 import { Doodle } from '@/components/doodles/Doodle';
 import { Sticker } from '@/components/Sticker';
@@ -17,9 +17,6 @@ const PODIUM = ['clay clay-gold', 'clay clay-sky', 'clay clay-lavender'] as cons
 
 const PULL_THRESHOLD = 64;
 const MAX_PULL = 90;
-// Deliberate friction before the refresh even starts — the "spinning key"
-// moment the pull is supposed to earn, not an instant, un-anticipated update.
-const REVEAL_DELAY_MS = 1500;
 
 export function Leaderboard({ rows, myTeamId }: { rows: LeaderboardRow[]; myTeamId: string | null }) {
   const router = useRouter();
@@ -61,14 +58,17 @@ export function Leaderboard({ rows, myTeamId }: { rows: LeaderboardRow[]; myTeam
     setPull(0);
   };
 
-  const runRefresh = async () => {
+  // The key spins for exactly as long as the refresh takes. There used to be
+  // a fixed 1.5s pause here before the request even went out, to make the
+  // gesture feel earned; a delay that exists only to be noticed is the one
+  // kind of slowness nobody thanks you for.
+  const runRefresh = () => {
     setRevealing(true);
     setPull(PULL_THRESHOLD);
-    await new Promise((resolve) => setTimeout(resolve, REVEAL_DELAY_MS));
     startTransition(() => router.refresh());
   };
 
-  const onPointerUp = async () => {
+  const onPointerUp = () => {
     if (startY.current === null) return;
     startY.current = null;
 
@@ -77,7 +77,7 @@ export function Leaderboard({ rows, myTeamId }: { rows: LeaderboardRow[]; myTeam
       return;
     }
 
-    await runRefresh();
+    runRefresh();
   };
 
   return (
@@ -113,7 +113,7 @@ export function Leaderboard({ rows, myTeamId }: { rows: LeaderboardRow[]; myTeam
         className="flex items-center justify-center overflow-hidden text-brand-gold transition-[height]"
         style={{ height: pull }}
       >
-        <motion.svg
+        <m.svg
           width="20"
           height="20"
           viewBox="0 0 24 24"
@@ -125,7 +125,7 @@ export function Leaderboard({ rows, myTeamId }: { rows: LeaderboardRow[]; myTeam
         >
           <circle cx="8" cy="8" r="4" />
           <path d="M11 11 20 20M15.5 15.5 18 13M18.5 18.5 21 16" strokeLinecap="round" />
-        </motion.svg>
+        </m.svg>
       </div>
 
       {rows.length === 0 ? (
@@ -137,7 +137,7 @@ export function Leaderboard({ rows, myTeamId }: { rows: LeaderboardRow[]; myTeam
           {rows.map((row) => {
             const isMine = row.teamId === myTeamId;
             return (
-              <motion.li key={row.teamId} layout transition={{ type: 'spring', stiffness: 350, damping: 32 }}>
+              <m.li key={row.teamId} layout transition={{ type: 'spring', stiffness: 350, damping: 32 }}>
                 <Link
                   href={`/teams/${row.teamId}`}
                   className={cn(
@@ -184,7 +184,7 @@ export function Leaderboard({ rows, myTeamId }: { rows: LeaderboardRow[]; myTeam
                     </span>
                   </span>
                 </Link>
-              </motion.li>
+              </m.li>
             );
           })}
         </ul>
