@@ -1,4 +1,5 @@
 import { z } from 'zod';
+import { parseWebhookUrl } from './chat-webhook';
 import { MAX_LOCK_OFFSET_MINUTES } from './cycles';
 
 // Schemas shared between server mutations and client forms. Kept in its own
@@ -95,6 +96,23 @@ export const updateLeagueSchema = z.object({
       .int('Lock offset must be a whole number of minutes')
       .min(0, 'Rosters cannot lock after the episode airs')
       .max(MAX_LOCK_OFFSET_MINUTES, 'Rosters cannot lock more than 24 hours before airtime')
+      .nullable(),
+  ),
+  /**
+   * A Discord or Slack incoming-webhook URL, or null to disconnect. An empty
+   * field means "none" — the same `preprocess` shape as the lock offset, for
+   * the same reason. Only URLs on the two services' own webhook hosts are
+   * accepted: this is an address the server will post league data to.
+   */
+  chatWebhookUrl: z.preprocess(
+    (value) => (value == null || (typeof value === 'string' && value.trim() === '') ? null : value),
+    z
+      .string()
+      .trim()
+      .max(400, 'That webhook URL is too long')
+      .refine((url) => parseWebhookUrl(url) !== null, {
+        message: 'Paste a Discord or Slack incoming-webhook URL (discord.com/api/webhooks/… or hooks.slack.com/services/…)',
+      })
       .nullable(),
   ),
 });

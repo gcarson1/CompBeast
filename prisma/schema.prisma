@@ -63,8 +63,31 @@ model User {
   notifications       Notification[]           @relation("NotificationRecipient")
   notificationsCaused Notification[]           @relation("NotificationActor")
   careerRecords       CareerRecord[]
+  pushSubscriptions   PushSubscription[]
 
   @@map("users")
+}
+
+/// One browser's Web Push subscription. A person can hold several (phone,
+/// laptop); each is its own row keyed by the push service's endpoint. Rows
+/// are removed when the push service answers 404/410 — the browser has
+/// unsubscribed or the app was uninstalled — so the table describes devices
+/// that can still be reached, not devices that once could.
+model PushSubscription {
+  id         String   @id @default(cuid())
+  userId     String
+  user       User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  /// The push service URL; unique per browser installation.
+  endpoint   String   @unique
+  /// Client public key and auth secret, as the browser hands them over.
+  p256dh     String
+  auth       String
+  userAgent  String?
+  createdAt  DateTime @default(now())
+  lastSeenAt DateTime @default(now())
+
+  @@index([userId])
+  @@map("push_subscriptions")
 }
 
 // ---------------------------------------------------------------------------
@@ -341,6 +364,10 @@ model League {
   /// Minutes before Cycle.airsAt that this league's rosters hard-lock. Null
   /// falls back to the season-wide Cycle.locksAt.
   lockOffsetMinutes Int?
+  /// A Discord or Slack incoming-webhook URL. When set, the league's draft
+  /// and each week's standings are posted to the chat the league already
+  /// lives in. Commissioner-managed; validated in `src/lib/chat-webhook.ts`.
+  chatWebhookUrl    String?
   createdAt         DateTime       @default(now())
   updatedAt         DateTime       @updatedAt
 

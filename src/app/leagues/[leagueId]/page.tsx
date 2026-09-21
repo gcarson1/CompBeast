@@ -10,6 +10,7 @@ import { LeagueFeed } from '@/components/LeagueFeed';
 import { getCurrentUser } from '@/lib/auth';
 import { describeLockState } from '@/lib/cycles';
 import { atRiskMessage, isAtRiskCode, nearMissMessage } from '@/lib/engagement';
+import { describeWebhook } from '@/lib/chat-webhook';
 import { relativeTime } from '@/lib/ui';
 import { getInvitableFriends } from '@/server/social';
 import {
@@ -228,6 +229,10 @@ export default async function LeaguePage({ params }: { params: { leagueId: strin
             <Row label="Scoring" value={league.scoringRuleset.name} href="/rules" />
             <Row label="Draft" value={`${league.draftType.toLowerCase()} · ${league.rosterSize} rounds`} />
             <Row label="Visibility" value={league.isPublic ? 'Public' : 'Private'} />
+            {/* The service name only, never the URL: the URL is the credential. */}
+            {describeWebhook(league.chatWebhookUrl) && (
+              <Row label="Chat" value={`${describeWebhook(league.chatWebhookUrl)} connected`} />
+            )}
           </div>
           {league.scoringRuleset.description && (
             <p className="mt-2 px-1 text-2xs leading-relaxed text-muted">

@@ -2,6 +2,7 @@
 
 import { revalidatePath } from 'next/cache';
 import { requirePlatformAdmin } from '../lib/auth';
+import { prisma } from '../lib/db';
 import {
   approveCandidate,
   bootstrapSeasonFromSource,
@@ -9,6 +10,7 @@ import {
   rejectCandidate,
 } from '../lib/ingestion/pipeline';
 import { IngestionError } from '../lib/ingestion/types';
+import { announceSeasonResults } from './league-chat';
 
 export type IngestionActionState = { error?: string; message?: string };
 
@@ -68,9 +70,22 @@ export async function runSyncAction(
       return { error: 'Sync parsed no weeks — the source layout may have changed.' };
     }
 
+    // New results reached leaderboards, so the leagues' chats hear about it —
+    // the same step the scheduled sync takes.
+    let chats = 0;
+    if (result.autoPublished > 0) {
+      const season = await prisma.season.findUnique({
+        where: { slug: String(formData.get('seasonSlug') ?? '') },
+        select: { id: true },
+      });
+      if (season) chats = await announceSeasonResults(season.id);
+    }
+
     revalidatePath('/admin/ingestion');
     return {
-      message: `${result.candidatesNew} new · ${result.autoPublished} published · ${result.pendingReview} to review`,
+      message: `${result.candidatesNew} new · ${result.autoPublished} published · ${result.pendingReview} to review${
+        chats > 0 ? ` · posted to ${chats} ${chats === 1 ? 'chat' : 'chats'}` : ''
+      }`,
     };
   } catch (error) {
     return { error: messageFor(error) };

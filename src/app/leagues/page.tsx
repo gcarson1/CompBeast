@@ -32,6 +32,9 @@ export const metadata: Metadata = {
     title: `${SITE_NAME}: Free Fantasy Leagues for Big Brother`,
     description: SITE_DESCRIPTION,
     url: absoluteUrl(HOME_PATH),
+    // Named explicitly: a page-level `openGraph` replaces the inherited one
+    // wholesale, which would drop the site card app/opengraph-image.tsx draws.
+    images: [{ url: absoluteUrl('/opengraph-image'), width: 1200, height: 630 }],
   },
 };
 

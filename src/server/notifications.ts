@@ -1,7 +1,8 @@
 import type { NotificationType, Prisma } from '@prisma/client';
-import { waitUntil } from '@vercel/functions';
 import { prisma } from '../lib/db';
+import { background } from './background';
 import { deliverNotificationEmails } from './notification-email';
+import { deliverNotificationPush } from './notification-push';
 
 /**
  * Notification delivery.
@@ -61,31 +62,12 @@ export async function notify(inputs: NotifyInput | NotifyInput[]): Promise<numbe
     });
 
     background(deliverNotificationEmails(created));
+    background(deliverNotificationPush(created));
     return created.length;
   } catch (error) {
     // Deliberately not rethrown. See the module comment.
     console.error('[notify] could not write notifications', error);
     return 0;
-  }
-}
-
-/**
- * Runs work the caller must not wait for.
- *
- * Email lives downstream of things people are staring at — a draft pick, a
- * league invite — and an inbox is not worth a second of somebody's turn.
- * `waitUntil` hands the promise to the platform, which keeps the function
- * alive until it settles *after* the response has gone out.
- *
- * Off Vercel there is no such platform, so the promise is simply left running:
- * locally the process outlives it anyway, and in tests it is awaited directly
- * through `deliverNotificationEmails`.
- */
-function background(work: Promise<unknown>): void {
-  try {
-    waitUntil(work);
-  } catch {
-    void work;
   }
 }
 

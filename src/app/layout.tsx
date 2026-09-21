@@ -3,11 +3,16 @@ import { Anton, Archivo } from 'next/font/google';
 import { ClerkProvider } from '@clerk/nextjs';
 import { Toaster } from 'sonner';
 import './globals.css';
+import { Analytics } from '@vercel/analytics/next';
+import { SpeedInsights } from '@vercel/speed-insights/next';
 import { AppHeader } from '@/components/AppHeader';
 import { BottomNav } from '@/components/BottomNav';
+import { ErrorReporting } from '@/components/ErrorReporting';
 import { JsonLd } from '@/components/JsonLd';
+import { ServiceWorkerRegistrar } from '@/components/ServiceWorkerRegistrar';
 import { getCurrentUser } from '@/lib/auth';
-import { SITE_DESCRIPTION, SITE_NAME, siteGraph } from '@/lib/seo';
+import { clerkAppearance, clerkLocalization } from '@/lib/clerk-appearance';
+import { HOME_PATH, SITE_DESCRIPTION, SITE_NAME, siteGraph } from '@/lib/seo';
 import { appBaseUrl } from '@/lib/site';
 import { getUnreadNotificationCount } from '@/server/notifications';
 
@@ -60,7 +65,11 @@ export const metadata: Metadata = {
   description: SITE_DESCRIPTION,
   applicationName: SITE_NAME,
   openGraph: { siteName: SITE_NAME, type: 'website', locale: 'en_US' },
-  twitter: { card: 'summary' },
+  twitter: { card: 'summary_large_image' },
+  // Home-screen install. The manifest (src/app/manifest.ts) carries the rest;
+  // iOS reads these two directly.
+  icons: { apple: '/icons/apple-touch-icon.png' },
+  appleWebApp: { capable: true, title: SITE_NAME, statusBarStyle: 'black-translucent' },
 };
 
 export const viewport: Viewport = {
@@ -79,7 +88,18 @@ export default async function RootLayout({ children }: { children: React.ReactNo
   const unreadCount = user ? await getUnreadNotificationCount(user.id).catch(() => 0) : 0;
 
   return (
-    <ClerkProvider>
+    // Sign-in and sign-up are pages on this domain (src/app/sign-in, sign-up),
+    // not Clerk's hosted portal; the middleware sends people to the same
+    // paths. The fallbacks only apply when nothing else says where to go —
+    // a `redirect_url` from the middleware or a form's forceRedirectUrl wins.
+    <ClerkProvider
+      appearance={clerkAppearance}
+      localization={clerkLocalization}
+      signInUrl="/sign-in"
+      signUpUrl="/sign-up"
+      signInFallbackRedirectUrl={HOME_PATH}
+      signUpFallbackRedirectUrl={HOME_PATH}
+    >
       <html lang="en" className={`${displayFont.variable} ${textFont.variable}`}>
         <head>
           {/* The Organization and WebSite nodes every page shares. In the
@@ -115,6 +135,14 @@ export default async function RootLayout({ children }: { children: React.ReactNo
             {user && <BottomNav />}
           </div>
           <Toaster theme="dark" position="top-center" richColors closeButton />
+          <ServiceWorkerRegistrar />
+          <ErrorReporting />
+          {/* Vercel's field analytics and Core Web Vitals. Both are inert until
+              Web Analytics and Speed Insights are switched on for the project
+              in the Vercel dashboard; each is one small script, loaded after
+              the page is interactive. */}
+          <Analytics />
+          <SpeedInsights />
         </body>
       </html>
     </ClerkProvider>

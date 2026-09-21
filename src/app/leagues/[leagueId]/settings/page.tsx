@@ -25,6 +25,7 @@ export default async function LeagueSettingsPage({
       maxTeams: true,
       isPublic: true,
       lockOffsetMinutes: true,
+      chatWebhookUrl: true,
       draftStatus: true,
       season: { select: { showId: true, name: true, show: { select: { name: true } } } },
       _count: { select: { teams: true, members: true } },
@@ -63,6 +64,7 @@ export default async function LeagueSettingsPage({
           maxTeams: league.maxTeams,
           isPublic: league.isPublic,
           lockOffsetMinutes: league.lockOffsetMinutes,
+          chatWebhookUrl: league.chatWebhookUrl,
           draftStarted: league.draftStatus !== 'NOT_STARTED',
           teamCount: league._count.teams,
         }}

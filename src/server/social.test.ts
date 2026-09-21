@@ -409,6 +409,7 @@ describe.skipIf(!dbReady)('league settings', () => {
       maxTeams: 4,
       isPublic: false,
       lockOffsetMinutes: null,
+      chatWebhookUrl: null,
     });
 
     const after = await prisma.league.findUniqueOrThrow({
@@ -434,6 +435,7 @@ describe.skipIf(!dbReady)('league settings', () => {
       maxTeams: 4,
       isPublic: false,
       lockOffsetMinutes: null,
+      chatWebhookUrl: null,
     });
 
     const notifications = await getNotifications(other);
@@ -454,6 +456,7 @@ describe.skipIf(!dbReady)('league settings', () => {
         maxTeams: 4,
         isPublic: false,
         lockOffsetMinutes: null,
+        chatWebhookUrl: null,
       }),
     ).rejects.toThrow();
   });
@@ -476,6 +479,7 @@ describe.skipIf(!dbReady)('league settings', () => {
         maxTeams: 2,
         isPublic: false,
         lockOffsetMinutes: null,
+        chatWebhookUrl: null,
       }),
     ).rejects.toMatchObject({ code: 'MAX_TEAMS_BELOW_CURRENT' });
   });
@@ -495,6 +499,7 @@ describe.skipIf(!dbReady)('league settings', () => {
         maxTeams: 4,
         isPublic: false,
         lockOffsetMinutes: null,
+        chatWebhookUrl: null,
       }),
     ).rejects.toMatchObject({ code: 'ROSTER_SIZE_LOCKED' });
   });
@@ -515,6 +520,7 @@ describe.skipIf(!dbReady)('league settings', () => {
         maxTeams: 4,
         isPublic: false,
         lockOffsetMinutes: null,
+        chatWebhookUrl: null,
       }),
     ).rejects.toMatchObject({ code: 'RULESET_LOCKED' });
   });
@@ -532,6 +538,7 @@ describe.skipIf(!dbReady)('roster lock offset', () => {
       maxTeams: 4,
       isPublic: false,
       lockOffsetMinutes: 60,
+      chatWebhookUrl: null,
     });
     expect(
       (await prisma.league.findUniqueOrThrow({
@@ -548,6 +555,7 @@ describe.skipIf(!dbReady)('roster lock offset', () => {
       maxTeams: 4,
       isPublic: false,
       lockOffsetMinutes: null,
+      chatWebhookUrl: null,
     });
     expect(
       (await prisma.league.findUniqueOrThrow({
@@ -570,6 +578,7 @@ describe.skipIf(!dbReady)('roster lock offset', () => {
       maxTeams: 4,
       isPublic: false,
       lockOffsetMinutes: 0,
+      chatWebhookUrl: null,
     });
 
     const saved = await prisma.league.findUniqueOrThrow({
@@ -593,6 +602,7 @@ describe.skipIf(!dbReady)('roster lock offset', () => {
       maxTeams: 4,
       isPublic: false,
       lockOffsetMinutes: 1440,
+      chatWebhookUrl: null,
     });
 
     const shifted = (await getHomeLeagues(host)).find((l) => l.leagueId === league.id)!;
@@ -624,6 +634,7 @@ describe.skipIf(!dbReady)('roster lock offset', () => {
       maxTeams: 4,
       isPublic: false,
       lockOffsetMinutes: 120,
+      chatWebhookUrl: null,
     });
 
     const notifications = await getNotifications(other);
@@ -644,6 +655,7 @@ describe.skipIf(!dbReady)('roster lock offset', () => {
         maxTeams: 4,
         isPublic: false,
         lockOffsetMinutes: -30,
+        chatWebhookUrl: null,
       }),
     ).rejects.toThrow();
   });

@@ -20,6 +20,8 @@ const PRIVATE_PATHS = [
   '/unsubscribe',
   '/leagues/',
   '/teams/',
+  '/sign-in',
+  '/sign-up',
 ];
 
 /**

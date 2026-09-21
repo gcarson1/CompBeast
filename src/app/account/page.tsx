@@ -5,10 +5,12 @@ import { BadgeShelf } from '@/components/BadgeShelf';
 import { EmailPreferences } from '@/components/EmailPreferences';
 import { FriendsPanel } from '@/components/FriendsPanel';
 import { PointHistoryChart } from '@/components/PointHistoryChart';
+import { PushToggle } from '@/components/PushToggle';
 import { getCurrentUser } from '@/lib/auth';
 import { BADGES, earnedBadges, highestBadge } from '@/lib/badges';
 import { formatPoints, pointsTone } from '@/lib/ui';
 import { getEmailPreferences } from '@/server/notification-email';
+import { pushPublicKey } from '@/server/notification-push';
 import { getAccountOverview, type SeasonHistoryRow } from '@/server/queries';
 import { getFriendOverview } from '@/server/social';
 
@@ -38,6 +40,7 @@ export default async function AccountPage() {
   );
   const past = ordered.filter((row) => row.seasonStatus === 'COMPLETED');
   const badge = highestBadge(account.totalPoints);
+  const vapidKey = pushPublicKey();
 
   return (
     <div className="pt-2">
@@ -162,6 +165,21 @@ export default async function AccountPage() {
         </p>
         <FriendsPanel overview={friends} />
       </section>
+
+      {/* Hidden entirely when the deployment has no VAPID keys — like the
+          email switches, a control that governs nothing is worse than none. */}
+      {vapidKey && (
+        <section className="mt-10" aria-labelledby="push-heading">
+          <h2 id="push-heading" className="mb-1 text-lg font-semibold">
+            Push alerts
+          </h2>
+          <p className="mb-4 max-w-measure text-2xs leading-relaxed text-muted">
+            The same alerts as the bell, delivered to this device even when Comp Beast is closed.
+            Turn it on separately on each phone or computer you use.
+          </p>
+          <PushToggle publicKey={vapidKey} />
+        </section>
+      )}
 
       {/* id="email" is the anchor every email footer links back to. */}
       <section className="mt-10 scroll-mt-6" id="email" aria-labelledby="email-heading">

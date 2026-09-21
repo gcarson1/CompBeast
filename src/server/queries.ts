@@ -49,6 +49,7 @@ export async function getLeagueOverview(leagueId: string) {
       draftStatus: true,
       isPublic: true,
       lockOffsetMinutes: true,
+      chatWebhookUrl: true,
       commissionerId: true,
       season: {
         select: {
@@ -855,20 +856,73 @@ export async function getAccountOverview(userId: string): Promise<AccountOvervie
   };
 }
 
+export interface LeagueInvite {
+  id: string;
+  name: string;
+  commissionerName: string | null;
+  showName: string;
+  seasonName: string;
+  seasonStatus: 'UPCOMING' | 'ACTIVE' | 'COMPLETED';
+  draftStatus: 'NOT_STARTED' | 'IN_PROGRESS' | 'COMPLETED';
+  rosterSize: number;
+  teamCount: number;
+  maxTeams: number;
+}
+
+/**
+ * What an invite code unlocks, for the join page to show before anyone
+ * signs in. The code is the invitation: whoever holds it may join, so the
+ * league's name, season and seat count are theirs to see. Nothing personal
+ * about the members is here — the commissioner's display name, and only so
+ * the page can say who invited them.
+ */
+export async function getLeagueInvite(inviteCode: string): Promise<LeagueInvite | null> {
+  const league = await prisma.league.findUnique({
+    where: { inviteCode },
+    select: {
+      id: true,
+      name: true,
+      rosterSize: true,
+      maxTeams: true,
+      draftStatus: true,
+      commissioner: { select: { name: true, handle: true } },
+      season: { select: { name: true, status: true, show: { select: { name: true } } } },
+      _count: { select: { teams: true } },
+    },
+  });
+  if (!league) return null;
+  return {
+    id: league.id,
+    name: league.name,
+    commissionerName: league.commissioner.name ?? league.commissioner.handle ?? null,
+    showName: league.season.show.name,
+    seasonName: league.season.name,
+    seasonStatus: league.season.status,
+    draftStatus: league.draftStatus,
+    rosterSize: league.rosterSize,
+    teamCount: league._count.teams,
+    maxTeams: league.maxTeams,
+  };
+}
+
 export interface SeasonHeadline {
   id: string;
   contestantName: string;
+  /** The headshot for the ticker card; null when the source has none. */
+  contestantPhotoUrl: string | null;
   eventLabel: string;
   points: number;
   occurredAt: Date;
 }
 
 /**
- * The most recent real scored events for a season, for a "what just
- * happened" ticker. Deliberately real data rather than fabricated copy —
- * whatever the ingestion pipeline or an admin has actually recorded.
+ * The most recent real scored events for a season, newest first, for the
+ * "what just happened" ticker. Deliberately real data rather than
+ * fabricated copy — whatever the ingestion pipeline or an admin has
+ * actually recorded. Twelve by default: the ticker is a marquee now, and a
+ * loop of eight cards came round too often to feel like a feed.
  */
-export async function getRecentHeadlines(seasonId: string, limit = 8): Promise<SeasonHeadline[]> {
+export async function getRecentHeadlines(seasonId: string, limit = 12): Promise<SeasonHeadline[]> {
   const events = await prisma.scoredEvent.findMany({
     where: { isVoided: false, contestant: { seasonId } },
     orderBy: { occurredAt: 'desc' },
@@ -877,7 +931,7 @@ export async function getRecentHeadlines(seasonId: string, limit = 8): Promise<S
       id: true,
       pointsAwarded: true,
       occurredAt: true,
-      contestant: { select: { name: true } },
+      contestant: { select: { name: true, photoUrl: true } },
       eventDefinition: { select: { label: true } },
     },
   });
@@ -885,6 +939,7 @@ export async function getRecentHeadlines(seasonId: string, limit = 8): Promise<S
   return events.map((e) => ({
     id: e.id,
     contestantName: e.contestant.name,
+    contestantPhotoUrl: e.contestant.photoUrl,
     eventLabel: e.eventDefinition.label,
     points: Number(e.pointsAwarded),
     occurredAt: e.occurredAt,

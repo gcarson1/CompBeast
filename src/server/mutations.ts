@@ -13,6 +13,7 @@ import {
 import { recalculateLeague, recalculateLeaguesForCycle } from '../lib/scoring/repository';
 import { createLeagueSchema, updateLeagueSchema } from '../lib/validation';
 import { DomainError } from './errors';
+import { announceDraftPick, announceDraftStarted } from './league-chat';
 import { notify } from './notifications';
 
 export { createLeagueSchema, updateLeagueSchema };
@@ -253,6 +254,7 @@ export async function updateLeague(
       draftStatus: true,
       scoringRulesetId: true,
       lockOffsetMinutes: true,
+      chatWebhookUrl: true,
       season: { select: { showId: true } },
       _count: { select: { teams: true } },
     },
@@ -302,6 +304,7 @@ export async function updateLeague(
       maxTeams: data.maxTeams,
       isPublic: data.isPublic,
       lockOffsetMinutes: data.lockOffsetMinutes,
+      chatWebhookUrl: data.chatWebhookUrl,
     },
     select: { id: true, name: true },
   });
@@ -469,6 +472,7 @@ export async function startDraft(leagueId: string, userId: string) {
       draftStatus: true,
       rosterSize: true,
       seasonId: true,
+      chatWebhookUrl: true,
       _count: { select: { teams: true } },
     },
   });
@@ -523,6 +527,23 @@ export async function startDraft(leagueId: string, userId: string) {
     })),
   );
 
+  if (league.chatWebhookUrl) {
+    // Whoever holds the first slot — the same ordering the board uses.
+    const first = await prisma.team.findFirst({
+      where: { leagueId },
+      orderBy: DRAFT_TEAM_ORDER,
+      select: { name: true },
+    });
+    announceDraftStarted({
+      id: leagueId,
+      name: updated.name,
+      chatWebhookUrl: league.chatWebhookUrl,
+      rosterSize: league.rosterSize,
+      teamCount: league._count.teams,
+      firstTeam: first?.name ?? null,
+    });
+  }
+
   return updated;
 }
 
@@ -551,6 +572,7 @@ export async function makeDraftPick(input: {
       rosterSize: true,
       draftType: true,
       draftStatus: true,
+      chatWebhookUrl: true,
     },
   });
   if (league.draftStatus !== 'IN_PROGRESS') {
@@ -634,9 +656,12 @@ export async function makeDraftPick(input: {
   await announceDraftProgress({
     leagueId,
     leagueName: league.name,
+    chatWebhookUrl: league.chatWebhookUrl,
     order,
     slot: validation.slot,
     actorId: userId,
+    teamId,
+    contestantId,
   });
 
   return validation.slot;
@@ -656,14 +681,40 @@ export async function makeDraftPick(input: {
 async function announceDraftProgress(input: {
   leagueId: string;
   leagueName: string;
+  chatWebhookUrl: string | null;
   order: DraftSlot[];
   slot: DraftSlot;
   actorId: string;
+  teamId: string;
+  contestantId: string;
 }) {
   const { leagueId, leagueName, order, slot, actorId } = input;
 
   // `slot.pickNumber` is 1-indexed, so this index is the pick *after* it.
   const next = order[slot.pickNumber];
+
+  if (input.chatWebhookUrl) {
+    // Names only when there is a chat to tell: two small reads, skipped for
+    // the many leagues that never connect one.
+    const [picker, contestant, upNext] = await Promise.all([
+      prisma.team.findUnique({ where: { id: input.teamId }, select: { name: true } }),
+      prisma.contestant.findUnique({ where: { id: input.contestantId }, select: { name: true } }),
+      next ? prisma.team.findUnique({ where: { id: next.teamId }, select: { name: true } }) : null,
+    ]);
+    if (picker && contestant) {
+      announceDraftPick({
+        leagueId,
+        leagueName,
+        chatWebhookUrl: input.chatWebhookUrl,
+        teamName: picker.name,
+        contestantName: contestant.name,
+        round: slot.round,
+        pickNumber: slot.pickNumber,
+        totalPicks: order.length,
+        nextTeam: upNext?.name ?? null,
+      });
+    }
+  }
 
   if (!next) {
     const members = await prisma.leagueMember.findMany({

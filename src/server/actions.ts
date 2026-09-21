@@ -153,6 +153,7 @@ export async function updateLeagueAction(
       maxTeams: formData.get('maxTeams'),
       isPublic: formData.get('isPublic') === 'on',
       lockOffsetMinutes: formData.get('lockOffsetMinutes'),
+      chatWebhookUrl: formData.get('chatWebhookUrl'),
     });
     await updateLeague(leagueId, user.id, parsed);
   } catch (error) {

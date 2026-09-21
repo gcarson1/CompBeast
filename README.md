@@ -183,6 +183,16 @@ first populated — contestant photos, most recently. It matters because the
 alternative is pointing a local shell at production's own `DATABASE_URL`, and
 handling a production credential to fill in one column is a bad trade.
 
+### Scheduled
+
+`vercel.json` runs `/api/cron/sync` once a day at 06:00 UTC — after the last West Coast
+airing has been written up, and within the daily limit every Vercel plan allows. It does
+what the Sync button does for every `ACTIVE` season whose cast is linked to a source,
+recording under a platform admin's account. Vercel signs the request with
+`Authorization: Bearer $CRON_SECRET`; without that variable the route refuses everything,
+so the schedule is inert until the secret is set. Both the button and the cron post
+standings to each league's chat afterwards (below) when new results reached a leaderboard.
+
 ### Three layers
 
 ```
@@ -303,6 +313,21 @@ redirect for someone scanning without an account.
 The QR encoder is a lazily-imported chunk fetched on first open, since most league page
 views never open it.
 
+### Signing in, and joining from a QR code
+
+Sign-in and sign-up are pages on this domain (`/sign-in`, `/sign-up`, Clerk's components
+in the app's own theme from `src/lib/clerk-appearance.ts`), and the middleware sends
+signed-out visitors there rather than to Clerk's hosted portal on another domain. Which
+providers appear — Google, Apple, passkeys, email — is decided in the Clerk dashboard
+under SSO connections; the components render every enabled one, social buttons first.
+
+`/leagues/join` is public on purpose. A new member who scans a QR code sees the league
+they were invited to (name, season, seats — `getLeagueInvite`, keyed by the code, which
+*is* the invitation) and creates their account right there with `<SignUp routing="hash">`,
+then returns to the same URL signed in, code intact, to name their team. Joining itself is
+still a server action that requires a session. The page also carries Open Graph metadata,
+so a join link pasted into a chat shows an invite card (`/api/og/join`).
+
 ## Friends, invites and alerts
 
 `Friendship` is one directed row — a request genuinely has a sender and a
@@ -338,6 +363,26 @@ The header badge is server-rendered for first paint, then polls
 marks it read via a `keepalive` fetch rather than a server action, because the
 click navigates at the same time and a server action's POST races that
 navigation.
+
+### Push
+
+Web Push is the third channel. `notify()` hands every batch to
+`deliverNotificationPush` alongside email; each device a member has switched on
+(`PushSubscription`, one row per browser, keyed by the push service's endpoint) gets the
+same title, body and link the bell shows, with `LEAGUE_DRAFT_PICK_DUE` marked high
+urgency so it clears a phone's battery saver. A 404 or 410 from the push service deletes
+the row — that browser is gone. The service worker (`public/sw.js`) does push and
+nothing else; every page here is rendered per request, and a cache in front of that
+would show people standings that have since moved.
+
+Unconfigured is a normal state: without `VAPID_PUBLIC_KEY` / `VAPID_PRIVATE_KEY` (one
+pair per deployment, `npx web-push generate-vapid-keys`; `VAPID_SUBJECT` is a `mailto:`
+or `https:` contact) nothing is sent and the switch on `/account` is hidden. The public
+key reaches the browser from the server at request time, never through a `NEXT_PUBLIC_`
+variable, so setting the keys needs no rebuild. On iPhone and iPad push only works once
+the app is on the home screen, which the switch explains; `src/app/manifest.ts` and the
+icons in `public/icons` (rendered from the logo mark by `scripts/make-icons.ts`) are what
+make it installable.
 
 ### Email
 
@@ -458,6 +503,15 @@ later cannot be missed. Members are notified **before** the delete, because
 afterwards there is no membership list left to read. Confirmation is typing the
 league name, not a dialog that gets dismissed by reflex.
 
+A league can be connected to the chat it already lives in. `chatWebhookUrl` takes a
+Discord or Slack *incoming webhook* URL — only URLs on those two services' own webhook
+hosts are accepted (`src/lib/chat-webhook.ts`), because it is an address this server will
+post league data to — and from then on the draft (start, every pick, completion) and each
+week's standings post to that channel (`src/server/league-chat.ts`). Posting follows the
+notification rules: after the primary write, in the background, never able to fail the
+thing it reports. The league page shows the service name to members, never the URL: the
+URL is the credential.
+
 **The points survive the league.** In the same transaction as the delete,
 `deleteLeague` writes one `CareerRecord` per team that had scored anything:
 league, team, season and show names, the final total and rank, whether the
@@ -567,6 +621,27 @@ Clerk user ids are per instance. `User.authId` is re-keyed by verified email in
 `src/lib/auth.ts` when the id no longer matches, so switching instances costs a member
 nothing but signing in again with the same email; without that, the unique index on `email`
 would fail every returning member's first sign-in. Only a verified address may adopt a row.
+
+## Observability
+
+`@vercel/analytics` and `@vercel/speed-insights` are mounted in the root layout and are
+inert until Web Analytics and Speed Insights are switched on for the project in the Vercel
+dashboard; Speed Insights is the field Core Web Vitals data the synthetic Lighthouse runs
+approximate. Sentry (`@sentry/nextjs`) is wired for errors only — no tracing, no replay —
+and is disabled until `NEXT_PUBLIC_SENTRY_DSN` is set. On the server it loads through
+`src/instrumentation.ts` (Node runtime only; the edge middleware does not carry it) and
+reports through `onRequestError`. In the browser it is deliberately *not* bundled into the
+entry: `ErrorReporting.tsx` imports the SDK once the page is idle and buffers the two global
+error events until it arrives, so the ~30 KB it costs never sits on the first paint, and
+both error boundaries report through the same late import.
+
+## Open Graph
+
+Every public page has a share card drawn by `src/lib/og/card.tsx` — one layout, the two
+brand faces read from `src/lib/og/fonts` because satori cannot use the web fonts — with
+the page routes deciding the words: the site default, `/seasons/[slug]`,
+`/players/[id]`, and the invite card at `/api/og/join?code=`. The invite card never shows
+the code; a screenshot of it should not be an invitation.
 
 ## Tests
 

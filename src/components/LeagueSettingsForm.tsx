@@ -18,6 +18,8 @@ export interface LeagueSettingsValues {
   isPublic: boolean;
   /** Null means "use the season's own deadline". */
   lockOffsetMinutes: number | null;
+  /** Discord or Slack incoming-webhook URL; null when the league has no chat connected. */
+  chatWebhookUrl: string | null;
   /** Drives which fields are frozen; the server enforces the same rule. */
   draftStarted: boolean;
   teamCount: number;
@@ -186,6 +188,29 @@ export function LeagueSettingsForm({
           </span>
         </span>
       </label>
+
+      <div>
+        <label className="label" htmlFor="chatWebhookUrl">
+          League chat (Discord or Slack)
+        </label>
+        <input
+          id="chatWebhookUrl"
+          name="chatWebhookUrl"
+          type="url"
+          inputMode="url"
+          autoComplete="off"
+          spellCheck={false}
+          className="field"
+          placeholder="https://discord.com/api/webhooks/…"
+          defaultValue={values.chatWebhookUrl ?? ''}
+        />
+        <p className="mt-1.5 text-2xs leading-relaxed text-muted">
+          Paste an incoming-webhook URL and the draft — every pick — and each week&apos;s standings
+          post to that channel. In Discord: channel settings → Integrations → Webhooks → New
+          Webhook → Copy URL. In Slack: create an Incoming Webhook app for the channel. Clear the
+          field to disconnect.
+        </p>
+      </div>
 
       {state.error && <p className="text-xs text-danger-deep">{state.error}</p>}
       <SaveButton />

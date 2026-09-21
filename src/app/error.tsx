@@ -1,6 +1,7 @@
 'use client';
 
 import { useEffect } from 'react';
+import { reportError } from '@/components/ErrorReporting';
 
 /**
  * Route-level error boundary.
@@ -22,6 +23,8 @@ export default function Error({
 }) {
   useEffect(() => {
     console.error(error);
+    // No-op until a DSN is configured; see ErrorReporting.tsx.
+    reportError(error);
   }, [error]);
 
   return (
