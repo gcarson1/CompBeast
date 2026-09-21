@@ -136,7 +136,7 @@ function Switch({
           // static position — centred, because buttons centre their content —
           // so both translations landed it at the right-hand end and an off
           // switch was indistinguishable from an on one.
-          'absolute left-0 top-1 h-4 w-4 rounded-pill transition-transform duration-200 motion-reduce:transition-none',
+          'switch-knob absolute left-0 top-1 h-4 w-4 rounded-pill shadow-[0_1px_2px_rgba(0,0,0,0.35)]',
           // Gold is a light fill; white on it is 2:1. Same rule as every other
           // gold surface in the app (see the `on-gold` token).
           enabled ? 'translate-x-6 bg-on-gold' : 'translate-x-1 bg-ink',

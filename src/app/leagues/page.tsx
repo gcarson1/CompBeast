@@ -1,7 +1,10 @@
 import type { Metadata } from 'next';
 import Link from 'next/link';
 import { Suspense } from 'react';
+import { BeastDoodle } from '@/components/doodles/BeastDoodle';
+import { Doodle } from '@/components/doodles/Doodle';
 import { LeagueRail } from '@/components/LeagueRail';
+import { Reveal } from '@/components/motion/Reveal';
 import { LIVE_HASHTAG, LiveSection, type FeaturedCast } from '@/components/LiveSection';
 import { getSocialBuzz } from '@/lib/social-feed';
 import { SignedOutLanding, type LandingSeason } from '@/components/SignedOutLanding';
@@ -116,7 +119,7 @@ export default async function HomePage() {
   return (
     <div className="pt-2">
       <div className="mb-3 flex items-center justify-between gap-3">
-        <h1 className="text-4xl font-semibold tracking-tight">Leagues</h1>
+        <h1 className="headline text-4xl">Leagues</h1>
         <div className="flex shrink-0 gap-2">
           <Link href="/leagues/join" prefetch={false} className="btn-ghost btn-sm">
             Join
@@ -131,7 +134,9 @@ export default async function HomePage() {
         <HomeRail userId={user.id} />
       </Suspense>
 
-      <div className="mt-10">{live}</div>
+      {/* Below the fold on a phone, so it rises in as it is reached; on a
+          tall screen it is simply there. */}
+      <Reveal className="mt-10">{live}</Reveal>
     </div>
   );
 }
@@ -178,18 +183,18 @@ function LiveSkeleton() {
           <div className="h-7 w-24 animate-pulse rounded-pill bg-surface" />
           <div className="h-4 w-28 animate-pulse rounded-pill bg-surface/70" />
         </div>
-        <div className="flex gap-4 overflow-hidden">
-          {[0, 1, 2, 3, 4, 5].map((i) => (
-            <div key={i} className="flex w-16 shrink-0 flex-col items-center gap-1.5 py-1">
-              <div className="h-14 w-14 animate-pulse rounded-full bg-surface" />
-              <div className="h-3 w-10 animate-pulse rounded-pill bg-surface/70" />
+        <div className="flex gap-4 overflow-hidden pt-2">
+          {[0, 1, 2].map((i) => (
+            <div key={i} className="card flex w-64 shrink-0 items-start gap-3 p-3">
+              <div className="h-11 w-11 shrink-0 animate-pulse rounded-full bg-canvas" />
+              <div className="min-w-0 flex-1 space-y-2 py-0.5">
+                <div className="h-3.5 w-2/3 animate-pulse rounded-pill bg-canvas" />
+                <div className="h-3 w-5/6 animate-pulse rounded-pill bg-canvas/70" />
+                <div className="h-3 w-1/3 animate-pulse rounded-pill bg-canvas/70" />
+              </div>
             </div>
           ))}
         </div>
-      </div>
-      <div className="card p-4">
-        <div className="h-3 w-24 animate-pulse rounded-pill bg-canvas" />
-        <div className="mt-3 h-4 w-3/4 animate-pulse rounded-pill bg-canvas" />
       </div>
       <div className="divide-y divide-hairline border-y border-hairline">
         {[0, 1, 2, 3].map((i) => (
@@ -223,17 +228,31 @@ function RailSkeleton() {
 
 function EmptyLeagues() {
   return (
-    <div className="rounded-card border border-dashed border-brand-gold-deep/50 bg-brand-gold-soft/30 p-5">
-      <h2 className="text-lg font-semibold">You&apos;re not in a league yet</h2>
-      <p className="mt-1 text-xs leading-relaxed text-muted">
-        Start one for any season that is still open, or join a friend&apos;s with their invite
-        code — they can show you a QR code to scan instead.
-      </p>
-      <div className="mt-4 flex gap-2">
-        <Link href="/leagues/join" prefetch={false} className="btn-ghost bg-surface">
+    <div className="card-pop-gold relative mt-6 overflow-visible p-5">
+      {/* The mascot leans in from the corner, half off the tile. Only the
+          copy makes room for it; the buttons get the full width. */}
+      <BeastDoodle className="absolute -right-3 -top-5 h-24 w-24 rotate-6" />
+      <Doodle kind="tally" tone="paper" className="absolute right-24 top-4 h-7 w-7 -rotate-6" />
+      <div className="pr-20">
+        <h2 className="headline text-2xl">You&apos;re not in a league yet</h2>
+        <p className="mt-2 max-w-measure text-xs leading-relaxed text-tile-muted">
+          Start one for any season that is still open, or join a friend&apos;s with their invite
+          code — they can show you a QR code to scan instead.
+        </p>
+      </div>
+      <div className="mt-4 flex flex-wrap gap-2">
+        <Link
+          href="/leagues/join"
+          prefetch={false}
+          className="btn border-2 border-pop-gold-ink/20 bg-white/40 text-pop-gold-ink hover:bg-white/60"
+        >
           Join a league
         </Link>
-        <Link href="/leagues/new" prefetch={false} className="btn-primary">
+        <Link
+          href="/leagues/new"
+          prefetch={false}
+          className="btn bg-pop-gold-ink text-brand-gold-deep hover:bg-black"
+        >
           Create
         </Link>
       </div>

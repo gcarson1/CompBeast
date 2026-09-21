@@ -9,6 +9,8 @@ import { AppHeader } from '@/components/AppHeader';
 import { BottomNav } from '@/components/BottomNav';
 import { ErrorReporting } from '@/components/ErrorReporting';
 import { JsonLd } from '@/components/JsonLd';
+import { AmbientShapes } from '@/components/motion/AmbientShapes';
+import { MotionProvider } from '@/components/motion/MotionProvider';
 import { ServiceWorkerRegistrar } from '@/components/ServiceWorkerRegistrar';
 import { getCurrentUser } from '@/lib/auth';
 import { clerkAppearance, clerkLocalization } from '@/lib/clerk-appearance';
@@ -123,14 +125,18 @@ export default async function RootLayout({ children }: { children: React.ReactNo
               unfinished layout. A single soft gold bloom behind the header
               does that without pretending to be a desktop redesign. */}
           <div className="pointer-events-none fixed inset-x-0 top-0 -z-10 h-[420px] bg-[radial-gradient(60%_100%_at_50%_0%,rgba(245,158,11,0.10),transparent_70%)]" />
+          {/* The drifting shapes behind the tiles (see AmbientShapes.tsx). */}
+          <AmbientShapes />
           <div className="flex min-h-dvh flex-col">
             <AppHeader
               isPlatformAdmin={user?.isPlatformAdmin ?? false}
               signedIn={Boolean(user)}
               unreadCount={unreadCount}
             />
+            {/* Framer's feature bundle, loaded once for every `m.*` tile below;
+                the children stay server-rendered. */}
             <main id="main" className="mx-auto w-full max-w-md flex-1 px-5 pb-6 sm:max-w-lg lg:max-w-3xl">
-              {children}
+              <MotionProvider>{children}</MotionProvider>
             </main>
             {user && <BottomNav />}
           </div>

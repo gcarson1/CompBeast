@@ -5,8 +5,15 @@ import { useRouter } from 'next/navigation';
 import { useEffect, useRef, useState, useTransition } from 'react';
 import { motion } from 'framer-motion';
 import { Avatar } from '@/components/Avatar';
-import { formatPoints, pointsTone } from '@/lib/ui';
+import { Doodle } from '@/components/doodles/Doodle';
+import { Sticker } from '@/components/Sticker';
+import { cn, formatPoints, pointsTone } from '@/lib/ui';
 import type { LeaderboardRow } from '@/server/queries';
+
+// The podium: the top three ranks as moulded chips in the tile tones, in
+// medal order — gold, then the cooler sky and lavender for second and third.
+// Everyone else is a plain numeral. Spelled out for Tailwind's content scan.
+const PODIUM = ['clay clay-gold', 'clay clay-sky', 'clay clay-lavender'] as const;
 
 const PULL_THRESHOLD = 64;
 const MAX_PULL = 90;
@@ -141,14 +148,33 @@ export function Leaderboard({
               <motion.li key={row.teamId} layout transition={{ type: 'spring', stiffness: 350, damping: 32 }}>
                 <Link
                   href={`/teams/${row.teamId}`}
-                  className={`flex items-center gap-3 p-4 transition ${isMine ? 'bg-brand-gold-soft/40' : ''}`}
+                  className={cn(
+                    'flex items-center gap-3 p-4 transition duration-200 ease-soft hover:bg-surface-raised motion-safe:active:scale-[0.99]',
+                    isMine && 'bg-brand-gold-soft/40',
+                  )}
                 >
-                  <span className="w-6 text-base font-semibold tabular-nums text-muted">{row.rank}</span>
+                  {row.rank <= PODIUM.length ? (
+                    <span
+                      className={cn('relative h-8 w-8 font-display text-md leading-none', PODIUM[row.rank - 1])}
+                    >
+                      {row.rank}
+                      {/* Decorative — the numeral says it. */}
+                      {row.rank === 1 && <Doodle kind="crown" className="absolute -right-2.5 -top-3 h-5 w-5 rotate-12" />}
+                    </span>
+                  ) : (
+                    <span className="grid h-8 w-8 place-items-center text-base font-semibold tabular-nums text-muted">
+                      {row.rank}
+                    </span>
+                  )}
                   <Avatar name={row.ownerName ?? row.teamName} size={38} />
                   <span className="min-w-0 flex-1">
-                    <span className="block truncate text-base font-semibold">
-                      {row.teamName}
-                      {isMine && <span className="ml-1.5 text-2xs text-brand-gold-deep">you</span>}
+                    <span className="flex items-center gap-1.5 text-base font-semibold">
+                      <span className="min-w-0 truncate">{row.teamName}</span>
+                      {isMine && (
+                        <Sticker tone="mint" tilt="l" seed={row.teamId} className="shrink-0">
+                          you
+                        </Sticker>
+                      )}
                     </span>
                     <span className="mt-0.5 block text-2xs text-muted">
                       {row.ownerName} · {row.activeCount}/{row.rosterCount} still in

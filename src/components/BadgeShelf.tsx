@@ -1,4 +1,5 @@
 import { BADGES, type Badge, earnedBadges, nextBadge } from '@/lib/badges';
+import { Doodle } from '@/components/doodles/Doodle';
 import { cn } from '@/lib/ui';
 
 /**
@@ -17,28 +18,27 @@ export function BadgeShelf({ points }: { points: number }) {
 
   return (
     <div>
-      <ol className="grid grid-cols-3 gap-2 sm:grid-cols-6">
+      <ol className="grid grid-cols-3 gap-3 pt-2 sm:grid-cols-6">
         {BADGES.map((badge) => {
           const has = earned.has(badge.slug);
           return (
             <li
               key={badge.slug}
+              // An earned tier is a moulded gold chip with a star stuck on its
+              // corner; a locked one is the same shape in slate, dimmed,
+              // threshold showing. Same layout either way so the ladder reads
+              // as one. The star is decoration: the word "Earned" is below.
               className={cn(
-                'card flex flex-col items-center p-3 text-center',
+                'card relative flex flex-col items-center p-3 text-center',
                 has ? 'border-brand-gold/40' : 'opacity-60',
               )}
               aria-label={`${badge.name}: ${has ? 'earned' : `locked, ${badge.threshold} points`}`}
             >
-              <span
-                aria-hidden
-                className={cn(
-                  'grid h-11 w-11 place-items-center rounded-full',
-                  has ? 'bg-brand-gold-soft text-brand-gold-deep' : 'bg-canvas text-muted',
-                )}
-              >
+              {has && <Doodle kind="star" className="absolute -right-2 -top-2.5 h-6 w-6 rotate-12" />}
+              <span aria-hidden className={cn('clay h-12 w-12', has ? 'clay-gold' : 'clay-slate text-muted')}>
                 <BadgeIcon slug={badge.slug} />
               </span>
-              <span className="mt-2 text-2xs font-semibold leading-tight">{badge.name}</span>
+              <span className="mt-2.5 text-2xs font-semibold leading-tight">{badge.name}</span>
               <span className="mt-0.5 text-2xs tabular-nums text-muted">
                 {has ? 'Earned' : `${badge.threshold.toLocaleString('en-US')} pts`}
               </span>
@@ -68,7 +68,10 @@ export function BadgeShelf({ points }: { points: number }) {
             aria-valuenow={Math.round(next.fraction * 100)}
             aria-label={`Progress to ${next.badge.name}`}
           >
-            <div className="h-full rounded-pill bg-brand-gold" style={{ width: `${Math.max(2, next.fraction * 100)}%` }} />
+            <div
+              className="h-full rounded-pill bg-brand-gold shadow-[inset_0_1px_0_rgba(255,255,255,0.45)] transition-[width] duration-700 ease-soft"
+              style={{ width: `${Math.max(2, next.fraction * 100)}%` }}
+            />
           </div>
           <p className="mt-2 max-w-measure text-2xs leading-relaxed text-muted">{next.badge.blurb}</p>
         </div>

@@ -31,7 +31,7 @@ export function BottomNav() {
                 href={tab.href}
                 aria-current={active ? 'page' : undefined}
                 className={cn(
-                  'flex w-16 flex-col items-center gap-1 rounded-btn py-2 transition sm:w-20',
+                  'flex w-16 flex-col items-center gap-1 rounded-btn py-2 transition duration-200 ease-spring motion-safe:active:scale-90 sm:w-20',
                   active ? 'bg-canvas text-ink' : 'text-muted',
                 )}
               >

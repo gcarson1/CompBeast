@@ -2,16 +2,21 @@ import type { Metadata } from 'next';
 import Link from 'next/link';
 import { notFound } from 'next/navigation';
 import { cache } from 'react';
-import { Avatar } from '@/components/Avatar';
+import { Avatar, AvatarStack } from '@/components/Avatar';
+import { BeastDoodle } from '@/components/doodles/BeastDoodle';
+import { Doodle } from '@/components/doodles/Doodle';
 import { InviteCode } from '@/components/InviteCode';
 import { InviteFriends } from '@/components/InviteFriends';
 import { Leaderboard } from '@/components/Leaderboard';
 import { LeagueFeed } from '@/components/LeagueFeed';
+import { MotionCard } from '@/components/motion/MotionCard';
+import { Reveal, RevealGroup } from '@/components/motion/Reveal';
+import { Sticker } from '@/components/Sticker';
 import { getCurrentUser } from '@/lib/auth';
 import { describeLockState } from '@/lib/cycles';
 import { atRiskMessage, isAtRiskCode, nearMissMessage } from '@/lib/engagement';
 import { describeWebhook } from '@/lib/chat-webhook';
-import { relativeTime } from '@/lib/ui';
+import { cn, formatPoints, relativeTime } from '@/lib/ui';
 import { getInvitableFriends } from '@/server/social';
 import {
   getCurrentCycle,
@@ -79,6 +84,8 @@ export default async function LeaguePage({ params }: { params: { leagueId: strin
   ];
   const atRisk = atRiskMessage(atRiskNames);
   const openSeats = Math.max(0, league.maxTeams - league.teams.length);
+  const myRow = myTeam ? rows.find((row) => row.teamId === myTeam.id) ?? null : null;
+  const managerNames = league.members.map((m) => m.user.name ?? m.user.handle ?? '?');
 
   return (
     <div className="pt-2">
@@ -86,144 +93,209 @@ export default async function LeaguePage({ params }: { params: { leagueId: strin
         ← Leagues
       </Link>
 
-      <div className="mt-2 flex items-start justify-between gap-3">
-        <h1 className="text-3xl font-semibold tracking-tight">{league.name}</h1>
-        {/* Settings are the commissioner's alone (the mutation refuses anyone
-            else), so the control only renders for them. It is a plain icon
-            button, not a badge: the previous "Commissioner" pill announced a
-            role where a control was expected, and a pill is the shape this
-            app reserves for things you cannot tap. The role itself is still
-            shown where it belongs, on the commissioner's row in the managers
-            list. 44px square: WCAG 2.5.8's target size for a standalone
-            control, the same floor as `.btn`. */}
-        {isCommissioner && (
-          <Link
-            href={`/leagues/${league.id}/settings`}
-            prefetch={false}
-            aria-label="League settings"
-            title="League settings"
-            className="grid h-11 w-11 shrink-0 place-items-center rounded-btn border border-hairline bg-surface text-muted transition hover:bg-surface-raised hover:text-ink active:scale-[0.97]"
+      {/*
+        The dashboard is a bento grid: the league's identity as a wide hero
+        tile, then this week, the draft, any warnings and your own team as
+        colour-block tiles, then the three reference lists. DOM order is
+        reading order; `dense` only ever backfills a hole with a later,
+        smaller tile. Each tile rises in as it is reached (RevealGroup), and
+        the ones that are links answer the pointer (MotionCard).
+      */}
+      <RevealGroup className="bento mt-4" step={60}>
+        <Reveal as="section" aria-labelledby="league-title" className="bento-2">
+          {/* The hero leans toward the pointer but is not a control: no lift,
+              no squash. `overflow-visible` for the mascot's overhang. */}
+          <MotionCard tilt lift={0} tap={false} className="relative h-full overflow-visible p-5">
+            {/* The Beast, hanging over the corner. Shocked while the draft is
+                still open, grinning once the season is under way. */}
+            <BeastDoodle
+              mood={drafting ? 'shock' : 'grin'}
+              className="absolute -right-3 -top-7 h-20 w-20 rotate-6 sm:-right-4 sm:h-24 sm:w-24"
+            />
+            <div className="flex items-start justify-between gap-3 pr-14 sm:pr-16">
+              <div className="min-w-0">
+                <Sticker tone="lavender" tilt="l">
+                  {league.season.show.name}
+                </Sticker>
+                <h1 id="league-title" className="headline mt-3 text-3xl sm:text-4xl">
+                  {league.name}
+                </h1>
+                <p className="mt-2 text-xs text-muted">
+                  {league.season.name} · {league.scoringRuleset.name} scoring
+                </p>
+              </div>
+              {/* Settings are the commissioner's alone (the mutation refuses anyone
+                  else), so the control only renders for them. It is a plain icon
+                  button, not a badge: the previous "Commissioner" pill announced a
+                  role where a control was expected, and a pill is the shape this
+                  app reserves for things you cannot tap. The role itself is still
+                  shown where it belongs, on the commissioner's row in the managers
+                  list. 44px square: WCAG 2.5.8's target size for a standalone
+                  control, the same floor as `.btn`. */}
+              {isCommissioner && (
+                <Link
+                  href={`/leagues/${league.id}/settings`}
+                  prefetch={false}
+                  aria-label="League settings"
+                  title="League settings"
+                  className="grid h-11 w-11 shrink-0 place-items-center rounded-btn border border-hairline bg-surface-raised text-muted transition duration-200 ease-spring hover:text-ink motion-safe:hover:scale-105 motion-safe:active:scale-95"
+                >
+                  <GearIcon />
+                </Link>
+              )}
+            </div>
+            <div className="mt-5 flex items-center justify-between gap-3 border-t border-hairline pt-4">
+              <AvatarStack names={managerNames.slice(0, 4)} total={league.members.length} max={4} />
+              <span className="text-2xs text-muted">
+                {league.teams.length} of {league.maxTeams} seats filled
+              </span>
+            </div>
+          </MotionCard>
+        </Reveal>
+
+        {currentCycle && lockState && (
+          <Reveal
+            as="section"
+            aria-label="This week"
+            className={cn('relative p-5', cycleLocked ? 'card' : 'card-pop-gold')}
           >
-            <GearIcon />
-          </Link>
-        )}
-      </div>
-      <p className="mt-0.5 text-xs text-muted">
-        {league.season.show.name} · {league.season.name} · {league.scoringRuleset.name} scoring
-      </p>
-
-      {drafting && (
-        <Link
-          href={`/leagues/${league.id}/draft`}
-          prefetch={false}
-          className="mt-4 flex items-center justify-between rounded-card border border-brand-gold/30 bg-surface p-4 text-ink transition active:scale-[0.99]"
-        >
-          <span>
-            <span className="block text-base font-semibold">
-              {league.draftStatus === 'NOT_STARTED' ? 'Draft has not started' : 'Draft in progress'}
-            </span>
-            <span className="mt-0.5 block text-xs text-muted">
-              {league.teams.length} {league.teams.length === 1 ? 'team' : 'teams'} ·{' '}
-              {league.rosterSize} picks each
-            </span>
-          </span>
-          <span className="pill bg-brand-gold text-on-gold">
-            {league.draftStatus === 'NOT_STARTED' && isCommissioner ? 'Start' : 'Open'}
-          </span>
-        </Link>
-      )}
-
-      {currentCycle && lockState && (
-        <div className="card mt-4 flex items-center justify-between p-4">
-          <span>
-            <span className="block text-base font-semibold">{currentCycle.label}</span>
-            <span className="mt-0.5 block text-xs text-muted">
+            <Sticker tone={cycleLocked ? 'ink' : 'paper'} tilt="r" className="absolute -right-2 -top-3">
+              {cycleLocked ? 'Locked' : 'Open'}
+            </Sticker>
+            <Doodle
+              kind={cycleLocked ? 'lock' : 'lock-open'}
+              tone={cycleLocked ? 'sky' : 'paper'}
+              className="h-8 w-8 -rotate-6"
+            />
+            <p className="mt-3 text-2xs font-bold uppercase tracking-wide text-tile-muted">This week</p>
+            <h2 className="headline mt-1 text-2xl">{currentCycle.label}</h2>
+            <p className="mt-2 text-xs text-tile-muted">
               {!lockState.showLockAt
                 ? 'Rosters are closed'
                 : cycleLocked
                   ? `Locked ${relativeTime(lockState.lockAt)}`
                   : `Rosters lock ${relativeTime(lockState.lockAt)}`}
-            </span>
-          </span>
-          <span
-            className={`pill text-2xs ${
-              cycleLocked ? 'bg-canvas text-muted' : 'bg-brand-gold-soft text-brand-gold-deep'
-            }`}
-          >
-            {cycleLocked ? 'Locked' : 'Open'}
-          </span>
-        </div>
-      )}
+            </p>
+          </Reveal>
+        )}
 
-      {(nearMiss || atRisk) && (
-        <div className="mt-4 space-y-2 rounded-card border border-hairline p-4">
-          {nearMiss && <p className="text-xs font-medium text-brand-gold-deep">{nearMiss}</p>}
-          {atRisk && <p className="text-xs font-medium text-danger-deep">{atRisk}</p>}
-        </div>
-      )}
+        {drafting && (
+          <Reveal>
+            <MotionCard tilt className="card-pop-lavender relative h-full">
+              <Sticker tone="gold" tilt="r" className="absolute -right-2 -top-3">
+                {league.draftStatus === 'NOT_STARTED' && isCommissioner ? 'Start' : 'Open'}
+              </Sticker>
+              <Link
+                href={`/leagues/${league.id}/draft`}
+                prefetch={false}
+                className="flex h-full flex-col rounded-card p-5"
+              >
+                <span className="clay clay-gold h-11 w-11">
+                  <BoardIcon />
+                </span>
+                <span className="headline mt-3 block text-2xl">
+                  {league.draftStatus === 'NOT_STARTED' ? 'Draft not started' : 'Draft in progress'}
+                </span>
+                <span className="mt-2 block text-xs text-tile-muted">
+                  {league.teams.length} {league.teams.length === 1 ? 'team' : 'teams'} ·{' '}
+                  {league.rosterSize} picks each
+                </span>
+              </Link>
+            </MotionCard>
+          </Reveal>
+        )}
 
-      <section className="mt-6">
-        <div className="mb-2 flex items-baseline justify-between">
-          <h2 className="text-lg font-semibold">Leaderboard</h2>
-          {myTeam && (
-            <Link href={`/teams/${myTeam.id}`} className="text-xs text-brand-gold-deep">
-              My team
-            </Link>
-          )}
-        </div>
+        {(nearMiss || atRisk) && (
+          <Reveal as="section" aria-label="Heads up" className="bento-2 card relative p-5">
+            {/* Inset from the left edge: a tile to its left may carry its own
+                sticker on that corner, and two overhanging tags collide. */}
+            <Sticker tone={atRisk ? 'red' : 'gold'} tilt="l" className="absolute left-4 -top-3">
+              Heads up
+            </Sticker>
+            <Doodle kind="alert" tone={atRisk ? 'red' : 'gold'} className="absolute -right-2 -top-3 h-9 w-9 rotate-6" />
+            <div className="mt-2 space-y-2">
+              {nearMiss && <p className="text-sm font-medium text-brand-gold-deep">{nearMiss}</p>}
+              {atRisk && <p className="text-sm font-medium text-danger-deep">{atRisk}</p>}
+            </div>
+          </Reveal>
+        )}
 
-        <Leaderboard rows={rows} myTeamId={myTeam?.id ?? null} />
-      </section>
-
-      {/* Managers and the league's settings are both short reference lists, so
-          they pair off once there is room rather than each taking a full
-          screen-width row on a desktop. */}
-      <div className="lg:grid lg:grid-cols-2 lg:gap-6">
-      <section className="mt-6">
-        <div className="mb-2 flex items-baseline justify-between">
-          <h2 className="text-lg font-semibold">
-            Managers <span className="text-sm font-normal text-muted">{league.members.length}</span>
-          </h2>
-          <span className="text-2xs text-muted">
-            {league.teams.length} of {league.maxTeams} seats filled
-          </span>
-        </div>
-        <ul className="card divide-y divide-hairline">
-          {league.members.map((member) => {
-            const team = league.teams.find((t) => t.owner?.id === member.user.id);
-            const isYou = member.user.id === user?.id;
-            return (
-              <li key={member.user.id} className="flex items-center gap-3 p-4">
-                <Avatar name={member.user.name ?? member.user.handle ?? '?'} photoUrl={member.user.avatarUrl} size={38} />
-                <span className="min-w-0 flex-1">
-                  <span className="block truncate text-base font-semibold">
-                    {team?.name ?? 'No team yet'}
-                    {isYou && <span className="ml-1.5 text-2xs text-brand-gold-deep">you</span>}
-                  </span>
-                  <span className="mt-0.5 block truncate text-2xs text-muted">
-                    {member.user.name ?? member.user.handle ?? 'Unknown manager'}
+        {myTeam && myRow && (
+          <Reveal>
+            <MotionCard tilt className="card-pop-mint relative h-full">
+              <Link href={`/teams/${myTeam.id}`} className="flex h-full flex-col rounded-card p-5">
+                <span className="text-2xs font-bold uppercase tracking-wide text-tile-muted">My team</span>
+                <span className="mt-1 block truncate text-base font-semibold">{myTeam.name}</span>
+                <span className="mt-3 block font-display text-6xl leading-none tracking-wide">
+                  {myRow.totalPoints}
+                </span>
+                <span className="mt-auto flex flex-wrap items-center gap-2 pt-4">
+                  <Sticker tone={myRow.rank === 1 ? 'gold' : 'paper'} tilt="l">
+                    {myRow.rank === 1 && <Doodle kind="crown" className="-ml-1 h-4 w-4" />}#{myRow.rank} of{' '}
+                    {rows.length}
+                  </Sticker>
+                  {/* The sign carries the meaning — colour on a mint block
+                      would not clear contrast for either tone. */}
+                  <span className="text-2xs font-semibold tabular-nums text-tile-muted">
+                    {formatPoints(myRow.lastCyclePoints)} last
                   </span>
                 </span>
-                {member.role === 'COMMISSIONER' && (
-                  <span className="pill shrink-0 bg-brand-velvet-soft text-2xs text-brand-velvet-deep">
-                    Commish
-                  </span>
-                )}
-              </li>
-            );
-          })}
-        </ul>
-        <p className="mt-2 px-1 text-2xs leading-relaxed text-muted">
-          {openSeats === 0
-            ? 'Every seat is taken — this league is full.'
-            : `${openSeats} ${
-                openSeats === 1 ? 'seat is' : 'seats are'
-              } still open — tap the invite code below to copy it, or show the QR code for someone to scan.`}
-        </p>
-      </section>
+              </Link>
+            </MotionCard>
+          </Reveal>
+        )}
 
-        <section className="mt-6">
-          <h2 className="mb-2 text-lg font-semibold">League</h2>
+        <Reveal as="section" aria-labelledby="leaderboard-heading" className="bento-2 bento-tall">
+          <h2 id="leaderboard-heading" className="headline mb-2">
+            Leaderboard
+          </h2>
+          <Leaderboard rows={rows} myTeamId={myTeam?.id ?? null} />
+        </Reveal>
+
+        <Reveal as="section" aria-labelledby="managers-heading">
+          <div className="mb-2 flex items-baseline justify-between gap-3">
+            <h2 id="managers-heading" className="headline">
+              Managers <span className="font-sans text-sm normal-case tracking-normal text-muted">{league.members.length}</span>
+            </h2>
+          </div>
+          <ul className="card divide-y divide-hairline">
+            {league.members.map((member) => {
+              const team = league.teams.find((t) => t.owner?.id === member.user.id);
+              const isYou = member.user.id === user?.id;
+              return (
+                <li key={member.user.id} className="flex items-center gap-3 p-4">
+                  <Avatar name={member.user.name ?? member.user.handle ?? '?'} photoUrl={member.user.avatarUrl} size={38} />
+                  <span className="min-w-0 flex-1">
+                    <span className="block truncate text-base font-semibold">
+                      {team?.name ?? 'No team yet'}
+                      {isYou && <span className="ml-1.5 text-2xs text-brand-gold-deep">you</span>}
+                    </span>
+                    <span className="mt-0.5 block truncate text-2xs text-muted">
+                      {member.user.name ?? member.user.handle ?? 'Unknown manager'}
+                    </span>
+                  </span>
+                  {member.role === 'COMMISSIONER' && (
+                    <Sticker tone="lavender" tilt="r" seed={member.user.id} className="shrink-0">
+                      Commish
+                    </Sticker>
+                  )}
+                </li>
+              );
+            })}
+          </ul>
+          <p className="mt-2 px-1 text-2xs leading-relaxed text-muted">
+            {openSeats === 0
+              ? 'Every seat is taken — this league is full.'
+              : `${openSeats} ${
+                  openSeats === 1 ? 'seat is' : 'seats are'
+                } still open — tap the invite code below to copy it, or show the QR code for someone to scan.`}
+          </p>
+        </Reveal>
+
+        <Reveal as="section" aria-labelledby="league-heading">
+          <h2 id="league-heading" className="headline mb-2">
+            League
+          </h2>
           <div className="card divide-y divide-hairline">
             <InviteCode code={league.inviteCode} leagueName={league.name} />
             <Row label="Scoring" value={league.scoringRuleset.name} href="/rules" />
@@ -239,8 +311,8 @@ export default async function LeaguePage({ params }: { params: { leagueId: strin
               {league.scoringRuleset.description}
             </p>
           )}
-        </section>
-      </div>
+        </Reveal>
+      </RevealGroup>
 
       {isMember && league.draftStatus === 'NOT_STARTED' && (
         <InviteFriends
@@ -259,6 +331,16 @@ export default async function LeaguePage({ params }: { params: { leagueId: strin
         isCommissioner={isCommissioner}
       />
     </div>
+  );
+}
+
+function BoardIcon() {
+  return (
+    <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" aria-hidden>
+      <rect x="3" y="4" width="18" height="16" rx="2.5" />
+      <path d="M3 9.5h18M8.5 9.5V20M15.5 9.5V20" strokeLinecap="round" />
+      <path d="M5.5 13h1M11 13h2M18 13h1M5.5 16.5h1M11 16.5h2" strokeLinecap="round" />
+    </svg>
   );
 }
 

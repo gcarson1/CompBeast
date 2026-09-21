@@ -5,10 +5,13 @@ import { BadgeShelf } from '@/components/BadgeShelf';
 import { EmailPreferences } from '@/components/EmailPreferences';
 import { FriendsPanel } from '@/components/FriendsPanel';
 import { PointHistoryChart } from '@/components/PointHistoryChart';
+import { Doodle, type DoodleKind } from '@/components/doodles/Doodle';
+import { Reveal, RevealGroup } from '@/components/motion/Reveal';
 import { PushToggle } from '@/components/PushToggle';
+import { Sticker } from '@/components/Sticker';
 import { getCurrentUser } from '@/lib/auth';
 import { BADGES, earnedBadges, highestBadge } from '@/lib/badges';
-import { formatPoints, pointsTone } from '@/lib/ui';
+import { cn, formatPoints, pointsTone } from '@/lib/ui';
 import { getEmailPreferences } from '@/server/notification-email';
 import { pushPublicKey } from '@/server/notification-push';
 import { getAccountOverview, type SeasonHistoryRow } from '@/server/queries';
@@ -49,159 +52,203 @@ export default async function AccountPage() {
       </Link>
 
       <div className="mt-3 flex items-center gap-4">
-        <Avatar name={displayName} photoUrl={user.avatarUrl} size={56} />
+        <span className="relative shrink-0">
+          <Avatar name={displayName} photoUrl={user.avatarUrl} size={56} />
+          {/* The highest badge, stuck to the avatar's corner; named again
+              in text right after, so the sticker is never the only copy. */}
+          {badge && <Doodle kind="key" className="absolute -right-2.5 -top-2.5 h-7 w-7 rotate-[18deg]" />}
+        </span>
         <div className="min-w-0">
-          <h1 className="truncate text-3xl font-semibold tracking-tight">{displayName}</h1>
-          <p className="flex min-w-0 items-center gap-2 text-xs text-muted">
+          <h1 className="headline truncate text-3xl">{displayName}</h1>
+          <p className="mt-1.5 flex min-w-0 items-center gap-2 text-xs text-muted">
             <span className="truncate">{user.handle ? `@${user.handle}` : user.email}</span>
             {badge && (
-              <span className="pill shrink-0 bg-brand-gold-soft px-2 py-0.5 text-2xs font-medium text-brand-gold-deep">
+              <Sticker tone="gold" tilt="r" className="shrink-0">
                 {badge.name}
-              </span>
+              </Sticker>
             )}
           </p>
         </div>
       </div>
 
+      {/* Career totals as a bento: the headline number on a gold block two
+          tiles wide, the three supporting counts beside it. */}
       <section className="mt-6" aria-labelledby="career">
         <h2 id="career" className="sr-only">
           Career totals
         </h2>
-        <dl className="grid grid-cols-2 gap-2 sm:grid-cols-4">
-          <Stat label="Total points" value={String(account.totalPoints)} />
+        <dl className="grid grid-cols-2 gap-3 sm:grid-cols-5">
+          <Stat label="Total points" value={String(account.totalPoints)} tone="gold" glyph="tally" className="col-span-2" />
           <Stat label="Leagues" value={String(account.leaguesPlayed)} />
           <Stat
             label="Best finish"
             value={account.bestRank ? `#${account.bestRank}` : '—'}
+            tone={account.bestRank === 1 ? 'mint' : undefined}
+            glyph={account.bestRank === 1 ? 'crown' : undefined}
           />
-          <Stat label="Titles" value={String(account.titles)} hint="Seasons won outright" />
+          {/* Full width on a phone so the row below the gold block is not a
+              lone tile; one column once the five fit on a line. */}
+          <Stat
+            label="Titles"
+            value={String(account.titles)}
+            hint="Seasons won outright"
+            tone={account.titles > 0 ? 'lavender' : undefined}
+            glyph={account.titles > 0 ? 'star' : undefined}
+            className="col-span-2 sm:col-span-1"
+          />
         </dl>
       </section>
 
-      <section className="mt-8" aria-labelledby="badges">
-        <div className="mb-3 flex items-baseline justify-between gap-3">
-          <h2 id="badges" className="text-lg font-semibold">
-            Badges
-          </h2>
-          <span className="text-2xs text-muted">
-            {earnedBadges(account.totalPoints).length} of {BADGES.length}
-          </span>
-        </div>
-        <BadgeShelf points={account.totalPoints} />
-      </section>
-
-      {current && (
-        <section className="mt-8" aria-labelledby="current-run">
+      <RevealGroup step={80}>
+        <Reveal as="section" className="mt-8" aria-labelledby="badges">
           <div className="mb-3 flex items-baseline justify-between gap-3">
-            <h2 id="current-run" className="text-lg font-semibold">
-              This season
+            <h2 id="badges" className="headline">
+              Badges
             </h2>
-            <Link
-              href={`/leagues/${current.leagueId}`}
-              className="shrink-0 text-2xs text-brand-gold-deep"
-            >
-              {current.leagueName} →
-            </Link>
+            <span className="text-2xs text-muted">
+              {earnedBadges(account.totalPoints).length} of {BADGES.length}
+            </span>
           </div>
-          <div className="card p-4">
-            <div className="mb-4 flex items-end justify-between gap-3">
-              <span className="min-w-0">
-                <span className="block truncate text-2xs text-muted">{current.teamName}</span>
-                <span className="font-display text-5xl leading-none tracking-wide">
-                  {current.totalPoints}
-                </span>
-              </span>
-              {current.rank > 0 && (
-                <span
-                  className={`pill shrink-0 text-2xs ${
-                    current.rank === 1 ? 'bg-brand-gold text-on-gold' : 'bg-canvas text-muted'
-                  }`}
-                >
-                  #{current.rank} of {current.teamCount}
-                </span>
-              )}
+          <BadgeShelf points={account.totalPoints} />
+        </Reveal>
+
+        {current && (
+          <Reveal as="section" className="mt-8" aria-labelledby="current-run">
+            <div className="mb-3 flex items-baseline justify-between gap-3">
+              <h2 id="current-run" className="headline">
+                This season
+              </h2>
+              <Link
+                href={`/leagues/${current.leagueId}`}
+                className="shrink-0 text-2xs text-brand-gold-deep"
+              >
+                {current.leagueName} →
+              </Link>
             </div>
-            <PointHistoryChart history={current.history} caption={current.teamName} />
-          </div>
-        </section>
-      )}
+            <div className="card p-4">
+              <div className="mb-4 flex items-end justify-between gap-3">
+                <span className="min-w-0">
+                  <span className="block truncate text-2xs text-muted">{current.teamName}</span>
+                  <span className="font-display text-5xl leading-none tracking-wide">
+                    {current.totalPoints}
+                  </span>
+                </span>
+                {current.rank > 0 && (
+                  <Sticker tone={current.rank === 1 ? 'gold' : 'ink'} tilt="l" className="shrink-0">
+                    {current.rank === 1 && <Doodle kind="crown" className="-ml-1 h-4 w-4" />}#{current.rank} of{' '}
+                    {current.teamCount}
+                  </Sticker>
+                )}
+              </div>
+              <PointHistoryChart history={current.history} caption={current.teamName} />
+            </div>
+          </Reveal>
+        )}
 
-      <section className="mt-8" aria-labelledby="seasons">
-        <h2 id="seasons" className="mb-3 text-lg font-semibold">
-          Season history
-        </h2>
-        {account.rows.length === 0 ? (
-          <div className="rounded-card border border-dashed border-hairline p-5">
-            <p className="max-w-measure text-xs leading-relaxed text-muted">
-              You have not played a season yet. Join or create a league and your results will
-              build up here.
+        <Reveal as="section" className="mt-8" aria-labelledby="seasons">
+          <h2 id="seasons" className="headline mb-3">
+            Season history
+          </h2>
+          {account.rows.length === 0 ? (
+            <div className="rounded-card border border-dashed border-hairline p-5">
+              <p className="max-w-measure text-xs leading-relaxed text-muted">
+                You have not played a season yet. Join or create a league and your results will
+                build up here.
+              </p>
+              <Link href="/leagues/new" prefetch={false} className="btn-primary btn-sm mt-3">
+                Create a league
+              </Link>
+            </div>
+          ) : (
+            <ul className="divide-y divide-hairline border-y border-hairline">
+              {ordered.map((row) => (
+                <SeasonRow key={row.id} row={row} />
+              ))}
+            </ul>
+          )}
+          {past.length === 0 && account.rows.length > 0 && (
+            <p className="mt-3 text-2xs text-muted">
+              Finished seasons stay here permanently, with the score you ended on — even if the
+              league is deleted later.
             </p>
-            <Link href="/leagues/new" prefetch={false} className="btn-primary btn-sm mt-3">
-              Create a league
-            </Link>
-          </div>
-        ) : (
-          <ul className="divide-y divide-hairline border-y border-hairline">
-            {ordered.map((row) => (
-              <SeasonRow key={row.id} row={row} />
-            ))}
-          </ul>
-        )}
-        {past.length === 0 && account.rows.length > 0 && (
-          <p className="mt-3 text-2xs text-muted">
-            Finished seasons stay here permanently, with the score you ended on — even if the
-            league is deleted later.
-          </p>
-        )}
-      </section>
+          )}
+        </Reveal>
 
-      <section className="mt-10" aria-labelledby="friends">
-        <h2 id="friends" className="mb-1 text-lg font-semibold">
-          Friends
-        </h2>
-        <p className="mb-4 max-w-measure text-2xs leading-relaxed text-muted">
-          Friends can be invited into a league in one tap, and get an alert with the code already
-          filled in.
-        </p>
-        <FriendsPanel overview={friends} />
-      </section>
-
-      {/* Hidden entirely when the deployment has no VAPID keys — like the
-          email switches, a control that governs nothing is worse than none. */}
-      {vapidKey && (
-        <section className="mt-10" aria-labelledby="push-heading">
-          <h2 id="push-heading" className="mb-1 text-lg font-semibold">
-            Push alerts
+        <Reveal as="section" className="mt-10" aria-labelledby="friends">
+          <h2 id="friends" className="headline mb-1">
+            Friends
           </h2>
           <p className="mb-4 max-w-measure text-2xs leading-relaxed text-muted">
-            The same alerts as the bell, delivered to this device even when Comp Beast is closed.
-            Turn it on separately on each phone or computer you use.
+            Friends can be invited into a league in one tap, and get an alert with the code already
+            filled in.
           </p>
-          <PushToggle publicKey={vapidKey} />
-        </section>
-      )}
+          <FriendsPanel overview={friends} />
+        </Reveal>
 
-      {/* id="email" is the anchor every email footer links back to. */}
-      <section className="mt-10 scroll-mt-6" id="email" aria-labelledby="email-heading">
-        <h2 id="email-heading" className="mb-1 text-lg font-semibold">
-          Email alerts
-        </h2>
-        <p className="mb-4 max-w-measure text-2xs leading-relaxed text-muted">
-          Alerts always appear in the app. These decide which of them also reach{' '}
-          <span className="text-ink">{user.email}</span>.
-        </p>
-        <EmailPreferences preferences={emailPreferences} />
-      </section>
+        {/* Hidden entirely when the deployment has no VAPID keys — like the
+            email switches, a control that governs nothing is worse than none. */}
+        {vapidKey && (
+          <Reveal as="section" className="mt-10" aria-labelledby="push-heading">
+            <h2 id="push-heading" className="headline mb-1">
+              Push alerts
+            </h2>
+            <p className="mb-4 max-w-measure text-2xs leading-relaxed text-muted">
+              The same alerts as the bell, delivered to this device even when Comp Beast is closed.
+              Turn it on separately on each phone or computer you use.
+            </p>
+            <PushToggle publicKey={vapidKey} />
+          </Reveal>
+        )}
+
+        {/* id="email" is the anchor every email footer links back to. */}
+        <Reveal as="section" className="mt-10 scroll-mt-6" id="email" aria-labelledby="email-heading">
+          <h2 id="email-heading" className="headline mb-1">
+            Email alerts
+          </h2>
+          <p className="mb-4 max-w-measure text-2xs leading-relaxed text-muted">
+            Alerts always appear in the app. These decide which of them also reach{' '}
+            <span className="text-ink">{user.email}</span>.
+          </p>
+          <EmailPreferences preferences={emailPreferences} />
+        </Reveal>
+      </RevealGroup>
     </div>
   );
 }
 
-function Stat({ label, value, hint }: { label: string; value: string; hint?: string }) {
+// Spelled out for Tailwind's content scan.
+const STAT_TONE = {
+  gold: 'card-pop-gold',
+  mint: 'card-pop-mint',
+  lavender: 'card-pop-lavender',
+} as const;
+
+function Stat({
+  label,
+  value,
+  hint,
+  tone,
+  glyph,
+  className,
+}: {
+  label: string;
+  value: string;
+  hint?: string;
+  /** A colour block for the number worth celebrating; the rest stay dark. */
+  tone?: keyof typeof STAT_TONE;
+  /** The sticker in the corner of a colour block. */
+  glyph?: DoodleKind;
+  className?: string;
+}) {
+  const wide = className?.includes('col-span-2');
   return (
-    <div className="card p-3">
-      <dt className="text-2xs text-muted">{label}</dt>
-      <dd className="mt-0.5 font-display text-2xl leading-none tracking-wide">{value}</dd>
-      {hint && <p className="mt-1 text-[11px] leading-tight text-muted">{hint}</p>}
+    <div className={cn(tone ? STAT_TONE[tone] : 'card', 'relative p-4', className)}>
+      {glyph && <Doodle kind={glyph} tone="paper" className="absolute right-3 top-3 h-7 w-7 rotate-6" />}
+      <dt className="text-2xs font-bold uppercase tracking-wide text-tile-muted">{label}</dt>
+      <dd className={cn('mt-1 font-display leading-none tracking-wide', wide && tone ? 'text-6xl' : 'text-3xl')}>
+        {value}
+      </dd>
+      {hint && <p className="mt-1.5 text-2xs leading-tight text-tile-muted">{hint}</p>}
     </div>
   );
 }
@@ -242,15 +289,13 @@ function SeasonRow({ row }: { row: SeasonHistoryRow }) {
 
       <span className="w-20 shrink-0 text-right">
         {row.rank > 0 ? (
-          <span
-            className={`pill text-2xs ${
-              row.rank === 1 && row.settled ? 'bg-brand-gold text-on-gold' : 'bg-canvas text-muted'
-            }`}
-          >
+          <Sticker tone={row.rank === 1 && row.settled ? 'gold' : 'ink'} tilt="l" seed={row.id}>
             #{row.rank}
-          </span>
+          </Sticker>
         ) : (
-          <span className="pill bg-canvas text-2xs text-muted">{STATUS_LABEL[row.seasonStatus]}</span>
+          <Sticker tone="ink" tilt="r" seed={row.id}>
+            {STATUS_LABEL[row.seasonStatus]}
+          </Sticker>
         )}
         {row.archived && (
           <span className="mt-1 block text-[11px] leading-tight text-muted">League closed</span>

@@ -44,6 +44,60 @@ const config: Config = {
           soft: 'rgba(139,92,246,0.18)',
           deep: '#C4B5FD', // text-on-dark only
         },
+        /**
+         * Pop tiles — the bento "colour block" surfaces, layered on top of the
+         * dark arena palette rather than replacing it. Gold is the brand fill
+         * itself; lavender is `brand-velvet-deep` promoted from a text colour
+         * to a surface; mint and sky are the two new accents. Every fill is a
+         * *light* surface, so text on it is dark: `ink` is the primary text
+         * (8.6–11.5:1 measured against its fill) and `muted` the secondary
+         * (5.6–6.7:1). `deep` is the tone as text on the dark surfaces
+         * (≥ 8.7:1 on `surface`). `glow` is the hover halo — a colour, not a
+         * shadow, because on a near-black canvas a coloured bloom reads as
+         * lift where a black drop shadow reads as a smudge.
+         */
+        'pop-gold': {
+          DEFAULT: '#F59E0B',
+          ink: '#1A1206',
+          muted: '#4A3208',
+          deep: '#FBBF24',
+          glow: 'rgba(245,158,11,0.45)',
+        },
+        'pop-lavender': {
+          DEFAULT: '#C4B5FD',
+          ink: '#1E1046',
+          muted: '#3F2E7A',
+          deep: '#C4B5FD',
+          glow: 'rgba(196,181,253,0.45)',
+        },
+        'pop-mint': {
+          DEFAULT: '#A7F3D0',
+          ink: '#052E23',
+          muted: '#0F5A46',
+          deep: '#6EE7B7',
+          glow: 'rgba(167,243,208,0.45)',
+        },
+        'pop-sky': {
+          DEFAULT: '#BAE6FD',
+          ink: '#0C2A3F',
+          muted: '#1D4E70',
+          deep: '#7DD3FC',
+          glow: 'rgba(186,230,253,0.45)',
+        },
+        /**
+         * Tone-agnostic text inside a tile. `.card` and every `.card-pop-*`
+         * set these custom properties (globals.css), so a component such as a
+         * stat readout can say `text-tile-muted` once and be correct whether
+         * it lands on the dark surface or on a mint block. Prefer these over
+         * `text-muted` in anything that can be dropped into a pop tile.
+         */
+        tile: {
+          ink: 'var(--tile-ink)',
+          muted: 'var(--tile-muted)',
+          line: 'var(--tile-line)',
+        },
+        /** Sticker paper: the off-white a die-cut badge is printed on. */
+        paper: '#FFF8EC',
       },
       fontFamily: {
         // Anton (display) and Archivo (text) are both Omnibus-Type grotesques,
@@ -53,16 +107,21 @@ const config: Config = {
         sans: ['var(--font-text)', 'ui-sans-serif', '-apple-system', 'system-ui', 'sans-serif'],
       },
       borderRadius: {
-        // Tightened from 20px — the previous value read as a rounded-poster
-        // aesthetic on sections that are otherwise a flat, hairline-bordered
-        // dark UI. Cards, callouts and the dialog all key off this one value.
-        card: '10px',
-        // Buttons and the tab switcher were stadium pills (999px). `.pill`
-        // itself stays fully round — that shape is reserved for non-tappable
-        // status badges specifically so a badge never looks like a button
-        // (see the comment on `.pill` in globals.css) — but the tappable
-        // controls now get a tighter, literal rounded-rect corner instead.
-        btn: '10px',
+        /**
+         * Bento tile radius. Sits in the 16–32px band the tile system wants,
+         * and every nested corner is derived from it: `nested` is
+         * `card − 12px`, so a button, image slot or inner card inside a
+         * tile padded `p-3` (12px) shares the outer curve concentrically
+         * rather than fighting it. Tiles padded wider than that hold text,
+         * not nested boxes. The previous 10px was right for the hairline
+         * dark UI this grew out of; it is too tight for a colour block.
+         */
+        card: '24px',
+        nested: '12px',
+        // Tappable controls. Equal to `nested` on purpose — a button inside a
+        // tile is the most common nested corner, so the two stay concentric.
+        btn: '12px',
+        // Non-tappable badges only (see `.pill` in globals.css).
         pill: '999px',
       },
       // Named scale in rem, replacing ~200 one-off `text-[13px]`-style values.
@@ -113,11 +172,45 @@ const config: Config = {
           from: { transform: 'translateY(12px)' },
           to: { transform: 'translateY(0)' },
         },
+        // Ambient shapes. Transform only, so the compositor owns it and a busy
+        // main thread cannot stutter it (the same lesson as the marquee).
+        float: {
+          '0%, 100%': { transform: 'translate3d(0, 0, 0) rotate(0deg)' },
+          '50%': { transform: 'translate3d(14px, -22px, 0) rotate(8deg)' },
+        },
+        'float-alt': {
+          '0%, 100%': { transform: 'translate3d(0, 0, 0) rotate(0deg)' },
+          '50%': { transform: 'translate3d(-18px, 16px, 0) rotate(-10deg)' },
+        },
+        // A sticker settling: overshoots, then lands.
+        'pop-in': {
+          '0%': { transform: 'scale(0.6) rotate(-8deg)' },
+          '70%': { transform: 'scale(1.08) rotate(2deg)' },
+          '100%': { transform: 'scale(1) rotate(var(--sticker-tilt, 0deg))' },
+        },
+        // Elastic nudge for a badge that just changed (a rank moving).
+        wobble: {
+          '0%, 100%': { transform: 'rotate(0deg)' },
+          '25%': { transform: 'rotate(-4deg) scale(1.04)' },
+          '75%': { transform: 'rotate(3deg) scale(1.02)' },
+        },
       },
       animation: {
         // 280ms, inside the 150–300ms band. Longer reads as the page
         // assembling itself in front of you rather than as a settle.
         rise: 'rise 280ms ease-out both',
+        float: 'float 18s ease-in-out infinite',
+        'float-alt': 'float-alt 22s ease-in-out infinite',
+        'pop-in': 'pop-in 420ms cubic-bezier(0.34, 1.56, 0.64, 1) both',
+        wobble: 'wobble 500ms ease-in-out',
+      },
+      transitionTimingFunction: {
+        // Spring-ish overshoot for anything that should feel elastic — a
+        // button press, a sticker straightening, a toggle knob. The second
+        // curve is the soft settle for lifts and glows, where an overshoot
+        // would read as jitter.
+        spring: 'cubic-bezier(0.34, 1.56, 0.64, 1)',
+        soft: 'cubic-bezier(0.2, 0.8, 0.2, 1)',
       },
       boxShadow: {
         /**
@@ -131,6 +224,19 @@ const config: Config = {
          * card-on-card cases, invisible everywhere it was only adding weight.
          */
         card: 'inset 0 1px 0 rgba(248,250,252,0.06), 0 1px 2px rgba(0,0,0,0.04)',
+        /**
+         * Hover lift. The glow colour comes from `--lift-glow`, set per tone
+         * by `.card-pop-*` and defaulting to the gold bloom, so one utility
+         * lifts every tile in its own colour.
+         */
+        lift: '0 14px 32px -14px var(--lift-glow, rgba(245,158,11,0.35)), 0 2px 0 rgba(255,255,255,0.05) inset',
+        // The hard 2px offset that makes a badge read as a die-cut sticker
+        // laid on the page rather than a pill drawn in it.
+        sticker: '0 2px 0 rgba(0,0,0,0.35)',
+        // Claymation chip: a lit top edge, a shaded bottom edge, and a soft
+        // ground shadow, which together are what make a flat disc read as a
+        // moulded object.
+        clay: 'inset 0 2px 0 rgba(255,255,255,0.45), inset 0 -4px 0 rgba(0,0,0,0.18), 0 10px 18px -8px rgba(0,0,0,0.6)',
       },
     },
   },

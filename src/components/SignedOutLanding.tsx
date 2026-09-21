@@ -1,7 +1,11 @@
 import Link from 'next/link';
 import { SignInButton } from '@clerk/nextjs';
 import type { ReactNode } from 'react';
+import { BeastDoodle } from '@/components/doodles/BeastDoodle';
+import { Doodle } from '@/components/doodles/Doodle';
 import { JsonLd } from '@/components/JsonLd';
+import { Reveal } from '@/components/motion/Reveal';
+import { Sticker } from '@/components/Sticker';
 import { DEFAULT_LOCK_OFFSET_MINUTES, MAX_LOCK_OFFSET_MINUTES } from '@/lib/cycles';
 import {
   HOME_PATH,
@@ -80,10 +84,16 @@ export function SignedOutLanding({
       <JsonLd data={applicationNode(facts, showSlug, showName)} />
       <JsonLd data={faqNode(faq)} />
 
-      <header>
-        <p className="animate-rise text-2xs font-semibold uppercase tracking-[0.18em] text-brand-gold-deep">
-          Free fantasy leagues for {showName}
+      <header className="relative">
+        {/* Still a CSS entrance and still visible in the HTML — nothing in
+            the hero may start at opacity 0 (see the `rise` keyframe). The
+            eyebrow is now a sticker; the camera beside it is decoration. */}
+        <p className="animate-rise">
+          <Sticker tone="gold" tilt="l">
+            Free fantasy leagues for {showName}
+          </Sticker>
         </p>
+        <Doodle kind="camera" tone="sky" className="absolute right-0 -top-3 h-10 w-10 -rotate-12 animate-rise [animation-delay:90ms]" />
 
         <h1 className="mt-3 animate-rise font-display text-5xl leading-[0.92] tracking-wide [animation-delay:60ms] sm:text-[64px] lg:text-[76px]">
           DRAFT THE HOUSE.
@@ -205,13 +215,17 @@ export function SignedOutLanding({
       )}
 
       <Section id="league-setup" title="League sizes, drafts and roster locks" lede={facts.leagueSetup}>
-        <dl className="mt-5 grid grid-cols-2 gap-3 sm:grid-cols-4">
-          {facts.stats.map((stat) => (
-            <div key={stat.label} className="card flex flex-col p-4">
-              <dd className="order-1 font-display text-3xl leading-none tracking-wide text-brand-gold">
-                {stat.value}
-              </dd>
-              <dt className="order-2 mt-2 text-2xs leading-snug text-muted">{stat.label}</dt>
+        {/* One colour block per number, and the Beast on the last one: the
+            landing page's one bento row. `pt-6` is the room the mascot's
+            overhang needs above the tiles. */}
+        <dl className="mt-5 grid grid-cols-2 gap-3 pt-6 sm:grid-cols-4">
+          {facts.stats.map((stat, i) => (
+            <div key={stat.label} className={`${STAT_TONES[i % STAT_TONES.length]} relative flex flex-col p-4`}>
+              {i === facts.stats.length - 1 && (
+                <BeastDoodle mood="wink" className="absolute -right-3 -top-8 h-16 w-16 rotate-6" />
+              )}
+              <dd className="order-1 font-display text-3xl leading-none tracking-wide">{stat.value}</dd>
+              <dt className="order-2 mt-2 text-2xs font-semibold leading-snug text-tile-muted">{stat.label}</dt>
             </div>
           ))}
         </dl>
@@ -296,15 +310,18 @@ function Section({
   children: ReactNode;
 }) {
   return (
-    <section className="mt-14" aria-labelledby={id}>
-      <h2 id={id} className="text-2xs font-semibold uppercase tracking-[0.18em] text-muted">
+    <Reveal as="section" className="mt-14" aria-labelledby={id}>
+      <h2 id={id} className="headline text-brand-gold-deep">
         {title}
       </h2>
       {lede && <p className="mt-3 max-w-measure text-sm leading-relaxed text-muted">{lede}</p>}
       {children}
-    </section>
+    </Reveal>
   );
 }
+
+// Spelled out for Tailwind's content scan.
+const STAT_TONES = ['card-pop-gold', 'card-pop-lavender', 'card-pop-mint', 'card-pop-sky'] as const;
 
 const CLAIMS = [
   {

@@ -1,7 +1,7 @@
 import Link from 'next/link';
-import { CastTicker, type TickerCastMember } from '@/components/CastTicker';
-import { HeadlineTicker } from '@/components/HeadlineTicker';
+import { LiveTicker, type TickerCastMember } from '@/components/LiveTicker';
 import { SocialFeed } from '@/components/SocialFeed';
+import { Sticker } from '@/components/Sticker';
 import type { SocialBuzz } from '@/lib/social-feed';
 import type { SeasonHeadline } from '@/server/queries';
 
@@ -22,13 +22,14 @@ export interface FeaturedCast {
 export const LIVE_HASHTAG = 'BB28';
 
 /**
- * The "what is happening right now" block: the airing cast, the last scored
- * events, and the community timeline.
+ * The "what is happening right now" block: the last scored events as a
+ * marquee of cards (each with the houseguest's face — this is the cast
+ * rail and the headline ticker folded into one), and the community
+ * timeline.
  *
  * Shared verbatim between the signed-out landing page and the signed-in home
- * page so the two can't drift. It is a server component; the headline
- * crossfade is now the only piece here that needs the client at all, since
- * the buzz feed replaced an embedded widget with server-rendered links.
+ * page so the two can't drift. It is a server component throughout: the
+ * marquee is CSS, and the buzz feed renders plain links.
  */
 export function LiveSection({
   featured,
@@ -46,10 +47,10 @@ export function LiveSection({
       {featured && featured.cast.length > 0 && (
         <div>
           <div className="mb-3 flex items-center justify-between">
-            <span className="pill flex items-center gap-1.5 bg-brand-gold-soft text-2xs text-brand-gold-deep">
+            <Sticker tone="gold" tilt="l">
               <span className="h-1.5 w-1.5 animate-pulse rounded-full bg-danger" />
               Airing now
-            </span>
+            </Sticker>
             <Link
               href={`/seasons/${featured.seasonSlug}`}
               className="text-2xs text-brand-gold-deep"
@@ -57,11 +58,9 @@ export function LiveSection({
               {featured.seasonName} →
             </Link>
           </div>
-          <CastTicker cast={featured.cast} seasonSlug={featured.seasonSlug} />
+          <LiveTicker headlines={headlines} cast={featured.cast} seasonSlug={featured.seasonSlug} />
         </div>
       )}
-
-      {headlines.length > 0 && <HeadlineTicker headlines={headlines} />}
 
       <SocialFeed buzz={buzz} hashtag={LIVE_HASHTAG} />
     </div>

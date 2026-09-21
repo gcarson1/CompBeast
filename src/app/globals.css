@@ -40,8 +40,124 @@
 }
 
 @layer components {
+  /*
+   * The bento tile. Every tile — the dark default and the pop tones below —
+   * sets the same three custom properties so that whatever is drawn inside
+   * can say `text-tile-ink` / `text-tile-muted` / `border-tile-line` and be
+   * right on any of them (the `tile` colours in tailwind.config.ts read
+   * these). `--lift-glow` is the colour `.card-lift` blooms in on hover.
+   */
   .card {
-    @apply rounded-card border border-hairline bg-surface shadow-card;
+    @apply rounded-card border border-hairline bg-surface text-ink shadow-card;
+    --tile-ink: theme(colors.ink);
+    --tile-muted: theme(colors.muted);
+    --tile-line: theme(colors.hairline);
+    --lift-glow: rgba(245, 158, 11, 0.32);
+  }
+
+  /*
+   * Pop tiles. A light colour block with dark ink — the `on-gold` rule,
+   * generalised: every one of these fills is light, so `ink` here is the
+   * tone's dark ink, not the app's near-white. The subtle top-edge highlight
+   * and bottom shade are what stop a flat block from reading as a flat block;
+   * they are the same trick as `.clay`, at a tenth of the strength.
+   *
+   * `border-transparent`, not the hairline: a light block does not need an
+   * edge to separate it from the canvas, and a white hairline on gold reads
+   * as a rendering artefact.
+   */
+  .card-pop-gold,
+  .card-pop-lavender,
+  .card-pop-mint,
+  .card-pop-sky {
+    @apply rounded-card border border-transparent
+      shadow-[inset_0_1px_0_rgba(255,255,255,0.35),inset_0_-2px_0_rgba(0,0,0,0.08)];
+    --tile-line: rgba(0, 0, 0, 0.12);
+    color: var(--tile-ink);
+  }
+
+  .card-pop-gold {
+    @apply bg-pop-gold;
+    --tile-ink: theme(colors.pop-gold.ink);
+    --tile-muted: theme(colors.pop-gold.muted);
+    --lift-glow: theme(colors.pop-gold.glow);
+  }
+
+  .card-pop-lavender {
+    @apply bg-pop-lavender;
+    --tile-ink: theme(colors.pop-lavender.ink);
+    --tile-muted: theme(colors.pop-lavender.muted);
+    --lift-glow: theme(colors.pop-lavender.glow);
+  }
+
+  .card-pop-mint {
+    @apply bg-pop-mint;
+    --tile-ink: theme(colors.pop-mint.ink);
+    --tile-muted: theme(colors.pop-mint.muted);
+    --lift-glow: theme(colors.pop-mint.glow);
+  }
+
+  .card-pop-sky {
+    @apply bg-pop-sky;
+    --tile-ink: theme(colors.pop-sky.ink);
+    --tile-muted: theme(colors.pop-sky.muted);
+    --lift-glow: theme(colors.pop-sky.glow);
+  }
+
+  /*
+   * Hover lift for tiles that are links, in plain CSS so it works in server
+   * components and before hydration. Rises 4px and blooms in the tile's own
+   * colour; `focus-within` gives keyboard users the same cue. The Framer
+   * `MotionCard` wrapper is the spring-physics version of this for the
+   * client-side tiles, with the 3D tilt on top; this is the floor.
+   *
+   * `motion-safe:` on the transform — the global reduce-motion block already
+   * collapses the transition, but a 4px jump with no transition is still a
+   * jump, so the movement itself is what has to go.
+   */
+  .card-lift {
+    @apply transition-[transform,box-shadow] duration-300 ease-soft
+      motion-safe:hover:-translate-y-1 hover:shadow-lift
+      motion-safe:focus-within:-translate-y-1 focus-within:shadow-lift;
+  }
+
+  /* A sticker sitting on a lifting tile straightens as the tile rises. */
+  .card-lift:hover .sticker,
+  .card-lift:focus-within .sticker {
+    --sticker-tilt: 0deg;
+  }
+
+  /*
+   * Bento grid. One column on a phone, two from `sm`, three from `lg`,
+   * gutters at the 16px end of the band so tiles read as a set. `dense`
+   * lets a one-column tile backfill a hole a two-column tile left, which is
+   * what keeps the grid from having a ragged edge without hand-placing
+   * every tile — the DOM stays in reading order for a screen reader.
+   */
+  .bento {
+    @apply grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-3;
+    grid-auto-flow: dense;
+  }
+
+  .bento-2 {
+    @apply sm:col-span-2;
+  }
+
+  .bento-3 {
+    @apply sm:col-span-2 lg:col-span-3;
+  }
+
+  .bento-tall {
+    @apply lg:row-span-2;
+  }
+
+  /*
+   * Section headline: the display face, which until now only the landing
+   * hero and the score readouts used. Uppercase and tracked, at a size that
+   * keeps Anton's condensed weight from shouting inside a tile.
+   */
+  .headline {
+    @apply font-display text-xl uppercase leading-none tracking-wide;
   }
 
   /* Non-interactive status badge. Buttons deliberately do not build on this —
@@ -58,7 +174,8 @@
    */
   .btn {
     @apply inline-flex min-h-[44px] items-center justify-center gap-2 rounded-btn px-5
-      text-sm font-semibold transition active:scale-[0.97]
+      text-sm font-semibold transition duration-200 ease-spring
+      motion-safe:hover:scale-[1.03] motion-safe:active:scale-[0.95]
       disabled:pointer-events-none disabled:opacity-50;
   }
 
@@ -70,7 +187,8 @@
    */
   .btn-primary {
     @apply btn bg-brand-gold uppercase tracking-wide text-on-gold
-      shadow-[inset_0_1px_0_rgba(255,255,255,0.28)] hover:bg-brand-gold-deep;
+      shadow-[inset_0_2px_0_rgba(255,255,255,0.35),inset_0_-2px_0_rgba(0,0,0,0.14),0_6px_14px_-8px_rgba(245,158,11,0.6)]
+      hover:bg-brand-gold-deep;
   }
 
   .btn-ghost {
@@ -127,6 +245,138 @@
 
   .label {
     @apply mb-1.5 block text-xs font-medium text-muted;
+  }
+
+  /*
+   * Die-cut sticker. A status badge printed on paper and stuck to the tile:
+   * a 2px white edge, a hard 2px drop, and a small tilt. The angle arrives
+   * as `--sticker-angle` (inline, chosen per sticker by <Sticker> so no two
+   * tags on a page sit at the same slant) and is read through
+   * `--sticker-tilt`, which `.card-lift` sets to level when the tile lifts
+   * — two variables because an inline one cannot be overridden by a hover
+   * rule. Uppercase and bold because it is read at 12px on a busy surface.
+   *
+   * It is a `.pill` in spirit — non-interactive, never a button — and keeps
+   * the fully round shape for the same reason `.pill` does. Fills: paper is
+   * the default; gold and the dark `ink` fill cover the two extremes; the
+   * red one uses `danger-strong` so its white label clears 4.5:1.
+   */
+  .sticker {
+    @apply inline-flex items-center gap-1 rounded-pill border-2 border-white bg-paper px-2.5 py-1
+      text-2xs font-bold uppercase leading-none tracking-wide text-on-gold shadow-sticker;
+    --sticker-tilt: var(--sticker-angle, 0deg);
+    transform: rotate(var(--sticker-tilt));
+    transition: transform 300ms theme(transitionTimingFunction.spring);
+  }
+
+  .sticker-gold {
+    @apply bg-pop-gold text-pop-gold-ink;
+  }
+
+  .sticker-lavender {
+    @apply bg-pop-lavender text-pop-lavender-ink;
+  }
+
+  .sticker-mint {
+    @apply bg-pop-mint text-pop-mint-ink;
+  }
+
+  .sticker-sky {
+    @apply bg-pop-sky text-pop-sky-ink;
+  }
+
+  .sticker-ink {
+    @apply bg-canvas text-ink;
+  }
+
+  .sticker-red {
+    @apply bg-danger-strong text-white;
+  }
+
+  /*
+   * Claymation chip: an icon or monogram moulded rather than drawn. A
+   * diagonal light-to-base gradient plus the `clay` shadow (lit top edge,
+   * shaded bottom edge, ground shadow) is all it takes. `--clay` is the base
+   * colour and `--clay-hi` the lit corner; the tone classes set both, and
+   * the ink colour for whatever is drawn on top.
+   */
+  .clay {
+    @apply grid shrink-0 place-items-center rounded-nested shadow-clay;
+    background: linear-gradient(145deg, var(--clay-hi, #fcd34d) 0%, var(--clay, #f59e0b) 62%);
+    color: var(--clay-ink, theme(colors.on-gold));
+  }
+
+  .clay-gold {
+    --clay: theme(colors.pop-gold.DEFAULT);
+    --clay-hi: #fcd34d;
+    --clay-ink: theme(colors.pop-gold.ink);
+  }
+
+  .clay-lavender {
+    --clay: theme(colors.pop-lavender.DEFAULT);
+    --clay-hi: #e9e3ff;
+    --clay-ink: theme(colors.pop-lavender.ink);
+  }
+
+  .clay-mint {
+    --clay: theme(colors.pop-mint.DEFAULT);
+    --clay-hi: #d9fbec;
+    --clay-ink: theme(colors.pop-mint.ink);
+  }
+
+  .clay-sky {
+    --clay: theme(colors.pop-sky.DEFAULT);
+    --clay-hi: #e4f5ff;
+    --clay-ink: theme(colors.pop-sky.ink);
+  }
+
+  .clay-slate {
+    --clay: theme(colors.surface-raised);
+    --clay-hi: #3b4a63;
+    --clay-ink: theme(colors.ink);
+  }
+
+  /*
+   * Elastic switch knob. The knob overshoots its end stop and settles, which
+   * is the whole difference between a toggle that feels like a state flip
+   * and one that feels like something you pushed. The track colour keeps
+   * its plain ease — a colour overshoot is not a thing.
+   */
+  .switch-knob {
+    @apply transition-transform duration-300 ease-spring motion-reduce:transition-none;
+  }
+}
+
+/*
+ * Scroll-driven reveal. Driven by <Reveal> (src/components/motion/Reveal.tsx),
+ * which only ever sets `data-reveal="pending"` on the client, after
+ * hydration, and only on elements that are *below* the viewport at that
+ * moment — so the server HTML never carries a hidden element (the LCP rule
+ * documented on the `rise` keyframe in tailwind.config.ts), an element that
+ * is already on screen never blinks, and a reader without JavaScript sees
+ * everything. `--reveal-delay` is the stagger, set per child by <RevealGroup>.
+ *
+ * The transition, not an animation: an element that is mid-reveal when the
+ * observer flips it just continues from where it is.
+ */
+[data-reveal='pending'] {
+  opacity: 0;
+  transform: translateY(20px) scale(0.98);
+}
+
+[data-reveal='shown'] {
+  opacity: 1;
+  transform: none;
+  transition:
+    opacity 520ms cubic-bezier(0.2, 0.8, 0.2, 1) var(--reveal-delay, 0ms),
+    transform 640ms cubic-bezier(0.34, 1.4, 0.64, 1) var(--reveal-delay, 0ms);
+}
+
+@media (prefers-reduced-motion: reduce) {
+  /* Fade only. The global block shortens the duration; this removes the
+     movement so what remains is a settle rather than a jump. */
+  [data-reveal='pending'] {
+    transform: none;
   }
 }
 
@@ -202,6 +452,12 @@
    * track at its start rather than at -50% (mid-list).
    */
   .marquee-track {
+    animation-name: none;
+  }
+
+  /* The ambient shapes park where they are; they were decoration in motion
+     and are decoration at rest. */
+  .ambient-shape {
     animation-name: none;
   }
 
