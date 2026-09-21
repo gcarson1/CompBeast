@@ -1,10 +1,11 @@
 import type { Metadata } from 'next';
 import Link from 'next/link';
-import { notFound } from 'next/navigation';
+import { notFound, redirect } from 'next/navigation';
 import { cache } from 'react';
 import { Avatar } from '@/components/Avatar';
+import { getCurrentUser } from '@/lib/auth';
 import { formatPoints, pointsTone } from '@/lib/ui';
-import { getTeamDetail } from '@/server/queries';
+import { canViewLeague, getTeamDetail } from '@/server/queries';
 
 export const dynamic = 'force-dynamic';
 
@@ -21,10 +22,14 @@ export async function generateMetadata({ params }: { params: { teamId: string } 
 }
 
 export default async function TeamPage({ params }: { params: { teamId: string } }) {
-  const detail = await loadTeam(params.teamId);
+  const [detail, user] = await Promise.all([loadTeam(params.teamId), getCurrentUser()]);
   if (!detail) notFound();
 
   const { team, score, roster } = detail;
+  // A private league's rosters are its members'. The league page explains
+  // why and offers the way in, so send them there rather than 404-ing a
+  // link a friend sent them.
+  if (!(await canViewLeague(team.leagueId, user?.id ?? null))) redirect(`/leagues/${team.leagueId}`);
 
   return (
     <div className="pt-2">

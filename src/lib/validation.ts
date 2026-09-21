@@ -52,6 +52,24 @@ export const createLeagueSchema = z.object({
 });
 
 /**
+ * Joining by invite code. The code itself is normalised (trimmed, uppercased)
+ * so a code read off a phone screen matches however it was typed.
+ */
+export const joinLeagueSchema = z.object({
+  inviteCode: z
+    .string()
+    .trim()
+    .toUpperCase()
+    .min(1, 'Enter an invite code')
+    .max(40, 'That is not an invite code'),
+  teamName: z
+    .string()
+    .trim()
+    .min(2, 'Give your team a name of at least 2 characters')
+    .max(40, 'Team names are limited to 40 characters'),
+});
+
+/**
  * What a commissioner may change after a league exists.
  *
  * Deliberately a subset of `createLeagueSchema`. `seasonId` is absent because

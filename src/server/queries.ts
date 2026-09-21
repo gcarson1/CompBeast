@@ -2,11 +2,11 @@ import { prisma } from '../lib/db';
 import { type PointHistoryPoint, parseStoredHistory, playedHistory } from '../lib/career';
 import { effectiveLockAt, isCycleLocked } from '../lib/cycles';
 import { DRAFT_TEAM_ORDER } from '../lib/draft/snake';
-import { atRiskMessage, isAtRiskCode, nearMissMessage } from '../lib/engagement';
+import { AT_RISK_EVENT_CODES, atRiskMessage, nearMissMessage } from '../lib/engagement';
 import { computeLeagueSnapshot, computeTeamSnapshot } from '../lib/scoring/repository';
 import type { LeagueScoreSnapshot, TeamScore } from '../lib/scoring/types';
 
-export async function getLeaguesForUser(userId: string) {
+async function getLeaguesForUser(userId: string) {
   return prisma.league.findMany({
     where: { members: { some: { userId, status: 'ACTIVE' } } },
     select: {
@@ -83,6 +83,29 @@ export async function getLeagueOverview(leagueId: string) {
       },
     },
   });
+}
+
+/**
+ * Whether someone may read a league's pages.
+ *
+ * The same rule the API routes already apply: a public league is readable by
+ * anyone with the link, a private one by its active members. The pages used
+ * to skip this — `isPublic` was a label on the settings form and nothing
+ * else — so a private league's standings, roster and feed were readable by
+ * anyone who had the id. The league page reads the answer off its own
+ * overview query; the team and draft pages, which hold only an id, use this.
+ */
+export async function canViewLeague(leagueId: string, userId: string | null): Promise<boolean> {
+  const league = await prisma.league.findUnique({
+    where: { id: leagueId },
+    select: {
+      isPublic: true,
+      members: userId
+        ? { where: { userId, status: 'ACTIVE' }, select: { id: true } }
+        : { where: { id: '' }, select: { id: true } },
+    },
+  });
+  return league !== null && (league.isPublic || league.members.length > 0);
 }
 
 export interface LeagueMessageView {
@@ -167,14 +190,6 @@ export async function getCurrentCycle(seasonId: string) {
       orderBy: { sequence: 'asc' },
     })) ?? (await prisma.cycle.findFirst({ where: { seasonId }, orderBy: { sequence: 'desc' } }))
   );
-}
-
-export async function getSeasonCycles(seasonId: string) {
-  return prisma.cycle.findMany({
-    where: { seasonId },
-    orderBy: { sequence: 'asc' },
-    select: { id: true, label: true, sequence: true, status: true, locksAt: true, airsAt: true },
-  });
 }
 
 export interface LeaderboardRow {
@@ -351,6 +366,39 @@ export async function getTeamDetail(teamId: string): Promise<TeamDetail | null> 
   };
 }
 
+/**
+ * The houseguests on a team's roster who are on the block in the latest week
+ * that has been scored for that team.
+ *
+ * Two indexed lookups. The home rail and the league page used to load the
+ * whole `TeamDetail` — the ledger replay behind the team page — to read one
+ * cycle's lines out of it, once per league on the home page. Nominations are
+ * recorded mid-week, before the cycle's status flips, so "the latest cycle
+ * with any scored event for this roster" is what catches a nomination the
+ * moment it lands; and it is scoped to that cycle so last week's nominees do
+ * not stay on the block after the eviction.
+ */
+export async function getTeamAtRiskNames(teamId: string): Promise<string[]> {
+  const latest = await prisma.scoredEvent.findFirst({
+    where: { isVoided: false, contestant: { draftPicks: { some: { teamId } } } },
+    orderBy: { cycle: { sequence: 'desc' } },
+    select: { cycleId: true },
+  });
+  if (!latest) return [];
+
+  const nominated = await prisma.scoredEvent.findMany({
+    where: {
+      isVoided: false,
+      cycleId: latest.cycleId,
+      eventDefinition: { code: { in: [...AT_RISK_EVENT_CODES] } },
+      contestant: { draftPicks: { some: { teamId } } },
+    },
+    distinct: ['contestantId'],
+    select: { contestant: { select: { name: true } } },
+  });
+  return nominated.map((event) => event.contestant.name);
+}
+
 export async function getDraftBoard(leagueId: string) {
   const league = await prisma.league.findUniqueOrThrow({
     where: { id: leagueId },
@@ -409,11 +457,6 @@ export async function getContestantProfile(contestantId: string) {
           eventDefinition: { select: { code: true, label: true, category: true } },
         },
       },
-      draftPicks: {
-        select: {
-          team: { select: { id: true, name: true, league: { select: { id: true, name: true } } } },
-        },
-      },
     },
   });
   if (!contestant) return null;
@@ -443,6 +486,39 @@ export async function getContestantProfile(contestantId: string) {
     totalPoints: events.reduce((sum, e) => sum + e.points, 0),
     gameLog: [...byCycle.entries()].sort((a, b) => a[0] - b[0]).map(([sequence, v]) => ({ sequence, ...v })),
   };
+}
+
+export interface ContestantLeagueLine {
+  leagueId: string;
+  leagueName: string;
+  teamName: string;
+}
+
+/**
+ * Which of the *viewer's* leagues have this houseguest on a roster, and on
+ * whose team. Scoped to leagues the viewer belongs to on purpose: the player
+ * page is public and indexed, and it used to list every league in the
+ * database that had drafted the player — private leagues' names and team
+ * names included.
+ */
+export async function getContestantLeaguesForViewer(
+  contestantId: string,
+  viewerId: string | null,
+): Promise<ContestantLeagueLine[]> {
+  if (!viewerId) return [];
+  const picks = await prisma.draftPick.findMany({
+    where: {
+      contestantId,
+      team: { league: { members: { some: { userId: viewerId, status: 'ACTIVE' } } } },
+    },
+    select: { team: { select: { name: true, league: { select: { id: true, name: true } } } } },
+    orderBy: { team: { league: { createdAt: 'desc' } } },
+  });
+  return picks.map((pick) => ({
+    leagueId: pick.team.league.id,
+    leagueName: pick.team.league.name,
+    teamName: pick.team.name,
+  }));
 }
 
 export async function getSeasonsByStatus() {
@@ -646,9 +722,9 @@ export async function getHomeLeagues(userId: string): Promise<HomeLeagueCard[]> 
   return Promise.all(
     leagues.map(async (league): Promise<HomeLeagueCard> => {
       const myTeam = league.teams[0] ?? null;
-      const [{ rows }, detail, currentCycle] = await Promise.all([
+      const [{ rows }, atRiskNames, currentCycle] = await Promise.all([
         getLeagueLeaderboard(league.id),
-        myTeam ? getTeamDetail(myTeam.id) : Promise.resolve(null),
+        myTeam ? getTeamAtRiskNames(myTeam.id) : Promise.resolve([]),
         getCurrentCycle(league.season.id),
       ]);
 
@@ -657,20 +733,6 @@ export async function getHomeLeagues(userId: string): Promise<HomeLeagueCard[]> 
       // showing a locked badge next to the *season's* deadline would be a
       // worse bug than not honouring the offset at all.
       const cycleLocked = currentCycle !== null && isCycleLocked(currentCycle, league.lockOffsetMinutes);
-
-      // "At risk" reads the latest cycle that has any recorded lines at all —
-      // nominations land mid-week, before that cycle's own status flips to
-      // SCORED, so this still catches a nomination the moment it's recorded.
-      const rosterNameById = new Map((detail?.roster ?? []).map((p) => [p.contestantId, p.name]));
-      const latestLines = detail?.score?.cycles.at(-1)?.lines ?? [];
-      const atRiskNames = [
-        ...new Set(
-          latestLines
-            .filter((line) => isAtRiskCode(line.code))
-            .map((line) => rosterNameById.get(line.contestantId))
-            .filter((name): name is string => Boolean(name)),
-        ),
-      ];
 
       return {
         leagueId: league.id,

@@ -1,8 +1,10 @@
 'use client';
 
+import Link from 'next/link';
 import { useState } from 'react';
 import { AnimatePresence, motion } from 'framer-motion';
 import { cn, formatPoints, pointsTone } from '@/lib/ui';
+import type { ContestantLeagueLine } from '@/server/queries';
 
 export interface PlayerEvent {
   id: string;
@@ -29,10 +31,13 @@ export function PlayerTabs({
   events,
   gameLog,
   leagues,
+  signedIn,
 }: {
   events: PlayerEvent[];
   gameLog: PlayerGameLogRow[];
-  leagues: Array<{ leagueId: string; leagueName: string; teamName: string }>;
+  /** The viewer's leagues that drafted this player; always empty signed out. */
+  leagues: ContestantLeagueLine[];
+  signedIn: boolean;
 }) {
   const [tab, setTab] = useState<Tab>('Summary');
 
@@ -62,7 +67,7 @@ export function PlayerTabs({
         >
           {tab === 'Summary' && <SummaryTab events={events} />}
           {tab === 'Game log' && <GameLogTab gameLog={gameLog} events={events} />}
-          {tab === 'Leagues' && <LeaguesTab leagues={leagues} />}
+          {tab === 'Leagues' && <LeaguesTab leagues={leagues} signedIn={signedIn} />}
         </motion.div>
       </AnimatePresence>
     </div>
@@ -162,11 +167,14 @@ function GameLogTab({ gameLog, events }: { gameLog: PlayerGameLogRow[]; events: 
   );
 }
 
-function LeaguesTab({
-  leagues,
-}: {
-  leagues: Array<{ leagueId: string; leagueName: string; teamName: string }>;
-}) {
+function LeaguesTab({ leagues, signedIn }: { leagues: ContestantLeagueLine[]; signedIn: boolean }) {
+  if (!signedIn) {
+    return (
+      <p className="card p-4 text-xs text-muted">
+        Sign in to see which of your leagues drafted this houseguest.
+      </p>
+    );
+  }
   if (leagues.length === 0) {
     return <p className="card p-4 text-xs text-muted">Undrafted in every league you&apos;re in.</p>;
   }
@@ -174,11 +182,19 @@ function LeaguesTab({
   return (
     <ul className="card divide-y divide-hairline">
       {leagues.map((entry) => (
-        <li key={entry.leagueId} className="flex items-center justify-between p-4">
-          <span>
-            <span className="block text-sm font-medium">{entry.leagueName}</span>
-            <span className="mt-0.5 block text-2xs text-muted">Rostered by {entry.teamName}</span>
-          </span>
+        <li key={entry.leagueId}>
+          <Link
+            href={`/leagues/${entry.leagueId}`}
+            className="flex items-center justify-between gap-3 p-4 transition hover:bg-surface-raised"
+          >
+            <span className="min-w-0">
+              <span className="block truncate text-sm font-medium">{entry.leagueName}</span>
+              <span className="mt-0.5 block truncate text-2xs text-muted">Rostered by {entry.teamName}</span>
+            </span>
+            <span aria-hidden className="text-muted">
+              →
+            </span>
+          </Link>
         </li>
       ))}
     </ul>

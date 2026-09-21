@@ -2,6 +2,7 @@ import type { Metadata } from 'next';
 import Link from 'next/link';
 import { notFound } from 'next/navigation';
 import { cache } from 'react';
+import { SignInButton } from '@clerk/nextjs';
 import { Avatar, AvatarStack } from '@/components/Avatar';
 import { BeastDoodle } from '@/components/doodles/BeastDoodle';
 import { Doodle } from '@/components/doodles/Doodle';
@@ -14,7 +15,7 @@ import { Reveal, RevealGroup } from '@/components/motion/Reveal';
 import { Sticker } from '@/components/Sticker';
 import { getCurrentUser } from '@/lib/auth';
 import { describeLockState } from '@/lib/cycles';
-import { atRiskMessage, isAtRiskCode, nearMissMessage } from '@/lib/engagement';
+import { atRiskMessage, nearMissMessage } from '@/lib/engagement';
 import { describeWebhook } from '@/lib/chat-webhook';
 import { cn, formatPoints, relativeTime } from '@/lib/ui';
 import { getInvitableFriends } from '@/server/social';
@@ -23,7 +24,7 @@ import {
   getLeagueLeaderboard,
   getLeagueMessages,
   getLeagueOverview,
-  getTeamDetail,
+  getTeamAtRiskNames,
 } from '@/server/queries';
 
 export const dynamic = 'force-dynamic';
@@ -51,18 +52,25 @@ export default async function LeaguePage({ params }: { params: { leagueId: strin
   const [user, league] = await Promise.all([getCurrentUser(), loadLeague(params.leagueId)]);
   if (!league) notFound();
 
-  const [{ rows }, currentCycle, messages] = await Promise.all([
+  const isMember = Boolean(user && league.members.some((m) => m.user.id === user.id));
+  // A private league is its members'. Everyone else gets the name and a way
+  // in, not the standings — the same line the API routes draw (see
+  // `canViewLeague`). Before anything else is queried, so the gate is also
+  // the cheapest render of this page.
+  if (!league.isPublic && !isMember) {
+    return <PrivateLeagueGate league={league} signedIn={Boolean(user)} />;
+  }
+
+  const myTeam = league.teams.find((t) => t.owner.id === user?.id);
+  const [{ rows }, currentCycle, messages, atRiskNames, invitableFriends] = await Promise.all([
     getLeagueLeaderboard(league.id),
     getCurrentCycle(league.season.id),
     getLeagueMessages(league.id, user?.id ?? null),
+    myTeam ? getTeamAtRiskNames(myTeam.id) : Promise.resolve([]),
+    // Only members can invite, so only members pay for the query.
+    user && isMember ? getInvitableFriends(user.id, league.id) : Promise.resolve([]),
   ]);
 
-  const isMember = Boolean(user && league.members.some((m) => m.user.id === user.id));
-  // Only members can invite, so only members pay for the query.
-  const invitableFriends = user && isMember ? await getInvitableFriends(user.id, league.id) : [];
-
-  const myTeam = league.teams.find((t) => t.owner.id === user?.id);
-  const myTeamDetail = myTeam ? await getTeamDetail(myTeam.id) : null;
   const isCommissioner = user?.id === league.commissionerId;
   const drafting = league.draftStatus !== 'COMPLETED';
   // This league's deadline, not the season's — see src/lib/cycles.ts.
@@ -70,16 +78,6 @@ export default async function LeaguePage({ params }: { params: { leagueId: strin
   const cycleLocked = lockState?.locked ?? false;
 
   const nearMiss = myTeam ? nearMissMessage(rows, myTeam.id) : null;
-  const myRosterNames = new Map((myTeamDetail?.roster ?? []).map((p) => [p.contestantId, p.name]));
-  const latestLines = myTeamDetail?.score?.cycles.at(-1)?.lines ?? [];
-  const atRiskNames = [
-    ...new Set(
-      latestLines
-        .filter((line) => isAtRiskCode(line.code))
-        .map((line) => myRosterNames.get(line.contestantId))
-        .filter((name): name is string => Boolean(name)),
-    ),
-  ];
   const atRisk = atRiskMessage(atRiskNames);
   const openSeats = Math.max(0, league.maxTeams - league.teams.length);
   const myRow = myTeam ? (rows.find((row) => row.teamId === myTeam.id) ?? null) : null;
@@ -361,6 +359,64 @@ export default async function LeaguePage({ params }: { params: { leagueId: strin
         canPost={isMember}
         isCommissioner={isCommissioner}
       />
+    </div>
+  );
+}
+
+/**
+ * What a non-member sees of a private league: enough to know they have the
+ * right link, and the one thing they can do about it. The invite code is the
+ * credential, so the way in is the join form, never a request button here.
+ */
+function PrivateLeagueGate({
+  league,
+  signedIn,
+}: {
+  league: { name: string; season: { name: string; show: { name: string } } };
+  signedIn: boolean;
+}) {
+  return (
+    <div className="pt-2">
+      <Link href="/leagues" className="text-xs text-muted">
+        ← Leagues
+      </Link>
+      <header className="relative mt-4 pr-20 sm:pr-32">
+        <BeastDoodle
+          mood="shock"
+          className="absolute -right-2 -top-3 h-20 w-20 rotate-6 sm:-right-3 sm:-top-5"
+        />
+        <Sticker tone="lavender" size="lg" tilt="l">
+          {league.season.show.name} · {league.season.name}
+        </Sticker>
+        <h1 className="headline mt-4 text-5xl sm:text-6xl">{league.name}</h1>
+      </header>
+
+      <section className="card relative mt-8 p-5" aria-labelledby="private-heading">
+        <Sticker tone="ink" tilt="r" className="absolute -right-2 -top-3">
+          Private
+        </Sticker>
+        <Doodle kind="lock" tone="sky" className="h-8 w-8 -rotate-6" />
+        <h2 id="private-heading" className="headline mt-3 text-2xl">
+          This league is members only
+        </h2>
+        <p className="mt-2 max-w-measure text-sm leading-relaxed text-muted">
+          {signedIn
+            ? 'Standings, rosters and the feed are visible to the people in it. If you were invited, join with the invite code and this page opens up.'
+            : 'Standings, rosters and the feed are visible to the people in it. Sign in if you are already a member, or join with the invite code you were sent.'}
+        </p>
+        <div className="mt-5 flex flex-wrap gap-2">
+          {!signedIn && (
+            <SignInButton mode="modal">
+              <button type="button" className="btn-primary">
+                Sign in
+              </button>
+            </SignInButton>
+          )}
+          <Link href="/leagues/join" prefetch={false} className={signedIn ? 'btn-primary' : 'btn-ghost'}>
+            Join with a code
+          </Link>
+        </div>
+      </section>
     </div>
   );
 }

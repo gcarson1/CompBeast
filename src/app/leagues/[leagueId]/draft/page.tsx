@@ -1,5 +1,5 @@
 import Link from 'next/link';
-import { notFound } from 'next/navigation';
+import { notFound, redirect } from 'next/navigation';
 import { DraftRoom } from '@/components/DraftRoom';
 import { getCurrentUser } from '@/lib/auth';
 import { buildDraftOrder } from '@/lib/draft/snake';
@@ -10,6 +10,11 @@ export const dynamic = 'force-dynamic';
 export default async function DraftPage({ params }: { params: { leagueId: string } }) {
   const [user, overview] = await Promise.all([getCurrentUser(), getLeagueOverview(params.leagueId)]);
   if (!overview) notFound();
+
+  // Signed in is the middleware's job; being *in* the league is this page's.
+  // The league page carries the private-league explanation.
+  const isMember = Boolean(user && overview.members.some((m) => m.user.id === user.id));
+  if (!overview.isPublic && !isMember) redirect(`/leagues/${overview.id}`);
 
   const { league, picks, contestants, teams } = await getDraftBoard(params.leagueId);
 

@@ -178,7 +178,9 @@ export function LeagueSettingsForm({
         />
         <span>
           <span className="block text-sm font-medium">Public league</span>
-          <span className="mt-0.5 block text-2xs text-muted">Anyone with the code joins instantly.</span>
+          <span className="mt-0.5 block text-2xs text-muted">
+            Anyone with the link can see standings and the feed. Joining always needs the invite code.
+          </span>
         </span>
       </label>
 

@@ -7,7 +7,7 @@ import { zodResolver } from '@hookform/resolvers/zod';
 import { toast } from 'sonner';
 import { z } from 'zod';
 import { createLeagueAction, joinLeagueAction, type ActionState } from '@/server/actions';
-import { createLeagueSchema } from '@/lib/validation';
+import { createLeagueSchema, joinLeagueSchema } from '@/lib/validation';
 
 // z.input, not z.infer/z.output — the .default() on isPublic makes the parsed
 // *output* required, but RHF needs the pre-parse *input* shape (optional).
@@ -155,7 +155,9 @@ export function CreateLeagueForm({
         <input type="checkbox" className="h-5 w-5 accent-brand-gold" {...register('isPublic')} />
         <span>
           <span className="block text-sm font-medium">Public league</span>
-          <span className="mt-0.5 block text-2xs text-muted">Anyone with the code joins instantly.</span>
+          <span className="mt-0.5 block text-2xs text-muted">
+            Anyone with the link can see standings and the feed. Joining always needs the invite code.
+          </span>
         </span>
       </label>
 
@@ -165,13 +167,9 @@ export function CreateLeagueForm({
   );
 }
 
-// No shared server schema exists for join (the action validates inline), so
-// this mirrors those same constraints locally for instant inline feedback.
-const joinLeagueSchema = z.object({
-  inviteCode: z.string().trim().min(1, 'Enter an invite code'),
-  teamName: z.string().trim().min(2, 'Give your team a name').max(40),
-});
-type JoinLeagueFields = z.infer<typeof joinLeagueSchema>;
+// The same schema the action parses, so the inline messages and the server's
+// answer can never disagree.
+type JoinLeagueFields = z.input<typeof joinLeagueSchema>;
 
 export function JoinLeagueForm({ defaultCode = '' }: { defaultCode?: string }) {
   const [state, formAction] = useFormState<ActionState, FormData>(joinLeagueAction, {});

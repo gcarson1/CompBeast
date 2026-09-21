@@ -230,5 +230,3 @@ export async function unsubscribeByToken(
   });
   return { ok: true, scope: group.label.toLowerCase() };
 }
-
-export { isEmailConfigured };

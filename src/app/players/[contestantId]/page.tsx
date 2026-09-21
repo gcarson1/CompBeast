@@ -5,9 +5,10 @@ import { cache } from 'react';
 import { Avatar } from '@/components/Avatar';
 import { JsonLd } from '@/components/JsonLd';
 import { PlayerTabs } from '@/components/PlayerTabs';
+import { getCurrentUser } from '@/lib/auth';
 import { absoluteUrl, breadcrumbList } from '@/lib/seo';
 import { formatPoints, pointsTone } from '@/lib/ui';
-import { getContestantProfile } from '@/server/queries';
+import { getContestantLeaguesForViewer, getContestantProfile } from '@/server/queries';
 
 export const dynamic = 'force-dynamic';
 
@@ -31,16 +32,12 @@ export async function generateMetadata({ params }: { params: { contestantId: str
 }
 
 export default async function PlayerPage({ params }: { params: { contestantId: string } }) {
-  const player = await loadPlayer(params.contestantId);
+  const [player, user] = await Promise.all([loadPlayer(params.contestantId), getCurrentUser()]);
   if (!player) notFound();
 
   const meta = player.metadata as { occupation?: string; hometown?: string; age?: number } | null;
-
-  const leagues = player.draftPicks.map((pick) => ({
-    leagueId: pick.team.league.id,
-    leagueName: pick.team.league.name,
-    teamName: pick.team.name,
-  }));
+  // The viewer's own leagues only — this page is public and indexed.
+  const leagues = await getContestantLeaguesForViewer(player.id, user?.id ?? null);
 
   return (
     <div className="pt-2">
@@ -73,7 +70,12 @@ export default async function PlayerPage({ params }: { params: { contestantId: s
         <Fact label="Job" value={meta?.occupation ?? '—'} />
       </div>
 
-      <PlayerTabs events={player.events} gameLog={player.gameLog} leagues={leagues} />
+      <PlayerTabs
+        events={player.events}
+        gameLog={player.gameLog}
+        leagues={leagues}
+        signedIn={Boolean(user)}
+      />
     </div>
   );
 }

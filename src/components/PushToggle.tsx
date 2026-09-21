@@ -96,8 +96,7 @@ export function PushToggle({ publicKey }: { publicKey: string }) {
     unsupported: 'This browser does not support push notifications.',
     'needs-install':
       'On iPhone and iPad, push works once Comp Beast is on your home screen: tap Share, then “Add to Home Screen”, and open it from there.',
-    denied:
-      'Notifications are blocked for compbeast.app in this browser. Allow them in the browser’s site settings, then come back.',
+    denied: `Notifications are blocked for ${typeof window === 'undefined' ? 'this site' : window.location.hostname} in this browser. Allow them in the browser’s site settings, then come back.`,
     off: 'Get an alert on this device when your pick is due, when a draft starts, and when a friend invites you.',
     on: 'This device gets an alert when your pick is due, when a draft starts, and when a friend invites you.',
     busy: 'One moment…',

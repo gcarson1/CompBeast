@@ -2,6 +2,7 @@
 
 import { revalidatePath } from 'next/cache';
 import { redirect } from 'next/navigation';
+import { ZodError } from 'zod';
 import { requireUser } from '../lib/auth';
 import {
   DomainError,
@@ -12,13 +13,13 @@ import {
   joinLeague,
   makeDraftPick,
   postLeagueMessage,
-  refreshLeagueScores,
   startDraft,
   toggleMessageReaction,
   updateLeague,
   updateLeagueSchema,
 } from './mutations';
 import type { EmailCategory } from '../lib/email/templates';
+import { joinLeagueSchema } from '../lib/validation';
 import { setEmailPreference } from './notification-email';
 import { markAllNotificationsRead } from './notifications';
 import { inviteFriendToLeague, removeFriend, respondToFriendRequest, sendFriendRequest } from './social';
@@ -27,6 +28,13 @@ export type ActionState = { error?: string; ok?: boolean };
 
 function messageFor(error: unknown): string {
   if (error instanceof DomainError) return error.message;
+  // The schemas write every message for the person reading it (see
+  // src/lib/validation.ts); the browser's own constraint validation usually
+  // catches these first, so this is the JavaScript-off path and the safety net.
+  if (error instanceof ZodError) return error.issues[0]?.message ?? 'Check the form and try again.';
+  if (error instanceof Error && error.message === 'UNAUTHENTICATED') {
+    return 'Your session has ended. Sign in and try again.';
+  }
   if (error instanceof Error && error.message === 'FORBIDDEN') {
     return 'You do not have permission to do that.';
   }
@@ -61,10 +69,11 @@ export async function joinLeagueAction(_prev: ActionState, formData: FormData): 
   let leagueId: string;
   try {
     const user = await requireUser();
-    const inviteCode = String(formData.get('inviteCode') ?? '');
-    const teamName = String(formData.get('teamName') ?? '').trim();
-    if (teamName.length < 2) return { error: 'Give your team a name.' };
-    leagueId = await joinLeague(user.id, inviteCode, teamName);
+    const parsed = joinLeagueSchema.parse({
+      inviteCode: formData.get('inviteCode'),
+      teamName: formData.get('teamName'),
+    });
+    leagueId = await joinLeague(user.id, parsed.inviteCode, parsed.teamName);
   } catch (error) {
     return { error: messageFor(error) };
   }
@@ -99,18 +108,6 @@ export async function draftPickAction(_prev: ActionState, formData: FormData): P
     return { error: messageFor(error) };
   }
   revalidatePath(`/leagues/${leagueId}/draft`);
-  revalidatePath(`/leagues/${leagueId}`);
-  return { ok: true };
-}
-
-export async function refreshScoresAction(_prev: ActionState, formData: FormData): Promise<ActionState> {
-  const leagueId = String(formData.get('leagueId') ?? '');
-  try {
-    await requireUser();
-    await refreshLeagueScores(leagueId);
-  } catch (error) {
-    return { error: messageFor(error) };
-  }
   revalidatePath(`/leagues/${leagueId}`);
   return { ok: true };
 }

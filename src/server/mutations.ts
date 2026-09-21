@@ -1,11 +1,12 @@
+import { randomInt } from 'node:crypto';
 import { z } from 'zod';
 import { Prisma } from '@prisma/client';
 import { prisma } from '../lib/db';
 import { assertLeagueRole } from '../lib/auth';
 import { playedHistory } from '../lib/career';
-import { describeLockOffset, isCycleLocked } from '../lib/cycles';
+import { describeLockOffset } from '../lib/cycles';
 import { DRAFT_TEAM_ORDER, type DraftSlot, buildDraftOrder, validatePick } from '../lib/draft/snake';
-import { recalculateLeague, recalculateLeaguesForCycle } from '../lib/scoring/repository';
+import { recalculateLeaguesForCycle } from '../lib/scoring/repository';
 import { createLeagueSchema, updateLeagueSchema } from '../lib/validation';
 import { DomainError } from './errors';
 import { announceDraftPick, announceDraftStarted } from './league-chat';
@@ -16,13 +17,18 @@ export { createLeagueSchema, updateLeagueSchema };
 // keep working; `./errors` is the definition.
 export { DomainError };
 
+// No 0/O or 1/I: the code is read aloud and typed back.
 const INVITE_ALPHABET = 'ABCDEFGHJKLMNPQRSTUVWXYZ23456789';
 
+/**
+ * The invite code is the league's access control, so it comes from the
+ * CSPRNG. 32^8 is ~10^12 codes, which is enough that guessing is not a
+ * strategy, and `randomInt` is unbiased where a `Math.random()` scale-and-
+ * floor is neither unpredictable nor quite uniform.
+ */
 function generateInviteCode(): string {
   let code = '';
-  for (let i = 0; i < 8; i += 1) {
-    code += INVITE_ALPHABET[Math.floor(Math.random() * INVITE_ALPHABET.length)];
-  }
+  for (let i = 0; i < 8; i += 1) code += INVITE_ALPHABET[randomInt(INVITE_ALPHABET.length)];
   return `${code.slice(0, 4)}-${code.slice(4)}`;
 }
 
@@ -744,39 +750,6 @@ async function announceDraftProgress(input: {
 }
 
 // ---------------------------------------------------------------------------
-// Roster locking
-// ---------------------------------------------------------------------------
-
-/**
- * Whether rosters are shut for a cycle, by id.
- *
- * The rule itself lives in `src/lib/cycles.ts`, pure and unit tested. This is
- * only the loader for callers that hold ids rather than rows — a page that
- * already has the cycle and the league should call `isCycleLocked` from there
- * directly instead of paying for these two queries.
- *
- * The previous version of this function *was* the rule, and took ids, which
- * meant every caller that already had the data would have re-fetched it. None
- * of them did: it went unused, and the per-league `lockOffsetMinutes` it was
- * the sole reader of silently did nothing for as long as it existed.
- */
-export async function isCycleLockedById(cycleId: string, leagueId?: string): Promise<boolean> {
-  const [cycle, league] = await Promise.all([
-    prisma.cycle.findUniqueOrThrow({
-      where: { id: cycleId },
-      select: { locksAt: true, airsAt: true, status: true },
-    }),
-    leagueId
-      ? prisma.league.findUnique({
-          where: { id: leagueId },
-          select: { lockOffsetMinutes: true },
-        })
-      : Promise.resolve(null),
-  ]);
-  return isCycleLocked(cycle, league?.lockOffsetMinutes);
-}
-
-// ---------------------------------------------------------------------------
 // Event recording (admin)
 // ---------------------------------------------------------------------------
 
@@ -907,15 +880,11 @@ export async function voidEvent(userId: string, scoredEventId: string, reason: s
   return { leaguesRecalculated: leagueIds.length };
 }
 
-export async function refreshLeagueScores(leagueId: string) {
-  return recalculateLeague(leagueId);
-}
-
 // ---------------------------------------------------------------------------
 // League feed
 // ---------------------------------------------------------------------------
 
-export const postMessageSchema = z.object({
+const postMessageSchema = z.object({
   body: z.string().trim().min(1, 'Say something first').max(500, 'Keep it under 500 characters'),
 });
 

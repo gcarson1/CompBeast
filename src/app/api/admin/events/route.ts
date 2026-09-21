@@ -1,14 +1,20 @@
 import { NextResponse } from 'next/server';
 import { ZodError } from 'zod';
-import { requireUser } from '@/lib/auth';
+import { requirePlatformAdmin } from '@/lib/auth';
 import { DomainError, recordEvents, recordEventsSchema, voidEvent } from '@/server/mutations';
 
 export const dynamic = 'force-dynamic';
 
-/** Batch-insert ledger rows as an episode airs. */
+/**
+ * Batch-insert ledger rows as an episode airs.
+ *
+ * Platform admin, not merely signed in: a write here rescores every league
+ * on the season, which is exactly the reach `requirePlatformAdmin` exists to
+ * gate (see src/lib/auth.ts). The route was checking for a session only.
+ */
 export async function POST(request: Request) {
   try {
-    const user = await requireUser();
+    const user = await requirePlatformAdmin();
     const body = await request.json();
     const result = await recordEvents(user.id, recordEventsSchema.parse(body));
     return NextResponse.json(result, { status: 201 });
@@ -20,7 +26,7 @@ export async function POST(request: Request) {
 /** Retroactive correction: void a previously recorded event. */
 export async function DELETE(request: Request) {
   try {
-    const user = await requireUser();
+    const user = await requirePlatformAdmin();
     const { scoredEventId, reason } = await request.json();
     if (!scoredEventId || !reason) {
       return NextResponse.json({ error: 'scoredEventId and reason are required' }, { status: 400 });
@@ -41,6 +47,9 @@ function toErrorResponse(error: unknown) {
   }
   if (error instanceof Error && error.message === 'UNAUTHENTICATED') {
     return NextResponse.json({ error: 'Unauthenticated' }, { status: 401 });
+  }
+  if (error instanceof Error && error.message === 'FORBIDDEN') {
+    return NextResponse.json({ error: 'Forbidden' }, { status: 403 });
   }
   console.error(error);
   return NextResponse.json({ error: 'Internal error' }, { status: 500 });

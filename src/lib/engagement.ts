@@ -34,12 +34,12 @@ export function nearMissMessage(rows: RankedTeam[], myTeamId: string, threshold 
   return `You're ${gap} ${pts} from ${target}.`;
 }
 
-/** Event codes that mean "at risk of elimination this cycle" for the loss-aversion banner. */
-const AT_RISK_CODES = new Set(['NOMINATED', 'ON_THE_BLOCK', 'REPLACEMENT_NOMINEE']);
-
-export function isAtRiskCode(code: string): boolean {
-  return AT_RISK_CODES.has(code);
-}
+/**
+ * Event codes that mean "at risk of elimination this cycle" for the
+ * loss-aversion banner. `getTeamAtRiskNames` in src/server/queries.ts is the
+ * one reader.
+ */
+export const AT_RISK_EVENT_CODES = ['NOMINATED', 'ON_THE_BLOCK', 'REPLACEMENT_NOMINEE'] as const;
 
 /**
  * Loss aversion framing for the houseguests a team has on the block this
