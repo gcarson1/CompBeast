@@ -256,10 +256,7 @@ export async function ingestSeason(input: {
       select: { id: true, showId: true },
     });
     if (!season) {
-      throw new IngestionError(
-        `Season "${seasonExternalId}" has not been bootstrapped yet.`,
-        sourceSlug,
-      );
+      throw new IngestionError(`Season "${seasonExternalId}" has not been bootstrapped yet.`, sourceSlug);
     }
 
     const candidates = mapBigBrotherSeason(facts, seasonExternalId);
@@ -311,9 +308,7 @@ export async function ingestSeason(input: {
       if (knownRefs.has(candidate.sourceRef)) continue;
 
       const canAutoPublish =
-        resolved.confidence === 'HIGH' &&
-        resolved.contestantId !== null &&
-        resolved.cycleId !== null;
+        resolved.confidence === 'HIGH' && resolved.contestantId !== null && resolved.cycleId !== null;
 
       const record = await prisma.ingestedEventCandidate.create({
         data: {
@@ -479,7 +474,12 @@ function resolveCandidate(
     cycleBySequence: Map<number, string>;
     hasDefinition: boolean;
   },
-): { contestantId: string | null; cycleId: string | null; confidence: CandidateEvent['confidence']; reasons: string[] } {
+): {
+  contestantId: string | null;
+  cycleId: string | null;
+  confidence: CandidateEvent['confidence'];
+  reasons: string[];
+} {
   const reasons = [...candidate.reasons];
   let confidence = candidate.confidence;
 
@@ -490,7 +490,7 @@ function resolveCandidate(
   }
 
   const cycleId =
-    candidate.weekNumber === null ? null : lookups.cycleBySequence.get(candidate.weekNumber) ?? null;
+    candidate.weekNumber === null ? null : (lookups.cycleBySequence.get(candidate.weekNumber) ?? null);
   if (!cycleId) {
     reasons.push(`No cycle matches ${candidate.weekLabel}`);
     confidence = 'LOW';
@@ -578,10 +578,7 @@ export async function approveCandidate(candidateId: string, userId: string): Pro
     select: { id: true, points: true },
   });
   if (!definition) {
-    throw new IngestionError(
-      `No EventDefinition for "${candidate.eventCode}".`,
-      candidate.sourceSlug,
-    );
+    throw new IngestionError(`No EventDefinition for "${candidate.eventCode}".`, candidate.sourceSlug);
   }
 
   await publishCandidate({
@@ -601,11 +598,7 @@ export async function approveCandidate(candidateId: string, userId: string): Pro
   await recalculateLeaguesForCycle(candidate.cycleId);
 }
 
-export async function rejectCandidate(
-  candidateId: string,
-  userId: string,
-  reason: string,
-): Promise<void> {
+export async function rejectCandidate(candidateId: string, userId: string, reason: string): Promise<void> {
   const candidate = await prisma.ingestedEventCandidate.findUniqueOrThrow({
     where: { id: candidateId },
     select: { status: true, sourceSlug: true },

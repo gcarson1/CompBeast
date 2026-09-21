@@ -146,12 +146,7 @@ function createAccumulator(team: TeamRef): TeamAccumulator {
   return { team, total: 0, cycles: new Map(), contestants: new Map() };
 }
 
-function pushLine(
-  acc: TeamAccumulator,
-  cycle: CycleRef,
-  line: ScoreLine,
-  contributes: boolean,
-): void {
+function pushLine(acc: TeamAccumulator, cycle: CycleRef, line: ScoreLine, contributes: boolean): void {
   let cycleBucket = acc.cycles.get(cycle.id);
   if (!cycleBucket) {
     cycleBucket = { cycleId: cycle.id, sequence: cycle.sequence, label: cycle.label, points: 0, lines: [] };

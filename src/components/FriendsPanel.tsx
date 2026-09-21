@@ -35,11 +35,7 @@ export function FriendsPanel({ overview }: { overview: FriendOverview }) {
                   )}
                 </span>
                 <RespondForm friendshipId={request.friendshipId} name={request.name} accept />
-                <RespondForm
-                  friendshipId={request.friendshipId}
-                  name={request.name}
-                  accept={false}
-                />
+                <RespondForm friendshipId={request.friendshipId} name={request.name} accept={false} />
               </li>
             ))}
           </ul>
@@ -52,8 +48,8 @@ export function FriendsPanel({ overview }: { overview: FriendOverview }) {
         </h3>
         {friends.length === 0 ? (
           <p className="rounded-btn border border-dashed border-hairline p-4 text-2xs leading-relaxed text-muted">
-            No friends yet. Search above by name, handle, or their full email address — then you
-            can invite them straight into a league.
+            No friends yet. Search above by name, handle, or their full email address — then you can invite
+            them straight into a league.
           </p>
         ) : (
           <ul className="card divide-y divide-hairline">
@@ -210,9 +206,7 @@ function SearchRowAction({ result }: { result: FriendSearchResult }) {
   }
   if (result.relation === 'REQUEST_RECEIVED') {
     return (
-      <span className="pill shrink-0 bg-brand-velvet-soft text-2xs text-brand-velvet-deep">
-        Asked you
-      </span>
+      <span className="pill shrink-0 bg-brand-velvet-soft text-2xs text-brand-velvet-deep">Asked you</span>
     );
   }
 
@@ -233,10 +227,7 @@ function RespondForm({
   name: string;
   accept: boolean;
 }) {
-  const [state, formAction] = useFormState<ActionState, FormData>(
-    respondToFriendRequestAction,
-    {},
-  );
+  const [state, formAction] = useFormState<ActionState, FormData>(respondToFriendRequestAction, {});
 
   useEffect(() => {
     if (state.error) toast.error(state.error);
@@ -309,11 +300,7 @@ function RemoveFriendForm({
         <PendingButton
           label={withdraw ? 'Withdraw' : 'Sure?'}
           pendingLabel="…"
-          ariaLabel={
-            withdraw
-              ? `Withdraw request to ${name}`
-              : `Confirm removing ${name} from friends`
-          }
+          ariaLabel={withdraw ? `Withdraw request to ${name}` : `Confirm removing ${name} from friends`}
         />
       )}
     </form>

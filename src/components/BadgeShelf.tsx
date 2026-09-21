@@ -52,7 +52,8 @@ export function BadgeShelf({ points }: { points: number }) {
           <div className="flex items-baseline justify-between gap-3 text-2xs text-muted">
             <span>
               <span className="font-semibold text-ink">{next.remaining.toLocaleString('en-US')}</span>{' '}
-              {next.remaining === 1 ? 'point' : 'points'} to <span className="text-ink">{next.badge.name}</span>
+              {next.remaining === 1 ? 'point' : 'points'} to{' '}
+              <span className="text-ink">{next.badge.name}</span>
             </span>
             <span className="tabular-nums">
               {Math.round(points).toLocaleString('en-US')} / {next.badge.threshold.toLocaleString('en-US')}

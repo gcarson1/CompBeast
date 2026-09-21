@@ -65,7 +65,10 @@ export default async function HomePage() {
   const user = await getCurrentUser();
   const { open } = await getSeasonsByStatus();
   // ACTIVE ahead of UPCOMING, so the copy talks about the season on air.
-  const ordered = [...open.filter((s) => s.status === 'ACTIVE'), ...open.filter((s) => s.status !== 'ACTIVE')];
+  const ordered = [
+    ...open.filter((s) => s.status === 'ACTIVE'),
+    ...open.filter((s) => s.status !== 'ACTIVE'),
+  ];
 
   // Started here, awaited in two places. The live block always needs it;
   // the signed-out copy needs it too, *before* the shell goes out, so the
@@ -107,12 +110,7 @@ export default async function HomePage() {
     const rulesets = await getRuleBook(season?.showSlug ?? 'big-brother');
 
     return (
-      <SignedOutLanding
-        live={live}
-        season={season}
-        rulesets={rulesets}
-        emailAlerts={isEmailConfigured()}
-      />
+      <SignedOutLanding live={live} season={season} rulesets={rulesets} emailAlerts={isEmailConfigured()} />
     );
   }
 
@@ -237,8 +235,8 @@ function EmptyLeagues() {
       <div className="pr-20">
         <h2 className="headline text-2xl">You&apos;re not in a league yet</h2>
         <p className="mt-2 max-w-measure text-xs leading-relaxed text-tile-muted">
-          Start one for any season that is still open, or join a friend&apos;s with their invite
-          code — they can show you a QR code to scan instead.
+          Start one for any season that is still open, or join a friend&apos;s with their invite code — they
+          can show you a QR code to scan instead.
         </p>
       </div>
       <div className="mt-4 flex flex-wrap gap-2">

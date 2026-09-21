@@ -49,8 +49,8 @@ export function EmailPreferences({ preferences }: { preferences: Preferences }) 
 
       {!preferences.configured && (
         <p className="p-4 text-2xs leading-relaxed text-muted">
-          No mail provider is connected to this deployment yet, so nothing is being sent. These
-          choices are saved and will apply the moment one is.
+          No mail provider is connected to this deployment yet, so nothing is being sent. These choices are
+          saved and will apply the moment one is.
         </p>
       )}
     </div>
@@ -85,12 +85,8 @@ function Row({
       <input type="hidden" name="enabled" value={enabled ? 'false' : 'true'} />
 
       <span className="min-w-0 flex-1">
-        <span className={cn('block text-sm', emphasis ? 'font-semibold' : 'font-medium')}>
-          {label}
-        </span>
-        <span className="mt-0.5 block max-w-measure text-2xs leading-relaxed text-muted">
-          {description}
-        </span>
+        <span className={cn('block text-sm', emphasis ? 'font-semibold' : 'font-medium')}>{label}</span>
+        <span className="mt-0.5 block max-w-measure text-2xs leading-relaxed text-muted">{description}</span>
       </span>
 
       <Switch enabled={enabled} disabled={disabled} label={label} />
@@ -98,15 +94,7 @@ function Row({
   );
 }
 
-function Switch({
-  enabled,
-  disabled,
-  label,
-}: {
-  enabled: boolean;
-  disabled: boolean;
-  label: string;
-}) {
+function Switch({ enabled, disabled, label }: { enabled: boolean; disabled: boolean; label: string }) {
   const { pending } = useFormStatus();
 
   return (

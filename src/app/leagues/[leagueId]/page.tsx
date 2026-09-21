@@ -66,9 +66,7 @@ export default async function LeaguePage({ params }: { params: { leagueId: strin
   const isCommissioner = user?.id === league.commissionerId;
   const drafting = league.draftStatus !== 'COMPLETED';
   // This league's deadline, not the season's — see src/lib/cycles.ts.
-  const lockState = currentCycle
-    ? describeLockState(currentCycle, league.lockOffsetMinutes)
-    : null;
+  const lockState = currentCycle ? describeLockState(currentCycle, league.lockOffsetMinutes) : null;
   const cycleLocked = lockState?.locked ?? false;
 
   const nearMiss = myTeam ? nearMissMessage(rows, myTeam.id) : null;
@@ -84,7 +82,7 @@ export default async function LeaguePage({ params }: { params: { leagueId: strin
   ];
   const atRisk = atRiskMessage(atRiskNames);
   const openSeats = Math.max(0, league.maxTeams - league.teams.length);
-  const myRow = myTeam ? rows.find((row) => row.teamId === myTeam.id) ?? null : null;
+  const myRow = myTeam ? (rows.find((row) => row.teamId === myTeam.id) ?? null) : null;
   const managerNames = league.members.map((m) => m.user.name ?? m.user.handle ?? '?');
 
   return (
@@ -161,12 +159,15 @@ export default async function LeaguePage({ params }: { params: { leagueId: strin
                 {league.draftStatus === 'NOT_STARTED' ? 'Draft not started' : 'Draft in progress'}
               </span>
               <span className="mt-1 block text-xs text-tile-muted">
-                {league.teams.length} {league.teams.length === 1 ? 'team' : 'teams'} ·{' '}
-                {league.rosterSize} picks each · {league.draftType.toLowerCase()} order
+                {league.teams.length} {league.teams.length === 1 ? 'team' : 'teams'} · {league.rosterSize}{' '}
+                picks each · {league.draftType.toLowerCase()} order
               </span>
             </span>
             <span className="btn btn-sm shrink-0 bg-pop-lavender-ink text-pop-lavender">
-              {league.draftStatus === 'NOT_STARTED' && isCommissioner ? 'Start the draft' : 'Open the draft room'} →
+              {league.draftStatus === 'NOT_STARTED' && isCommissioner
+                ? 'Start the draft'
+                : 'Open the draft room'}{' '}
+              →
             </span>
           </Link>
         </MotionCard>
@@ -179,20 +180,25 @@ export default async function LeaguePage({ params }: { params: { leagueId: strin
           </h2>
           {/* `auto-fit` so two tiles share the row and three split it, with
               no hole when one of them is absent. */}
-          <RevealGroup className="mt-3 grid grid-cols-1 gap-4 sm:grid-cols-[repeat(auto-fit,minmax(14rem,1fr))]" step={60}>
+          <RevealGroup
+            className="mt-3 grid grid-cols-1 gap-4 sm:grid-cols-[repeat(auto-fit,minmax(14rem,1fr))]"
+            step={60}
+          >
             {myTeam && myRow && (
               <Reveal>
                 <MotionCard tilt className="card-pop-mint relative h-full">
                   <Link href={`/teams/${myTeam.id}`} className="flex h-full flex-col rounded-card p-5">
-                    <span className="text-2xs font-bold uppercase tracking-wide text-tile-muted">My team</span>
+                    <span className="text-2xs font-bold uppercase tracking-wide text-tile-muted">
+                      My team
+                    </span>
                     <span className="mt-1 block truncate text-base font-semibold">{myTeam.name}</span>
                     <span className="mt-3 block font-display text-6xl leading-none tracking-wide">
                       {myRow.totalPoints}
                     </span>
                     <span className="mt-auto flex flex-wrap items-center gap-2 pt-4">
                       <Sticker tone={myRow.rank === 1 ? 'gold' : 'paper'} size="sm">
-                        {myRow.rank === 1 && <Doodle kind="crown" className="-ml-0.5 h-4 w-4" />}#{myRow.rank} of{' '}
-                        {rows.length}
+                        {myRow.rank === 1 && <Doodle kind="crown" className="-ml-0.5 h-4 w-4" />}#{myRow.rank}{' '}
+                        of {rows.length}
                       </Sticker>
                       {/* The sign carries the meaning — colour on a mint block
                           would not clear contrast for either tone. */}
@@ -232,13 +238,21 @@ export default async function LeaguePage({ params }: { params: { leagueId: strin
             )}
 
             {(nearMiss || atRisk) && (
-              <Reveal as="section" aria-label="Heads up" className="card relative p-5 sm:col-span-2 lg:col-span-1">
+              <Reveal
+                as="section"
+                aria-label="Heads up"
+                className="card relative p-5 sm:col-span-2 lg:col-span-1"
+              >
                 {/* Inset from the left edge: a tile to its left may carry its
                     own tag on that corner, and two overhanging tags collide. */}
                 <Sticker tone={atRisk ? 'red' : 'gold'} tilt="l" className="absolute left-4 -top-3">
                   Heads up
                 </Sticker>
-                <Doodle kind="alert" tone={atRisk ? 'red' : 'gold'} className="absolute -right-2 -top-3 h-9 w-9 rotate-6" />
+                <Doodle
+                  kind="alert"
+                  tone={atRisk ? 'red' : 'gold'}
+                  className="absolute -right-2 -top-3 h-9 w-9 rotate-6"
+                />
                 <div className="mt-2 space-y-2">
                   {nearMiss && <p className="text-sm font-medium text-brand-gold-deep">{nearMiss}</p>}
                   {atRisk && <p className="text-sm font-medium text-danger-deep">{atRisk}</p>}
@@ -281,7 +295,11 @@ export default async function LeaguePage({ params }: { params: { leagueId: strin
               const isYou = member.user.id === user?.id;
               return (
                 <li key={member.user.id} className="flex items-center gap-3 p-4">
-                  <Avatar name={member.user.name ?? member.user.handle ?? '?'} photoUrl={member.user.avatarUrl} size={38} />
+                  <Avatar
+                    name={member.user.name ?? member.user.handle ?? '?'}
+                    photoUrl={member.user.avatarUrl}
+                    size={38}
+                  />
                   <span className="min-w-0 flex-1">
                     <span className="block truncate text-base font-semibold">
                       {team?.name ?? 'No team yet'}
@@ -332,11 +350,7 @@ export default async function LeaguePage({ params }: { params: { leagueId: strin
       </div>
 
       {isMember && league.draftStatus === 'NOT_STARTED' && (
-        <InviteFriends
-          leagueId={league.id}
-          friends={invitableFriends}
-          seatsLeft={openSeats}
-        />
+        <InviteFriends leagueId={league.id} friends={invitableFriends} seatsLeft={openSeats} />
       )}
 
       {/* Full width on purpose: the feed is the part people come back to, and
@@ -353,7 +367,15 @@ export default async function LeaguePage({ params }: { params: { leagueId: strin
 
 function BoardIcon() {
   return (
-    <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" aria-hidden>
+    <svg
+      width="22"
+      height="22"
+      viewBox="0 0 24 24"
+      fill="none"
+      stroke="currentColor"
+      strokeWidth="1.8"
+      aria-hidden
+    >
       <rect x="3" y="4" width="18" height="16" rx="2.5" />
       <path d="M3 9.5h18M8.5 9.5V20M15.5 9.5V20" strokeLinecap="round" />
       <path d="M5.5 13h1M11 13h2M18 13h1M5.5 16.5h1M11 16.5h2" strokeLinecap="round" />
@@ -363,9 +385,20 @@ function BoardIcon() {
 
 function GearIcon() {
   return (
-    <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" aria-hidden>
+    <svg
+      width="20"
+      height="20"
+      viewBox="0 0 24 24"
+      fill="none"
+      stroke="currentColor"
+      strokeWidth="1.8"
+      aria-hidden
+    >
       <circle cx="12" cy="12" r="3.2" />
-      <path d="M12 2.5v2M12 19.5v2M21.5 12h-2M4.5 12h-2M18.7 5.3l-1.4 1.4M6.7 17.3l-1.4 1.4M18.7 18.7l-1.4-1.4M6.7 6.7 5.3 5.3" strokeLinecap="round" />
+      <path
+        d="M12 2.5v2M12 19.5v2M21.5 12h-2M4.5 12h-2M18.7 5.3l-1.4 1.4M6.7 17.3l-1.4 1.4M18.7 18.7l-1.4-1.4M6.7 6.7 5.3 5.3"
+        strokeLinecap="round"
+      />
     </svg>
   );
 }

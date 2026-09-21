@@ -1,7 +1,12 @@
 import { PrismaClient } from '@prisma/client';
 import { afterAll, beforeAll, describe, expect, it } from 'vitest';
 import { createLeague, deleteLeague, joinLeague, startDraft, updateLeague } from './mutations';
-import { getNotifications, getUnreadNotificationCount, markAllNotificationsRead, markNotificationRead } from './notifications';
+import {
+  getNotifications,
+  getUnreadNotificationCount,
+  markAllNotificationsRead,
+  markNotificationRead,
+} from './notifications';
 import { getAccountOverview, getHomeLeagues } from './queries';
 import {
   getFriendOverview,
@@ -216,9 +221,9 @@ describe.skipIf(!dbReady)('friend requests', () => {
     await sendFriendRequest(x, y);
     const { incoming } = await getFriendOverview(y);
 
-    await expect(
-      respondToFriendRequest(cleo, incoming[0].friendshipId, true),
-    ).rejects.toMatchObject({ code: 'REQUEST_NOT_FOUND' });
+    await expect(respondToFriendRequest(cleo, incoming[0].friendshipId, true)).rejects.toMatchObject({
+      code: 'REQUEST_NOT_FOUND',
+    });
   });
 
   it('unfriends from either side', async () => {
@@ -541,10 +546,12 @@ describe.skipIf(!dbReady)('roster lock offset', () => {
       chatWebhookUrl: null,
     });
     expect(
-      (await prisma.league.findUniqueOrThrow({
-        where: { id: league.id },
-        select: { lockOffsetMinutes: true },
-      })).lockOffsetMinutes,
+      (
+        await prisma.league.findUniqueOrThrow({
+          where: { id: league.id },
+          select: { lockOffsetMinutes: true },
+        })
+      ).lockOffsetMinutes,
     ).toBe(60);
 
     // Null is a real choice, not an absent field: back to the season schedule.
@@ -558,10 +565,12 @@ describe.skipIf(!dbReady)('roster lock offset', () => {
       chatWebhookUrl: null,
     });
     expect(
-      (await prisma.league.findUniqueOrThrow({
-        where: { id: league.id },
-        select: { lockOffsetMinutes: true },
-      })).lockOffsetMinutes,
+      (
+        await prisma.league.findUniqueOrThrow({
+          where: { id: league.id },
+          select: { lockOffsetMinutes: true },
+        })
+      ).lockOffsetMinutes,
     ).toBeNull();
   });
 
@@ -707,7 +716,7 @@ describe.skipIf(!dbReady)('deleting a league', () => {
     });
   });
 
-  it('keeps every manager\'s points as a career record, and skips teams that never scored', async (ctx) => {
+  it("keeps every manager's points as a career record, and skips teams that never scored", async (ctx) => {
     // A cycle that has actually been played: the history reduction stops at
     // the last non-UPCOMING week, so scores on a future week would not count
     // — for a live team or for the record, which is the parity being tested.

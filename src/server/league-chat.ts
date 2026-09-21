@@ -24,7 +24,10 @@ import { getLeagueLeaderboard } from './queries';
 const TIMEOUT_MS = 5_000;
 
 /** Posts one message to a webhook. Resolves to whether the service accepted it. */
-export async function postToChat(webhookUrl: string | null | undefined, message: ChatMessage): Promise<boolean> {
+export async function postToChat(
+  webhookUrl: string | null | undefined,
+  message: ChatMessage,
+): Promise<boolean> {
   if (!webhookUrl) return false;
   const target = parseWebhookUrl(webhookUrl);
   if (!target) return false;

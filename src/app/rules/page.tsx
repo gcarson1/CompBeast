@@ -78,9 +78,7 @@ export default async function RulesPage() {
                         .map((rule) => (
                           <li key={rule.id} className="flex items-center justify-between gap-3 px-4 py-2.5">
                             <span className="min-w-0 flex-1 truncate text-xs">{rule.label}</span>
-                            <span
-                              className={`text-xs font-semibold tabular-nums ${pointsTone(rule.points)}`}
-                            >
+                            <span className={`text-xs font-semibold tabular-nums ${pointsTone(rule.points)}`}>
                               {formatPoints(rule.points)}
                             </span>
                           </li>

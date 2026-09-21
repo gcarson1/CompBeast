@@ -44,12 +44,7 @@ export function SocialFeed({ buzz, hashtag }: { buzz: SocialBuzz; hashtag: strin
           <p className="max-w-measure text-xs leading-relaxed text-muted">
             Couldn&apos;t reach the news feeds just now. The conversation is still going on X.
           </p>
-          <a
-            href={xSearchUrl}
-            target="_blank"
-            rel="noopener noreferrer"
-            className="btn-ghost btn-sm mt-3"
-          >
+          <a href={xSearchUrl} target="_blank" rel="noopener noreferrer" className="btn-ghost btn-sm mt-3">
             Open #{hashtag} on X
           </a>
         </div>
@@ -64,9 +59,7 @@ export function SocialFeed({ buzz, hashtag }: { buzz: SocialBuzz; hashtag: strin
                   rel="noopener noreferrer"
                   className="block rounded-btn px-1 py-3.5 transition hover:bg-surface/60"
                 >
-                  <p className="max-w-measure text-sm font-medium leading-snug text-ink">
-                    {post.title}
-                  </p>
+                  <p className="max-w-measure text-sm font-medium leading-snug text-ink">{post.title}</p>
                   <p className="mt-1 flex items-center gap-1.5 text-2xs text-muted">
                     {post.author && <span className="truncate">{post.author}</span>}
                     {post.author && <span aria-hidden>·</span>}

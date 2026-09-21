@@ -17,9 +17,30 @@ const ruleset = resolveRuleset({
   slug: 'classic-measurable',
   name: 'Classic',
   entries: [
-    { eventDefinitionId: 'hoh', code: 'HOH_WIN', label: 'Win HOH', category: 'COMPETITION_GAMEPLAY', basePoints: 10, pointsOverride: null },
-    { eventDefinitionId: 'nom', code: 'NOMINATED', label: 'Nominated', category: 'COMPETITION_GAMEPLAY', basePoints: -5, pointsOverride: null },
-    { eventDefinitionId: 'veto', code: 'VETO_WIN', label: 'Win Veto', category: 'COMPETITION_GAMEPLAY', basePoints: 5, pointsOverride: 3 },
+    {
+      eventDefinitionId: 'hoh',
+      code: 'HOH_WIN',
+      label: 'Win HOH',
+      category: 'COMPETITION_GAMEPLAY',
+      basePoints: 10,
+      pointsOverride: null,
+    },
+    {
+      eventDefinitionId: 'nom',
+      code: 'NOMINATED',
+      label: 'Nominated',
+      category: 'COMPETITION_GAMEPLAY',
+      basePoints: -5,
+      pointsOverride: null,
+    },
+    {
+      eventDefinitionId: 'veto',
+      code: 'VETO_WIN',
+      label: 'Win Veto',
+      category: 'COMPETITION_GAMEPLAY',
+      basePoints: 5,
+      pointsOverride: 3,
+    },
   ],
 });
 
@@ -48,7 +69,10 @@ describe('aggregateTeamScores', () => {
         ['t1', 'c1', 'w1'],
         ['t2', 'c2', 'w1'],
       ]),
-      events: [event({ id: 'e1' }), event({ id: 'e2', contestantId: 'c2', eventDefinitionId: 'nom', pointsAwarded: -5 })],
+      events: [
+        event({ id: 'e1' }),
+        event({ id: 'e2', contestantId: 'c2', eventDefinitionId: 'nom', pointsAwarded: -5 }),
+      ],
       ruleset,
     });
 
@@ -172,7 +196,14 @@ describe('aggregateTeamScores', () => {
       slug: 'half',
       name: 'Half',
       entries: [
-        { eventDefinitionId: 'h', code: 'H', label: 'H', category: 'SOCIAL_DRAMA', basePoints: 0.1, pointsOverride: null },
+        {
+          eventDefinitionId: 'h',
+          code: 'H',
+          label: 'H',
+          category: 'SOCIAL_DRAMA',
+          basePoints: 0.1,
+          pointsOverride: null,
+        },
       ],
     });
 

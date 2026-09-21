@@ -8,8 +8,7 @@ import { parseFeed } from './parse';
  * ingestion parser tests follow. A test that depends on a third party being
  * up and unchanged is a test that fails for reasons that are not your bug.
  */
-const fixture = (name: string) =>
-  readFileSync(join(__dirname, '__fixtures__', name), 'utf8');
+const fixture = (name: string) => readFileSync(join(__dirname, '__fixtures__', name), 'utf8');
 
 describe('RSS 2.0 (the show feed)', () => {
   const posts = parseFeed(fixture('bbjunkies-feed.xml'), 'show-feed');

@@ -42,8 +42,9 @@ const MARK =
       '<circle cx="53" cy="7" r="4.5" fill="#EF4444"/></g></svg>',
   ).toString('base64');
 
-let fontsPromise: Promise<Array<{ name: string; data: ArrayBuffer; weight: 400 | 600; style: 'normal' }>> | null =
-  null;
+let fontsPromise: Promise<
+  Array<{ name: string; data: ArrayBuffer; weight: 400 | 600; style: 'normal' }>
+> | null = null;
 
 /** Read once per process; three files, ~540 KB, and every card needs them. */
 function loadFonts() {
@@ -54,9 +55,24 @@ function loadFonts() {
       return buffer.buffer.slice(buffer.byteOffset, buffer.byteOffset + buffer.byteLength) as ArrayBuffer;
     };
     fontsPromise = Promise.all([
-      read('Anton-Regular.ttf').then((data) => ({ name: 'Anton', data, weight: 400 as const, style: 'normal' as const })),
-      read('Archivo-Regular.ttf').then((data) => ({ name: 'Archivo', data, weight: 400 as const, style: 'normal' as const })),
-      read('Archivo-SemiBold.ttf').then((data) => ({ name: 'Archivo', data, weight: 600 as const, style: 'normal' as const })),
+      read('Anton-Regular.ttf').then((data) => ({
+        name: 'Anton',
+        data,
+        weight: 400 as const,
+        style: 'normal' as const,
+      })),
+      read('Archivo-Regular.ttf').then((data) => ({
+        name: 'Archivo',
+        data,
+        weight: 400 as const,
+        style: 'normal' as const,
+      })),
+      read('Archivo-SemiBold.ttf').then((data) => ({
+        name: 'Archivo',
+        data,
+        weight: 600 as const,
+        style: 'normal' as const,
+      })),
     ]);
   }
   return fontsPromise;
@@ -137,7 +153,9 @@ function Card({ eyebrow, title, subtitle, stats = [] }: OgCardProps) {
                 border: `1px solid ${HAIRLINE}`,
               }}
             >
-              <div style={{ fontFamily: 'Anton', fontSize: 40, lineHeight: 1, color: GOLD }}>{stat.value}</div>
+              <div style={{ fontFamily: 'Anton', fontSize: 40, lineHeight: 1, color: GOLD }}>
+                {stat.value}
+              </div>
               <div style={{ marginTop: 8, fontSize: 20, color: MUTED }}>{stat.label}</div>
             </div>
           ))}

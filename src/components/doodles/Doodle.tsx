@@ -1,16 +1,7 @@
 import { cn } from '@/lib/ui';
 
 export type DoodleKind =
-  | 'key'
-  | 'veto'
-  | 'crown'
-  | 'tally'
-  | 'camera'
-  | 'door'
-  | 'star'
-  | 'alert'
-  | 'lock'
-  | 'lock-open';
+  'key' | 'veto' | 'crown' | 'tally' | 'camera' | 'door' | 'star' | 'alert' | 'lock' | 'lock-open';
 
 const TONE = {
   gold: '#F59E0B',
@@ -65,14 +56,42 @@ export function Doodle({
         {glyph.accent && <path d={glyph.accent} />}
       </g>
       {glyph.line && (
-        <path d={glyph.line} fill="none" stroke={INK} strokeWidth="3.5" strokeLinecap="round" strokeLinejoin="round" />
+        <path
+          d={glyph.line}
+          fill="none"
+          stroke={INK}
+          strokeWidth="3.5"
+          strokeLinecap="round"
+          strokeLinejoin="round"
+        />
       )}
-      <path d={glyph.body} fill={fill} stroke={INK} strokeWidth="4" strokeLinejoin="round" paintOrder="stroke" />
+      <path
+        d={glyph.body}
+        fill={fill}
+        stroke={INK}
+        strokeWidth="4"
+        strokeLinejoin="round"
+        paintOrder="stroke"
+      />
       {glyph.accent && (
-        <path d={glyph.accent} fill={TONE.red} stroke={INK} strokeWidth="3" strokeLinejoin="round" paintOrder="stroke" />
+        <path
+          d={glyph.accent}
+          fill={TONE.red}
+          stroke={INK}
+          strokeWidth="3"
+          strokeLinejoin="round"
+          paintOrder="stroke"
+        />
       )}
       {glyph.detail && (
-        <path d={glyph.detail} fill="none" stroke={INK} strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" />
+        <path
+          d={glyph.detail}
+          fill="none"
+          stroke={INK}
+          strokeWidth="2"
+          strokeLinecap="round"
+          strokeLinejoin="round"
+        />
       )}
       {glyph.dots?.map((dot) => (
         <circle key={`${dot.cx}-${dot.cy}`} cx={dot.cx} cy={dot.cy} r={dot.r} fill={INK} />

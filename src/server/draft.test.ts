@@ -56,10 +56,16 @@ async function startedLeague() {
   });
   leagueIds.push(league.id);
 
-  await joinLeague(bob, (await prisma.league.findUniqueOrThrow({
-    where: { id: league.id },
-    select: { inviteCode: true },
-  })).inviteCode, 'Bob Squad');
+  await joinLeague(
+    bob,
+    (
+      await prisma.league.findUniqueOrThrow({
+        where: { id: league.id },
+        select: { inviteCode: true },
+      })
+    ).inviteCode,
+    'Bob Squad',
+  );
 
   await startDraft(league.id, alice);
 

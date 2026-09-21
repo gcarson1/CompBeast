@@ -56,7 +56,9 @@ export async function GET(request: Request) {
   }
 
   const results: Array<
-    { seasonSlug: string; sourceSlug: string; chatsPosted: number } & Partial<IngestionSummary> & { error?: string }
+    { seasonSlug: string; sourceSlug: string; chatsPosted: number } & Partial<IngestionSummary> & {
+        error?: string;
+      }
   > = [];
 
   for (const target of targets.values()) {

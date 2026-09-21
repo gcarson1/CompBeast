@@ -139,7 +139,8 @@ export function standingsMessage(input: {
     title: `${input.seasonName} results are in — ${input.leagueName} standings`,
     lines: [
       ...shown.map(
-        (row) => `${row.rank}. ${row.teamName} — ${row.totalPoints} (${signed(row.lastCyclePoints)} this week)`,
+        (row) =>
+          `${row.rank}. ${row.teamName} — ${row.totalPoints} (${signed(row.lastCyclePoints)} this week)`,
       ),
       ...(input.rows.length > shown.length ? [`…and ${input.rows.length - shown.length} more.`] : []),
     ],

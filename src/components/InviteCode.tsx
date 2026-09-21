@@ -153,10 +153,7 @@ export function InviteCode({ code, leagueName }: { code: string; leagueName: str
 
           const box = e.currentTarget.getBoundingClientRect();
           const outside =
-            e.clientX < box.left ||
-            e.clientX > box.right ||
-            e.clientY < box.top ||
-            e.clientY > box.bottom;
+            e.clientX < box.left || e.clientX > box.right || e.clientY < box.top || e.clientY > box.bottom;
           if (outside) e.currentTarget.close();
         }}
         className="rounded-card border border-hairline bg-surface p-0 text-ink shadow-card backdrop:bg-black/70 backdrop:backdrop-blur-sm"
@@ -200,11 +197,7 @@ export function InviteCode({ code, leagueName }: { code: string; leagueName: str
             >
               Copy link
             </button>
-            <button
-              type="button"
-              onClick={() => dialogRef.current?.close()}
-              className="btn-primary flex-1"
-            >
+            <button type="button" onClick={() => dialogRef.current?.close()} className="btn-primary flex-1">
               Done
             </button>
           </div>
@@ -216,16 +209,35 @@ export function InviteCode({ code, leagueName }: { code: string; leagueName: str
 
 function CopyIcon() {
   return (
-    <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" aria-hidden>
+    <svg
+      width="14"
+      height="14"
+      viewBox="0 0 24 24"
+      fill="none"
+      stroke="currentColor"
+      strokeWidth="1.8"
+      aria-hidden
+    >
       <rect x="9" y="9" width="11" height="11" rx="2.5" />
-      <path d="M15 5.5A2.5 2.5 0 0 0 12.5 3h-6A3.5 3.5 0 0 0 3 6.5v6A2.5 2.5 0 0 0 5.5 15" strokeLinecap="round" />
+      <path
+        d="M15 5.5A2.5 2.5 0 0 0 12.5 3h-6A3.5 3.5 0 0 0 3 6.5v6A2.5 2.5 0 0 0 5.5 15"
+        strokeLinecap="round"
+      />
     </svg>
   );
 }
 
 function CheckIcon() {
   return (
-    <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" aria-hidden>
+    <svg
+      width="14"
+      height="14"
+      viewBox="0 0 24 24"
+      fill="none"
+      stroke="currentColor"
+      strokeWidth="2.2"
+      aria-hidden
+    >
       <path d="m5 12.5 4.5 4.5L19 7" strokeLinecap="round" strokeLinejoin="round" />
     </svg>
   );
@@ -233,7 +245,15 @@ function CheckIcon() {
 
 function QrIcon() {
   return (
-    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" aria-hidden>
+    <svg
+      width="16"
+      height="16"
+      viewBox="0 0 24 24"
+      fill="none"
+      stroke="currentColor"
+      strokeWidth="1.8"
+      aria-hidden
+    >
       <rect x="3" y="3" width="7" height="7" rx="1.5" />
       <rect x="14" y="3" width="7" height="7" rx="1.5" />
       <rect x="3" y="14" width="7" height="7" rx="1.5" />

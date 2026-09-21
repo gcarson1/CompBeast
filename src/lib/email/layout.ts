@@ -208,13 +208,7 @@ export function renderText(input: {
   unsubscribeUrl?: string;
   settingsUrl: string;
 }): string {
-  const lines = [
-    'COMP BEAST',
-    '',
-    input.headline,
-    '',
-    input.body,
-  ];
+  const lines = ['COMP BEAST', '', input.headline, '', input.body];
   if (input.detail) lines.push('', input.detail);
   if (input.cta) lines.push('', `${input.cta.label}: ${input.cta.url}`);
   lines.push('', '—', input.footerReason, `Email settings: ${input.settingsUrl}`);

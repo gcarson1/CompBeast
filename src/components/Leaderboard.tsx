@@ -21,13 +21,7 @@ const MAX_PULL = 90;
 // moment the pull is supposed to earn, not an instant, un-anticipated update.
 const REVEAL_DELAY_MS = 1500;
 
-export function Leaderboard({
-  rows,
-  myTeamId,
-}: {
-  rows: LeaderboardRow[];
-  myTeamId: string | null;
-}) {
+export function Leaderboard({ rows, myTeamId }: { rows: LeaderboardRow[]; myTeamId: string | null }) {
   const router = useRouter();
   const [isPending, startTransition] = useTransition();
   const [pull, setPull] = useState(0);
@@ -127,9 +121,7 @@ export function Leaderboard({
           stroke="currentColor"
           strokeWidth="1.8"
           animate={{ rotate: revealing ? 360 : (pull / MAX_PULL) * 180 }}
-          transition={
-            revealing ? { repeat: Infinity, duration: 0.7, ease: 'linear' } : { duration: 0 }
-          }
+          transition={revealing ? { repeat: Infinity, duration: 0.7, ease: 'linear' } : { duration: 0 }}
         >
           <circle cx="8" cy="8" r="4" />
           <path d="M11 11 20 20M15.5 15.5 18 13M18.5 18.5 21 16" strokeLinecap="round" />
@@ -155,11 +147,16 @@ export function Leaderboard({
                 >
                   {row.rank <= PODIUM.length ? (
                     <span
-                      className={cn('relative h-8 w-8 font-display text-md leading-none', PODIUM[row.rank - 1])}
+                      className={cn(
+                        'relative h-8 w-8 font-display text-md leading-none',
+                        PODIUM[row.rank - 1],
+                      )}
                     >
                       {row.rank}
                       {/* Decorative — the numeral says it. */}
-                      {row.rank === 1 && <Doodle kind="crown" className="absolute -right-2.5 -top-3 h-5 w-5 rotate-12" />}
+                      {row.rank === 1 && (
+                        <Doodle kind="crown" className="absolute -right-2.5 -top-3 h-5 w-5 rotate-12" />
+                      )}
                     </span>
                   ) : (
                     <span className="grid h-8 w-8 place-items-center text-base font-semibold tabular-nums text-muted">

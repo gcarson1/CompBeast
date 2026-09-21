@@ -27,7 +27,12 @@ describe('playedHistory', () => {
 
   it('reads Decimal-like values as numbers', () => {
     const [point] = playedHistory([
-      { cyclePoints: { toString: () => '7.50' }, cumulativePoints: { toString: () => '7.50' }, rank: null, cycle: { label: 'Week 1', sequence: 1, status: 'SCORED' } },
+      {
+        cyclePoints: { toString: () => '7.50' },
+        cumulativePoints: { toString: () => '7.50' },
+        rank: null,
+        cycle: { label: 'Week 1', sequence: 1, status: 'SCORED' },
+      },
     ]);
     expect(point).toMatchObject({ cyclePoints: 7.5, cumulativePoints: 7.5 });
   });

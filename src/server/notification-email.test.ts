@@ -1,10 +1,6 @@
 import { PrismaClient } from '@prisma/client';
 import { afterAll, describe, expect, it } from 'vitest';
-import {
-  getEmailPreferences,
-  setEmailPreference,
-  unsubscribeByToken,
-} from './notification-email';
+import { getEmailPreferences, setEmailPreference, unsubscribeByToken } from './notification-email';
 
 /**
  * Email preferences, end to end against a database.

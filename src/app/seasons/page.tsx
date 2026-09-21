@@ -57,7 +57,10 @@ export default async function SeasonsPage() {
           <ul className="space-y-3">
             {open.map((season) => (
               <li key={season.id}>
-                <Link href={`/seasons/${season.slug}`} className="card block p-4 transition active:scale-[0.99]">
+                <Link
+                  href={`/seasons/${season.slug}`}
+                  className="card block p-4 transition active:scale-[0.99]"
+                >
                   <div className="flex items-start justify-between gap-3">
                     <span className="min-w-0">
                       <span className="block truncate text-md font-semibold">{season.name}</span>
@@ -85,8 +88,7 @@ export default async function SeasonsPage() {
       <section className="mt-7">
         <h2 className="mb-1 text-lg font-semibold">Archive</h2>
         <p className="mb-2 text-2xs text-muted">
-          Finished seasons are read-only — the whole cast is already known, so there is no game
-          left to draft.
+          Finished seasons are read-only — the whole cast is already known, so there is no game left to draft.
         </p>
         {archived.length === 0 ? (
           <p className="card p-4 text-xs text-muted">No finished seasons yet.</p>

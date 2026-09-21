@@ -21,9 +21,7 @@ export function BottomNav() {
     <nav className="sticky bottom-0 z-20 border-t border-hairline bg-surface/95 px-4 pb-[env(safe-area-inset-bottom)] pt-2 backdrop-blur">
       <ul className="mx-auto flex max-w-md items-center sm:max-w-lg lg:max-w-3xl justify-around">
         {TABS.map((tab) => {
-          const active = tab.owns.some(
-            (prefix) => pathname === prefix || pathname.startsWith(`${prefix}/`),
-          );
+          const active = tab.owns.some((prefix) => pathname === prefix || pathname.startsWith(`${prefix}/`));
           const Icon = tab.icon;
           return (
             <li key={tab.href}>

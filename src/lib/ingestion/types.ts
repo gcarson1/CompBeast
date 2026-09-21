@@ -64,10 +64,7 @@ export interface RawSeasonFacts {
 /** True when a week's grid is entirely empty — a scheduled week that has not aired. */
 export function isEmptyWeek(week: RawWeekResult): boolean {
   return (
-    week.hoh.length === 0 &&
-    week.veto.length === 0 &&
-    week.nominees.length === 0 &&
-    week.evicted.length === 0
+    week.hoh.length === 0 && week.veto.length === 0 && week.nominees.length === 0 && week.evicted.length === 0
   );
 }
 

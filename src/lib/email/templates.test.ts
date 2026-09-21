@@ -76,19 +76,16 @@ describe('accent contrast', () => {
   it('has an accent for every type that clears AA as small text', () => {
     // 11px uppercase is small text: the 4.5:1 floor, not the 3:1 large-text one.
     for (const accent of accents) {
-      expect(contrast(accent.eyebrow, SURFACE), `eyebrow ${accent.eyebrow}`).toBeGreaterThanOrEqual(
-        4.5,
-      );
+      expect(contrast(accent.eyebrow, SURFACE), `eyebrow ${accent.eyebrow}`).toBeGreaterThanOrEqual(4.5);
     }
   });
 
   it('puts readable ink on every button fill', () => {
     // 14px bold is still small text under WCAG — "large" starts at 18.66px bold.
     for (const accent of accents) {
-      expect(
-        contrast(accent.ink, accent.fill),
-        `${accent.ink} on ${accent.fill}`,
-      ).toBeGreaterThanOrEqual(4.5);
+      expect(contrast(accent.ink, accent.fill), `${accent.ink} on ${accent.fill}`).toBeGreaterThanOrEqual(
+        4.5,
+      );
     }
   });
 
@@ -117,9 +114,7 @@ describe('rendering', () => {
   });
 
   it('leaves an already absolute href alone', () => {
-    expect(render({ href: 'https://elsewhere.example/x' }).html).toContain(
-      'https://elsewhere.example/x',
-    );
+    expect(render({ href: 'https://elsewhere.example/x' }).html).toContain('https://elsewhere.example/x');
   });
 
   it('escapes names people chose themselves', () => {

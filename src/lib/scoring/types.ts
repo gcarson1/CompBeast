@@ -7,10 +7,7 @@
  * responsible for mapping Prisma rows (including Decimal) into these shapes.
  */
 
-export type EventCategory =
-  | 'COMPETITION_GAMEPLAY'
-  | 'ELIMINATION_ENDGAME'
-  | 'SOCIAL_DRAMA';
+export type EventCategory = 'COMPETITION_GAMEPLAY' | 'ELIMINATION_ENDGAME' | 'SOCIAL_DRAMA';
 
 /** One rule as it applies inside a specific ruleset, with overrides resolved. */
 export interface ScoringRule {

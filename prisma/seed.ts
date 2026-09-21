@@ -1,9 +1,5 @@
 import { PrismaClient } from '@prisma/client';
-import {
-  BIG_BROTHER_EVENTS,
-  BIG_BROTHER_LEXICON,
-  BIG_BROTHER_RULESETS,
-} from '../src/lib/shows/big-brother';
+import { BIG_BROTHER_EVENTS, BIG_BROTHER_LEXICON, BIG_BROTHER_RULESETS } from '../src/lib/shows/big-brother';
 import { buildDraftOrder } from '../src/lib/draft/snake';
 import { recalculateLeague } from '../src/lib/scoring/repository';
 
@@ -127,9 +123,7 @@ async function main() {
     for (const eventSpec of included) {
       const eventDefinitionId = eventDefinitions.get(eventSpec.code)!;
       const override =
-        spec.useBalancedPoints && eventSpec.balancedPoints !== undefined
-          ? eventSpec.balancedPoints
-          : null;
+        spec.useBalancedPoints && eventSpec.balancedPoints !== undefined ? eventSpec.balancedPoints : null;
       await prisma.scoringRulesetEventDefinition.upsert({
         where: {
           scoringRulesetId_eventDefinitionId: { scoringRulesetId: ruleset.id, eventDefinitionId },
@@ -341,7 +335,11 @@ async function main() {
     { cycle: 3, code: 'EVICTED', contestant: 'Grant Whitaker' },
   ];
 
-  const evictedByCycle: Record<number, string[]> = { 1: ['Javier Solis'], 2: ['Rowan Fitzgerald'], 3: ['Grant Whitaker'] };
+  const evictedByCycle: Record<number, string[]> = {
+    1: ['Javier Solis'],
+    2: ['Rowan Fitzgerald'],
+    3: ['Grant Whitaker'],
+  };
 
   const alreadyScored = await prisma.scoredEvent.count({ where: { cycle: { seasonId: season.id } } });
   if (alreadyScored === 0) {

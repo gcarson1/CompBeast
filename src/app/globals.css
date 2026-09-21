@@ -199,7 +199,6 @@
       disabled:pointer-events-none disabled:opacity-50;
   }
 
-
   /*
    * Gold is a light fill, so its label must be dark. `text-ink` here was a
    * 2.05:1 contrast failure on the app's single most important control.

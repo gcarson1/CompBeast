@@ -19,17 +19,11 @@ const round2 = (n: number): number => Math.round((n + Number.EPSILON) * 100) / 1
  * ahead, and only names 1st place once you're actually chasing it — a 40th
  * place team "chasing" 39th isn't the hook the blueprint is after.
  */
-export function nearMissMessage(
-  rows: RankedTeam[],
-  myTeamId: string,
-  threshold = 5,
-): string | null {
+export function nearMissMessage(rows: RankedTeam[], myTeamId: string, threshold = 5): string | null {
   const mine = rows.find((r) => r.teamId === myTeamId);
   if (!mine || mine.rank <= 1) return null;
 
-  const ahead = rows
-    .filter((r) => r.rank < mine.rank)
-    .sort((a, b) => b.rank - a.rank)[0]; // the team immediately above (highest rank number that's still < mine)
+  const ahead = rows.filter((r) => r.rank < mine.rank).sort((a, b) => b.rank - a.rank)[0]; // the team immediately above (highest rank number that's still < mine)
   if (!ahead) return null;
 
   const gap = round2(ahead.totalPoints - mine.totalPoints);

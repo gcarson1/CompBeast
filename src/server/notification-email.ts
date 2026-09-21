@@ -3,12 +3,7 @@ import type { NotificationType } from '@prisma/client';
 import { prisma } from '../lib/db';
 import { isEmailConfigured, sendEmails, type OutboundEmail } from '../lib/email/send';
 import { appBaseUrl } from '../lib/site';
-import {
-  CATEGORIES,
-  categoryOf,
-  renderNotificationEmail,
-  type EmailCategory,
-} from '../lib/email/templates';
+import { CATEGORIES, categoryOf, renderNotificationEmail, type EmailCategory } from '../lib/email/templates';
 
 /**
  * Turning notification rows into mail.
@@ -37,9 +32,7 @@ export interface DeliverableNotification {
  * for the tests and for the admin preview, not because anything branches on
  * it.
  */
-export async function deliverNotificationEmails(
-  notifications: DeliverableNotification[],
-): Promise<number> {
+export async function deliverNotificationEmails(notifications: DeliverableNotification[]): Promise<number> {
   if (notifications.length === 0) return 0;
 
   try {

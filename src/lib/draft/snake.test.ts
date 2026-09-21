@@ -6,12 +6,7 @@ const teamIds = ['a', 'b', 'c'];
 describe('buildDraftOrder', () => {
   it('reverses direction every other round for a snake draft', () => {
     const order = buildDraftOrder(teamIds, 4);
-    expect(order.map((s) => s.teamId)).toEqual([
-      'a', 'b', 'c',
-      'c', 'b', 'a',
-      'a', 'b', 'c',
-      'c', 'b', 'a',
-    ]);
+    expect(order.map((s) => s.teamId)).toEqual(['a', 'b', 'c', 'c', 'b', 'a', 'a', 'b', 'c', 'c', 'b', 'a']);
   });
 
   it('keeps a constant order for a linear draft', () => {
@@ -41,12 +36,24 @@ describe('validatePick', () => {
   const eligible = new Set(['x', 'y', 'z']);
 
   it('accepts the team on the clock', () => {
-    const result = validatePick({ order, picksMade: [], teamId: 'a', contestantId: 'x', eligibleContestantIds: eligible });
+    const result = validatePick({
+      order,
+      picksMade: [],
+      teamId: 'a',
+      contestantId: 'x',
+      eligibleContestantIds: eligible,
+    });
     expect(result.ok).toBe(true);
   });
 
   it('rejects a team picking out of turn', () => {
-    const result = validatePick({ order, picksMade: [], teamId: 'b', contestantId: 'x', eligibleContestantIds: eligible });
+    const result = validatePick({
+      order,
+      picksMade: [],
+      teamId: 'b',
+      contestantId: 'x',
+      eligibleContestantIds: eligible,
+    });
     expect(result).toMatchObject({ ok: false, reason: 'NOT_ON_THE_CLOCK' });
   });
 
@@ -62,13 +69,29 @@ describe('validatePick', () => {
   });
 
   it('rejects a contestant from another season', () => {
-    const result = validatePick({ order, picksMade: [], teamId: 'a', contestantId: 'nope', eligibleContestantIds: eligible });
+    const result = validatePick({
+      order,
+      picksMade: [],
+      teamId: 'a',
+      contestantId: 'nope',
+      eligibleContestantIds: eligible,
+    });
     expect(result).toMatchObject({ ok: false, reason: 'CONTESTANT_INELIGIBLE' });
   });
 
   it('rejects any pick once the board is full', () => {
-    const picksMade = order.map((slot, i) => ({ pickNumber: slot.pickNumber, teamId: slot.teamId, contestantId: `p${i}` }));
-    const result = validatePick({ order, picksMade, teamId: 'a', contestantId: 'x', eligibleContestantIds: eligible });
+    const picksMade = order.map((slot, i) => ({
+      pickNumber: slot.pickNumber,
+      teamId: slot.teamId,
+      contestantId: `p${i}`,
+    }));
+    const result = validatePick({
+      order,
+      picksMade,
+      teamId: 'a',
+      contestantId: 'x',
+      eligibleContestantIds: eligible,
+    });
     expect(result).toMatchObject({ ok: false, reason: 'DRAFT_COMPLETE' });
   });
 });

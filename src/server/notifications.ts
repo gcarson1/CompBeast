@@ -39,9 +39,7 @@ export interface NotifyInput {
  * reintroduce the bug.
  */
 export async function notify(inputs: NotifyInput | NotifyInput[]): Promise<number> {
-  const rows = (Array.isArray(inputs) ? inputs : [inputs]).filter(
-    (row) => row.userId !== row.actorId,
-  );
+  const rows = (Array.isArray(inputs) ? inputs : [inputs]).filter((row) => row.userId !== row.actorId);
   if (rows.length === 0) return 0;
 
   try {

@@ -133,15 +133,11 @@ export function LeagueFeed({
           </div>
         </form>
       ) : (
-        <p className="card p-4 text-xs text-muted">
-          Join this league to post.
-        </p>
+        <p className="card p-4 text-xs text-muted">Join this league to post.</p>
       )}
 
       {messages.length === 0 ? (
-        <p className="mt-3 text-center text-2xs text-muted">
-          Somebody has to go first.
-        </p>
+        <p className="mt-3 text-center text-2xs text-muted">Somebody has to go first.</p>
       ) : (
         <ul className="mt-3 space-y-2">
           <AnimatePresence initial={false}>
@@ -187,9 +183,7 @@ export function LeagueFeed({
                         count={message.shade}
                         active={message.myShade}
                       />
-                      {(message.isMine || isCommissioner) && (
-                        <DeleteMessageForm messageId={message.id} />
-                      )}
+                      {(message.isMine || isCommissioner) && <DeleteMessageForm messageId={message.id} />}
                     </div>
                   </div>
                 </div>
@@ -205,12 +199,7 @@ export function LeagueFeed({
 function PostButton({ disabled }: { disabled: boolean }) {
   const { pending } = useFormStatus();
   return (
-    <button
-      type="submit"
-      disabled={disabled || pending}
-      aria-busy={pending}
-      className="btn-primary btn-sm"
-    >
+    <button type="submit" disabled={disabled || pending} aria-busy={pending} className="btn-primary btn-sm">
       {pending ? 'Posting…' : 'Post'}
     </button>
   );
@@ -268,15 +257,34 @@ function DeleteMessageForm({ messageId }: { messageId: string }) {
 
 function FlameIcon() {
   return (
-    <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" aria-hidden>
-      <path d="M12 3s5 4.2 5 9a5 5 0 0 1-10 0c0-1.6.6-3 1.4-4.1.3 1.2 1.1 2 2.1 2C11.5 7.8 12 5.3 12 3Z" strokeLinejoin="round" />
+    <svg
+      width="13"
+      height="13"
+      viewBox="0 0 24 24"
+      fill="none"
+      stroke="currentColor"
+      strokeWidth="1.8"
+      aria-hidden
+    >
+      <path
+        d="M12 3s5 4.2 5 9a5 5 0 0 1-10 0c0-1.6.6-3 1.4-4.1.3 1.2 1.1 2 2.1 2C11.5 7.8 12 5.3 12 3Z"
+        strokeLinejoin="round"
+      />
     </svg>
   );
 }
 
 function TargetIcon() {
   return (
-    <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" aria-hidden>
+    <svg
+      width="13"
+      height="13"
+      viewBox="0 0 24 24"
+      fill="none"
+      stroke="currentColor"
+      strokeWidth="1.8"
+      aria-hidden
+    >
       <circle cx="12" cy="12" r="8.5" />
       <circle cx="12" cy="12" r="3.5" />
     </svg>

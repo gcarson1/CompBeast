@@ -35,8 +35,8 @@ export default async function UnsubscribePage({
     return (
       <Shell title="Unsubscribed">
         <p className="max-w-measure text-sm leading-relaxed text-muted">
-          You will stop getting {scope} from Comp Beast. Alerts still appear in the app, and you
-          can turn email back on any time from your account.
+          You will stop getting {scope} from Comp Beast. Alerts still appear in the app, and you can turn
+          email back on any time from your account.
         </p>
         <Link href="/account#email" className="btn-primary btn-sm mt-5">
           Email settings
@@ -49,8 +49,7 @@ export default async function UnsubscribePage({
     return (
       <Shell title="That link is incomplete">
         <p className="max-w-measure text-sm leading-relaxed text-muted">
-          The unsubscribe link was missing its key. You can change the same settings from your
-          account page.
+          The unsubscribe link was missing its key. You can change the same settings from your account page.
         </p>
         <Link href="/account#email" className="btn-primary btn-sm mt-5">
           Email settings

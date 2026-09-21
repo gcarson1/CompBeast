@@ -165,8 +165,7 @@ export async function getCurrentCycle(seasonId: string) {
     (await prisma.cycle.findFirst({
       where: { seasonId, status: { not: 'SCORED' } },
       orderBy: { sequence: 'asc' },
-    })) ??
-    (await prisma.cycle.findFirst({ where: { seasonId }, orderBy: { sequence: 'desc' } }))
+    })) ?? (await prisma.cycle.findFirst({ where: { seasonId }, orderBy: { sequence: 'desc' } }))
   );
 }
 
@@ -335,9 +334,7 @@ export async function getTeamDetail(teamId: string): Promise<TeamDetail | null> 
 
   const snapshot = await computeTeamSnapshot(teamId);
   const score = snapshot.teams[0] ?? null;
-  const pointsByContestant = new Map(
-    (score?.contestants ?? []).map((c) => [c.contestantId, c.points]),
-  );
+  const pointsByContestant = new Map((score?.contestants ?? []).map((c) => [c.contestantId, c.points]));
 
   return {
     team: { id: team.id, name: team.name, leagueId: team.leagueId, ownerName: team.owner?.name ?? null },
@@ -444,9 +441,7 @@ export async function getContestantProfile(contestantId: string) {
     ...contestant,
     events,
     totalPoints: events.reduce((sum, e) => sum + e.points, 0),
-    gameLog: [...byCycle.entries()]
-      .sort((a, b) => a[0] - b[0])
-      .map(([sequence, v]) => ({ sequence, ...v })),
+    gameLog: [...byCycle.entries()].sort((a, b) => a[0] - b[0]).map(([sequence, v]) => ({ sequence, ...v })),
   };
 }
 
@@ -661,8 +656,7 @@ export async function getHomeLeagues(userId: string): Promise<HomeLeagueCard[]> 
       // Both the flag and the timestamp go through the league's own offset —
       // showing a locked badge next to the *season's* deadline would be a
       // worse bug than not honouring the offset at all.
-      const cycleLocked =
-        currentCycle !== null && isCycleLocked(currentCycle, league.lockOffsetMinutes);
+      const cycleLocked = currentCycle !== null && isCycleLocked(currentCycle, league.lockOffsetMinutes);
 
       // "At risk" reads the latest cycle that has any recorded lines at all —
       // nominations land mid-week, before that cycle's own status flips to
@@ -846,7 +840,8 @@ export async function getAccountOverview(userId: string): Promise<AccountOvervie
   const ranked = rows.filter((row) => row.rank > 0);
   return {
     leaguesPlayed: rows.length,
-    seasonsPlayed: new Set([...teams.map((team) => team.league.season.id), ...records.map((r) => r.seasonId)]).size,
+    seasonsPlayed: new Set([...teams.map((team) => team.league.season.id), ...records.map((r) => r.seasonId)])
+      .size,
     totalPoints: Math.round(rows.reduce((sum, row) => sum + row.totalPoints, 0) * 100) / 100,
     bestRank: ranked.length > 0 ? Math.min(...ranked.map((row) => row.rank)) : null,
     // Only seasons that actually ended. Leading an active league is not a win

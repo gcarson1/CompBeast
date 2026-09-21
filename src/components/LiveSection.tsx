@@ -50,10 +50,7 @@ export function LiveSection({
               Airing now
               <span aria-hidden className="h-2 w-2 animate-pulse rounded-full bg-danger" />
             </h2>
-            <Link
-              href={`/seasons/${featured.seasonSlug}`}
-              className="text-xs text-brand-gold-deep"
-            >
+            <Link href={`/seasons/${featured.seasonSlug}`} className="text-xs text-brand-gold-deep">
               {featured.seasonName} →
             </Link>
           </div>

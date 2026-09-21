@@ -125,8 +125,6 @@ describe('describeLockState', () => {
   });
 
   it('reports the league deadline, not the season one', () => {
-    expect(describeLockState(cycle(), 1440, beforeLock).lockAt).toEqual(
-      new Date('2026-03-09T20:00:00Z'),
-    );
+    expect(describeLockState(cycle(), 1440, beforeLock).lockAt).toEqual(new Date('2026-03-09T20:00:00Z'));
   });
 });

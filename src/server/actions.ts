@@ -21,12 +21,7 @@ import {
 import type { EmailCategory } from '../lib/email/templates';
 import { setEmailPreference } from './notification-email';
 import { markAllNotificationsRead } from './notifications';
-import {
-  inviteFriendToLeague,
-  removeFriend,
-  respondToFriendRequest,
-  sendFriendRequest,
-} from './social';
+import { inviteFriendToLeague, removeFriend, respondToFriendRequest, sendFriendRequest } from './social';
 
 export type ActionState = { error?: string; ok?: boolean };
 
@@ -39,10 +34,7 @@ function messageFor(error: unknown): string {
   return 'Something went wrong. Try again.';
 }
 
-export async function createLeagueAction(
-  _prev: ActionState,
-  formData: FormData,
-): Promise<ActionState> {
+export async function createLeagueAction(_prev: ActionState, formData: FormData): Promise<ActionState> {
   let leagueId: string;
   try {
     const user = await requireUser();
@@ -65,10 +57,7 @@ export async function createLeagueAction(
   redirect(`/leagues/${leagueId}`);
 }
 
-export async function joinLeagueAction(
-  _prev: ActionState,
-  formData: FormData,
-): Promise<ActionState> {
+export async function joinLeagueAction(_prev: ActionState, formData: FormData): Promise<ActionState> {
   let leagueId: string;
   try {
     const user = await requireUser();
@@ -84,10 +73,7 @@ export async function joinLeagueAction(
   redirect(`/leagues/${leagueId}`);
 }
 
-export async function startDraftAction(
-  _prev: ActionState,
-  formData: FormData,
-): Promise<ActionState> {
+export async function startDraftAction(_prev: ActionState, formData: FormData): Promise<ActionState> {
   const leagueId = String(formData.get('leagueId') ?? '');
   try {
     const user = await requireUser();
@@ -99,10 +85,7 @@ export async function startDraftAction(
   return { ok: true };
 }
 
-export async function draftPickAction(
-  _prev: ActionState,
-  formData: FormData,
-): Promise<ActionState> {
+export async function draftPickAction(_prev: ActionState, formData: FormData): Promise<ActionState> {
   const leagueId = String(formData.get('leagueId') ?? '');
   try {
     const user = await requireUser();
@@ -120,10 +103,7 @@ export async function draftPickAction(
   return { ok: true };
 }
 
-export async function refreshScoresAction(
-  _prev: ActionState,
-  formData: FormData,
-): Promise<ActionState> {
+export async function refreshScoresAction(_prev: ActionState, formData: FormData): Promise<ActionState> {
   const leagueId = String(formData.get('leagueId') ?? '');
   try {
     await requireUser();
@@ -139,10 +119,7 @@ export async function refreshScoresAction(
 // League settings
 // ---------------------------------------------------------------------------
 
-export async function updateLeagueAction(
-  _prev: ActionState,
-  formData: FormData,
-): Promise<ActionState> {
+export async function updateLeagueAction(_prev: ActionState, formData: FormData): Promise<ActionState> {
   const leagueId = String(formData.get('leagueId') ?? '');
   try {
     const user = await requireUser();
@@ -172,10 +149,7 @@ export async function updateLeagueAction(
  * catch would treat a successful delete as a failure and report "something
  * went wrong" for work that actually completed.
  */
-export async function deleteLeagueAction(
-  _prev: ActionState,
-  formData: FormData,
-): Promise<ActionState> {
+export async function deleteLeagueAction(_prev: ActionState, formData: FormData): Promise<ActionState> {
   try {
     const user = await requireUser();
     await deleteLeague(
@@ -194,10 +168,7 @@ export async function deleteLeagueAction(
 // Friends
 // ---------------------------------------------------------------------------
 
-export async function sendFriendRequestAction(
-  _prev: ActionState,
-  formData: FormData,
-): Promise<ActionState> {
+export async function sendFriendRequestAction(_prev: ActionState, formData: FormData): Promise<ActionState> {
   try {
     const user = await requireUser();
     await sendFriendRequest(user.id, String(formData.get('targetUserId') ?? ''));
@@ -226,10 +197,7 @@ export async function respondToFriendRequestAction(
   return { ok: true };
 }
 
-export async function removeFriendAction(
-  _prev: ActionState,
-  formData: FormData,
-): Promise<ActionState> {
+export async function removeFriendAction(_prev: ActionState, formData: FormData): Promise<ActionState> {
   try {
     const user = await requireUser();
     await removeFriend(user.id, String(formData.get('friendUserId') ?? ''));
@@ -240,10 +208,7 @@ export async function removeFriendAction(
   return { ok: true };
 }
 
-export async function inviteFriendAction(
-  _prev: ActionState,
-  formData: FormData,
-): Promise<ActionState> {
+export async function inviteFriendAction(_prev: ActionState, formData: FormData): Promise<ActionState> {
   const leagueId = String(formData.get('leagueId') ?? '');
   try {
     const user = await requireUser();
@@ -267,10 +232,7 @@ export async function inviteFriendAction(
  * from should already be saved, and on a phone the save button is the step
  * people miss.
  */
-export async function setEmailPreferenceAction(
-  _prev: ActionState,
-  formData: FormData,
-): Promise<ActionState> {
+export async function setEmailPreferenceAction(_prev: ActionState, formData: FormData): Promise<ActionState> {
   try {
     const user = await requireUser();
     const scope = String(formData.get('scope') ?? '');
@@ -304,10 +266,7 @@ export async function markAllNotificationsReadAction(
 // League feed
 // ---------------------------------------------------------------------------
 
-export async function postMessageAction(
-  _prev: ActionState,
-  formData: FormData,
-): Promise<ActionState> {
+export async function postMessageAction(_prev: ActionState, formData: FormData): Promise<ActionState> {
   const leagueId = String(formData.get('leagueId') ?? '');
   try {
     const user = await requireUser();
@@ -319,18 +278,11 @@ export async function postMessageAction(
   return { ok: true };
 }
 
-export async function toggleReactionAction(
-  _prev: ActionState,
-  formData: FormData,
-): Promise<ActionState> {
+export async function toggleReactionAction(_prev: ActionState, formData: FormData): Promise<ActionState> {
   const kind = formData.get('kind') === 'SHADE' ? ('SHADE' as const) : ('HYPE' as const);
   try {
     const user = await requireUser();
-    const { leagueId } = await toggleMessageReaction(
-      String(formData.get('messageId') ?? ''),
-      user.id,
-      kind,
-    );
+    const { leagueId } = await toggleMessageReaction(String(formData.get('messageId') ?? ''), user.id, kind);
     revalidatePath(`/leagues/${leagueId}`);
   } catch (error) {
     return { error: messageFor(error) };
@@ -338,10 +290,7 @@ export async function toggleReactionAction(
   return { ok: true };
 }
 
-export async function deleteMessageAction(
-  _prev: ActionState,
-  formData: FormData,
-): Promise<ActionState> {
+export async function deleteMessageAction(_prev: ActionState, formData: FormData): Promise<ActionState> {
   try {
     const user = await requireUser();
     const { leagueId } = await deleteLeagueMessage(String(formData.get('messageId') ?? ''), user.id);

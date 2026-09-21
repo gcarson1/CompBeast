@@ -6,11 +6,7 @@ import { prisma } from '@/lib/db';
 
 export const dynamic = 'force-dynamic';
 
-export default async function LeagueSettingsPage({
-  params,
-}: {
-  params: { leagueId: string };
-}) {
+export default async function LeagueSettingsPage({ params }: { params: { leagueId: string } }) {
   const user = await getCurrentUser();
   if (!user) redirect('/leagues');
 
@@ -71,11 +67,7 @@ export default async function LeagueSettingsPage({
         rulesets={rulesets}
       />
 
-      <DeleteLeaguePanel
-        leagueId={league.id}
-        leagueName={league.name}
-        memberCount={league._count.members}
-      />
+      <DeleteLeaguePanel leagueId={league.id} leagueName={league.name} memberCount={league._count.members} />
     </div>
   );
 }

@@ -4,12 +4,7 @@ import { prisma } from '../lib/db';
 import { assertLeagueRole } from '../lib/auth';
 import { playedHistory } from '../lib/career';
 import { describeLockOffset, isCycleLocked } from '../lib/cycles';
-import {
-  DRAFT_TEAM_ORDER,
-  type DraftSlot,
-  buildDraftOrder,
-  validatePick,
-} from '../lib/draft/snake';
+import { DRAFT_TEAM_ORDER, type DraftSlot, buildDraftOrder, validatePick } from '../lib/draft/snake';
 import { recalculateLeague, recalculateLeaguesForCycle } from '../lib/scoring/repository';
 import { createLeagueSchema, updateLeagueSchema } from '../lib/validation';
 import { DomainError } from './errors';
@@ -408,10 +403,7 @@ export async function deleteLeague(leagueId: string, userId: string, confirmName
   // Typing the name is the guard. A confirm dialog is dismissed by reflex;
   // this cannot be satisfied by accident.
   if (confirmName.trim() !== league.name) {
-    throw new DomainError(
-      'Type the league name exactly to confirm deletion.',
-      'CONFIRM_NAME_MISMATCH',
-    );
+    throw new DomainError('Type the league name exactly to confirm deletion.', 'CONFIRM_NAME_MISMATCH');
   }
 
   await notify(
@@ -809,10 +801,7 @@ export const recordEventsSchema = z.object({
  * on that season. Points are snapshotted from the EventDefinition at write
  * time so a later rule edit cannot silently rewrite a settled week.
  */
-export async function recordEvents(
-  userId: string,
-  input: z.infer<typeof recordEventsSchema>,
-) {
+export async function recordEvents(userId: string, input: z.infer<typeof recordEventsSchema>) {
   const data = recordEventsSchema.parse(input);
 
   const cycle = await prisma.cycle.findUnique({
@@ -927,11 +916,7 @@ export async function refreshLeagueScores(leagueId: string) {
 // ---------------------------------------------------------------------------
 
 export const postMessageSchema = z.object({
-  body: z
-    .string()
-    .trim()
-    .min(1, 'Say something first')
-    .max(500, 'Keep it under 500 characters'),
+  body: z.string().trim().min(1, 'Say something first').max(500, 'Keep it under 500 characters'),
 });
 
 /**
@@ -954,11 +939,7 @@ export async function postLeagueMessage(leagueId: string, userId: string, body: 
  * undoes rather than erroring, and the unique constraint keeps that honest if
  * two taps land at once.
  */
-export async function toggleMessageReaction(
-  messageId: string,
-  userId: string,
-  kind: 'HYPE' | 'SHADE',
-) {
+export async function toggleMessageReaction(messageId: string, userId: string, kind: 'HYPE' | 'SHADE') {
   const message = await prisma.leagueMessage.findUnique({
     where: { id: messageId },
     select: { leagueId: true, deletedAt: true },

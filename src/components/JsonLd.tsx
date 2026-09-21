@@ -7,7 +7,5 @@ import { serializeJsonLd } from '@/lib/seo';
  * the page, not a harmless bug.
  */
 export function JsonLd({ data }: { data: object }) {
-  return (
-    <script type="application/ld+json" dangerouslySetInnerHTML={{ __html: serializeJsonLd(data) }} />
-  );
+  return <script type="application/ld+json" dangerouslySetInnerHTML={{ __html: serializeJsonLd(data) }} />;
 }

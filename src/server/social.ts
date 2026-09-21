@@ -281,11 +281,7 @@ export async function sendFriendRequest(userId: string, targetUserId: string) {
  * direction twice — which would otherwise leave the other person staring at a
  * pending request from someone who is already their friend.
  */
-export async function respondToFriendRequest(
-  userId: string,
-  friendshipId: string,
-  accept: boolean,
-) {
+export async function respondToFriendRequest(userId: string, friendshipId: string, accept: boolean) {
   const request = await prisma.friendship.findUnique({
     where: { id: friendshipId },
     select: { id: true, status: true, addresseeId: true, requesterId: true },
@@ -359,10 +355,7 @@ export interface InvitableFriend extends FriendCard {
  * Members are kept in the list rather than filtered out. "Where did Dana go?"
  * is a worse question than a greyed-out row that says "Already in".
  */
-export async function getInvitableFriends(
-  userId: string,
-  leagueId: string,
-): Promise<InvitableFriend[]> {
+export async function getInvitableFriends(userId: string, leagueId: string): Promise<InvitableFriend[]> {
   const ids = await friendIdsFor(userId);
   if (ids.length === 0) return [];
 

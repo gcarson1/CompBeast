@@ -36,9 +36,7 @@ export function NotificationList({ notifications }: { notifications: Notificatio
   return (
     <div>
       <div className="mb-4 flex items-center justify-between gap-3">
-        <p className="text-xs text-muted">
-          {unread > 0 ? `${unread} unread` : 'All caught up'}
-        </p>
+        <p className="text-xs text-muted">{unread > 0 ? `${unread} unread` : 'All caught up'}</p>
         {unread > 0 && <MarkAllReadForm />}
       </div>
 
@@ -46,8 +44,8 @@ export function NotificationList({ notifications }: { notifications: Notificatio
         <div className="rounded-card border border-dashed border-hairline p-6">
           <h2 className="text-base font-semibold">Nothing yet</h2>
           <p className="mt-1 max-w-measure text-xs leading-relaxed text-muted">
-            League invites, friend requests and draft alerts land here. Add a friend from your
-            account page to get started.
+            League invites, friend requests and draft alerts land here. Add a friend from your account page to
+            get started.
           </p>
           <Link href="/account" className="btn-ghost btn-sm mt-4">
             Go to your account
@@ -167,10 +165,7 @@ function MarkReadOnVisit({
 }
 
 function MarkAllReadForm() {
-  const [state, formAction] = useFormState<ActionState, FormData>(
-    markAllNotificationsReadAction,
-    {},
-  );
+  const [state, formAction] = useFormState<ActionState, FormData>(markAllNotificationsReadAction, {});
 
   useEffect(() => {
     if (state.error) toast.error(state.error);

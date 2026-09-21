@@ -18,13 +18,7 @@ const PAD_Y = 10;
  * anything typeset in viewBox units would scale with it — legible on a
  * desktop, six pixels tall on a phone. Labels are real HTML around the chart.
  */
-export function PointHistoryChart({
-  history,
-  caption,
-}: {
-  history: PointHistoryPoint[];
-  caption: string;
-}) {
+export function PointHistoryChart({ history, caption }: { history: PointHistoryPoint[]; caption: string }) {
   if (history.length === 0) {
     return (
       <p className="rounded-btn border border-dashed border-hairline p-4 text-2xs text-muted">
@@ -46,12 +40,9 @@ export function PointHistoryChart({
   const flat = rawMax === rawMin;
   const span = flat ? 1 : rawMax - rawMin;
 
-  const x = (index: number) =>
-    history.length === 1 ? VIEW_W / 2 : (index / (history.length - 1)) * VIEW_W;
+  const x = (index: number) => (history.length === 1 ? VIEW_W / 2 : (index / (history.length - 1)) * VIEW_W);
   const y = (value: number) =>
-    flat
-      ? VIEW_H / 2
-      : VIEW_H - PAD_Y - ((value - rawMin) / span) * (VIEW_H - PAD_Y * 2);
+    flat ? VIEW_H / 2 : VIEW_H - PAD_Y - ((value - rawMin) / span) * (VIEW_H - PAD_Y * 2);
 
   const points = history.map((point, index) => ({
     cx: x(index),

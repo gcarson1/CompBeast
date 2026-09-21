@@ -121,9 +121,7 @@ describe('in-progress season', () => {
 
   it('still credits survival only through the last aired week', () => {
     const candidates = mapBigBrotherSeason(liveFacts, 'big-brother-28');
-    const weeks = new Set(
-      candidates.filter((c) => c.eventCode === 'WEEK_SURVIVED').map((c) => c.weekNumber),
-    );
+    const weeks = new Set(candidates.filter((c) => c.eventCode === 'WEEK_SURVIVED').map((c) => c.weekNumber));
     expect(weeks.has(12)).toBe(true);
     expect(weeks.has(13)).toBe(false);
   });

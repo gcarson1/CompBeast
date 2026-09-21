@@ -95,9 +95,7 @@ export function LeagueRail({ leagues, caption }: { leagues: HomeLeagueCard[]; ca
         // top edge, and a scroll container clips on both axes, so the scroll
         // box has to start above the cards for the overhang to show.
         className="no-scrollbar -mx-5 -mt-8 flex snap-x snap-mandatory scroll-px-5 gap-4 overflow-x-auto px-5 pb-3 pt-8"
-        {...(overflowing
-          ? { tabIndex: 0, role: 'region', 'aria-label': 'Your leagues, scrollable' }
-          : {})}
+        {...(overflowing ? { tabIndex: 0, role: 'region', 'aria-label': 'Your leagues, scrollable' } : {})}
       >
         {leagues.map((league, index) => (
           <li key={league.leagueId} className="w-[16.5rem] shrink-0 snap-start">
@@ -112,13 +110,7 @@ export function LeagueRail({ leagues, caption }: { leagues: HomeLeagueCard[]; ca
   );
 }
 
-function LeagueCard({
-  league,
-  chipTone,
-}: {
-  league: HomeLeagueCard;
-  chipTone: (typeof CHIP_TONES)[number];
-}) {
+function LeagueCard({ league, chipTone }: { league: HomeLeagueCard; chipTone: (typeof CHIP_TONES)[number] }) {
   const alert = league.atRisk ?? league.nearMiss;
   const alertTone = league.atRisk ? 'text-danger-deep' : 'text-brand-gold-deep';
   const leading = league.rank === 1;
@@ -133,10 +125,7 @@ function LeagueCard({
         {DRAFT_LABEL[league.draftStatus] ?? league.draftStatus}
       </Sticker>
 
-      <Link
-        href={`/leagues/${league.leagueId}`}
-        className="flex h-full flex-col rounded-card p-4"
-      >
+      <Link href={`/leagues/${league.leagueId}`} className="flex h-full flex-col rounded-card p-4">
         <span aria-hidden className={cn('clay h-11 w-11 font-display text-lg leading-none', chipTone)}>
           {league.leagueName.slice(0, 1).toUpperCase()}
         </span>
@@ -150,9 +139,7 @@ function LeagueCard({
           <div className="mt-3 flex items-end justify-between gap-2">
             <span className="min-w-0">
               <span className="block truncate text-2xs text-muted">{league.teamName}</span>
-              <span className="font-display text-4xl leading-none tracking-wide">
-                {league.totalPoints}
-              </span>
+              <span className="font-display text-4xl leading-none tracking-wide">{league.totalPoints}</span>
             </span>
             <span className="flex shrink-0 flex-col items-end">
               {league.rank > 0 && (

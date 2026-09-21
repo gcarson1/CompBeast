@@ -21,8 +21,13 @@ export default async function Image({ params }: { params: { slug: string } }) {
     subtitle: `Every houseguest ranked by fantasy points${live ? ' as the season airs' : ', beside where they actually placed'}.`,
     stats: [
       { value: String(players.length), label: 'houseguests' },
-      ...(leader ? [{ value: formatPoints(leader.points), label: `${leader.name.split(' ')[0]} leads` }] : []),
-      { value: String(players.filter((p) => p.isActive).length), label: live ? 'still in the house' : 'made the finale' },
+      ...(leader
+        ? [{ value: formatPoints(leader.points), label: `${leader.name.split(' ')[0]} leads` }]
+        : []),
+      {
+        value: String(players.filter((p) => p.isActive).length),
+        label: live ? 'still in the house' : 'made the finale',
+      },
     ],
   });
 }

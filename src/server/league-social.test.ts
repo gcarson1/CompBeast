@@ -285,10 +285,7 @@ describe.skipIf(!dbReady)('the home league rail', () => {
     const league = await makeLeague(alice, 'Alice Squad');
     await joinLeague(bob, await inviteCodeFor(league.id), 'Bob Squad');
 
-    const [forAlice, forBob] = await Promise.all([
-      getHomeLeagues(alice),
-      getHomeLeagues(bob),
-    ]);
+    const [forAlice, forBob] = await Promise.all([getHomeLeagues(alice), getHomeLeagues(bob)]);
 
     expect(forAlice.map((l) => l.leagueId)).toContain(league.id);
     expect(forBob.map((l) => l.leagueId)).toContain(league.id);

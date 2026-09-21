@@ -3,10 +3,7 @@
 import { useEffect, useState } from 'react';
 import { useFormState, useFormStatus } from 'react-dom';
 import { toast } from 'sonner';
-import {
-  DEFAULT_LOCK_OFFSET_MINUTES,
-  LOCK_OFFSET_CHOICES,
-} from '@/lib/cycles';
+import { DEFAULT_LOCK_OFFSET_MINUTES, LOCK_OFFSET_CHOICES } from '@/lib/cycles';
 import { deleteLeagueAction, updateLeagueAction, type ActionState } from '@/server/actions';
 
 export interface LeagueSettingsValues {
@@ -147,9 +144,7 @@ export function LeagueSettingsForm({
           defaultValue={values.lockOffsetMinutes === null ? '' : String(values.lockOffsetMinutes)}
           aria-describedby="lock-help"
         >
-          <option value="">
-            Season default ({DEFAULT_LOCK_OFFSET_MINUTES} minutes before airtime)
-          </option>
+          <option value="">Season default ({DEFAULT_LOCK_OFFSET_MINUTES} minutes before airtime)</option>
           {LOCK_OFFSET_CHOICES.map((choice) => (
             <option key={choice.value} value={choice.value}>
               {choice.label}
@@ -157,8 +152,8 @@ export function LeagueSettingsForm({
           ))}
         </select>
         <p id="lock-help" className="mt-1.5 text-2xs leading-relaxed text-muted">
-          When this league&apos;s rosters close each week, counted back from when the episode
-          airs. Weeks with no known airtime fall back to the season schedule.
+          When this league&apos;s rosters close each week, counted back from when the episode airs. Weeks with
+          no known airtime fall back to the season schedule.
         </p>
       </div>
 
@@ -183,9 +178,7 @@ export function LeagueSettingsForm({
         />
         <span>
           <span className="block text-sm font-medium">Public league</span>
-          <span className="mt-0.5 block text-2xs text-muted">
-            Anyone with the code joins instantly.
-          </span>
+          <span className="mt-0.5 block text-2xs text-muted">Anyone with the code joins instantly.</span>
         </span>
       </label>
 
@@ -205,10 +198,9 @@ export function LeagueSettingsForm({
           defaultValue={values.chatWebhookUrl ?? ''}
         />
         <p className="mt-1.5 text-2xs leading-relaxed text-muted">
-          Paste an incoming-webhook URL and the draft — every pick — and each week&apos;s standings
-          post to that channel. In Discord: channel settings → Integrations → Webhooks → New
-          Webhook → Copy URL. In Slack: create an Incoming Webhook app for the channel. Clear the
-          field to disconnect.
+          Paste an incoming-webhook URL and the draft — every pick — and each week&apos;s standings post to
+          that channel. In Discord: channel settings → Integrations → Webhooks → New Webhook → Copy URL. In
+          Slack: create an Incoming Webhook app for the channel. Clear the field to disconnect.
         </p>
       </div>
 
@@ -265,9 +257,9 @@ export function DeleteLeaguePanel({
     <section className="mt-10 rounded-card border border-danger/30 p-4">
       <h2 className="text-base font-semibold text-danger-deep">Delete this league</h2>
       <p className="mt-1 max-w-measure text-2xs leading-relaxed text-muted">
-        Standings, rosters, draft results and the whole feed go with it, for all{' '}
-        {memberCount} {memberCount === 1 ? 'manager' : 'managers'}. Everyone keeps the points they
-        scored here on their own account. This cannot be undone.
+        Standings, rosters, draft results and the whole feed go with it, for all {memberCount}{' '}
+        {memberCount === 1 ? 'manager' : 'managers'}. Everyone keeps the points they scored here on their own
+        account. This cannot be undone.
       </p>
 
       {!open ? (

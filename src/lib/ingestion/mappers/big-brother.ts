@@ -29,19 +29,11 @@ const PLACEMENT_BY_LABEL: Record<string, string> = {
   '3rd place': 'PLACEMENT_THIRD',
 };
 
-function ref(
-  seasonExternalId: string,
-  weekLabel: string,
-  code: string,
-  player: RawPlayerRef,
-): string {
+function ref(seasonExternalId: string, weekLabel: string, code: string, player: RawPlayerRef): string {
   return `${seasonExternalId}:${weekLabel.toLowerCase()}:${code}:${player.externalId}`;
 }
 
-export function mapBigBrotherSeason(
-  facts: RawSeasonFacts,
-  seasonExternalId: string,
-): CandidateEvent[] {
+export function mapBigBrotherSeason(facts: RawSeasonFacts, seasonExternalId: string): CandidateEvent[] {
   const candidates: CandidateEvent[] = [];
 
   // A live season's grid includes scheduled weeks that have not aired. They
@@ -129,7 +121,7 @@ export function mapBigBrotherSeason(
       // is flagged rather than trusted.
       if (!week.nominees.some((n) => n.externalId === player.externalId)) {
         push('EVICTED_BACKDOORED', player, weekNumber, weekLabel, 'LOW', [
-          'Evicted without appearing in that week\'s nominees — possible backdoor, or missing nomination data',
+          "Evicted without appearing in that week's nominees — possible backdoor, or missing nomination data",
         ]);
       }
     }
@@ -140,7 +132,8 @@ export function mapBigBrotherSeason(
   for (const member of facts.cast) allPlayers.set(member.externalId, member);
   for (const week of airedWeeks) {
     for (const column of [week.hoh, week.veto, week.nominees, week.evicted]) {
-      for (const player of column) if (!allPlayers.has(player.externalId)) allPlayers.set(player.externalId, player);
+      for (const player of column)
+        if (!allPlayers.has(player.externalId)) allPlayers.set(player.externalId, player);
     }
   }
 

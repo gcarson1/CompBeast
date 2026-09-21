@@ -8,10 +8,7 @@ import { getDraftBoard, getLeagueOverview } from '@/server/queries';
 export const dynamic = 'force-dynamic';
 
 export default async function DraftPage({ params }: { params: { leagueId: string } }) {
-  const [user, overview] = await Promise.all([
-    getCurrentUser(),
-    getLeagueOverview(params.leagueId),
-  ]);
+  const [user, overview] = await Promise.all([getCurrentUser(), getLeagueOverview(params.leagueId)]);
   if (!overview) notFound();
 
   const { league, picks, contestants, teams } = await getDraftBoard(params.leagueId);

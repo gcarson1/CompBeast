@@ -68,14 +68,10 @@ export interface DraftValidationInput {
 }
 
 export type DraftValidation =
-  | { ok: true; slot: DraftSlot }
-  | { ok: false; reason: DraftRejection; message: string };
+  { ok: true; slot: DraftSlot } | { ok: false; reason: DraftRejection; message: string };
 
 export type DraftRejection =
-  | 'DRAFT_COMPLETE'
-  | 'NOT_ON_THE_CLOCK'
-  | 'CONTESTANT_TAKEN'
-  | 'CONTESTANT_INELIGIBLE';
+  'DRAFT_COMPLETE' | 'NOT_ON_THE_CLOCK' | 'CONTESTANT_TAKEN' | 'CONTESTANT_INELIGIBLE';
 
 /**
  * Pure validation for a single pick. The database's unique constraints on

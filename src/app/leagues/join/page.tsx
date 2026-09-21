@@ -41,7 +41,9 @@ export async function generateMetadata({ searchParams }: Params): Promise<Metada
       title,
       description,
       url: absoluteUrl(`/leagues/join?code=${encodeURIComponent(code)}`),
-      images: [{ url: absoluteUrl(`/api/og/join?code=${encodeURIComponent(code)}`), width: 1200, height: 630 }],
+      images: [
+        { url: absoluteUrl(`/api/og/join?code=${encodeURIComponent(code)}`), width: 1200, height: 630 },
+      ],
     },
   };
 }
@@ -87,8 +89,8 @@ export default async function JoinLeaguePage({ searchParams }: Params) {
         <div className="mt-5">
           {invite && invite.draftStatus !== 'NOT_STARTED' && (
             <p className="mb-4 rounded-card border border-hairline bg-surface/60 p-3 text-2xs leading-relaxed text-muted">
-              This league has already started its draft, so it is not taking new teams. Ask the
-              commissioner about the next season.
+              This league has already started its draft, so it is not taking new teams. Ask the commissioner
+              about the next season.
             </p>
           )}
           <JoinLeagueForm defaultCode={code} />

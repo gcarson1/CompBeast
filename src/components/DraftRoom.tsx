@@ -103,16 +103,14 @@ export function DraftRoom(props: DraftRoomProps) {
           <StartDraftPanel leagueId={props.leagueId} isCommissioner={props.isCommissioner} />
         ) : props.draftStatus === 'COMPLETED' ? (
           <p className="text-sm font-medium">
-            <span className="text-brand-gold-deep">Houseguests locked in</span> — all{' '}
-            {props.totalPicks} picks are in.
+            <span className="text-brand-gold-deep">Houseguests locked in</span> — all {props.totalPicks} picks
+            are in.
           </p>
         ) : (
           <>
             <div className="flex items-center justify-between gap-3">
               <span className="min-w-0">
-                <span className="block text-2xs uppercase tracking-wide text-muted">
-                  On the clock
-                </span>
+                <span className="block text-2xs uppercase tracking-wide text-muted">On the clock</span>
                 <span className="mt-0.5 block truncate text-md font-semibold">
                   {myTurn ? 'You' : (onTheClock?.name ?? '—')}
                 </span>
@@ -141,8 +139,7 @@ export function DraftRoom(props: DraftRoomProps) {
 
       {drafting && myPicks.length > 0 && (
         <p className="mt-2 px-1 text-2xs text-muted">
-          <span className="text-ink">Your roster:</span>{' '}
-          {myPicks.map((p) => p.contestantName).join(', ')}
+          <span className="text-ink">Your roster:</span> {myPicks.map((p) => p.contestantName).join(', ')}
         </p>
       )}
 
@@ -269,12 +266,8 @@ export function DraftRoom(props: DraftRoomProps) {
                       {pick.round}.{String(pick.pickNumber).padStart(2, '0')}
                     </span>
                     <span className="min-w-0 flex-1">
-                      <span className="block truncate text-sm font-medium">
-                        {pick.contestantName}
-                      </span>
-                      <span className="mt-0.5 block truncate text-2xs text-muted">
-                        {pick.teamName}
-                      </span>
+                      <span className="block truncate text-sm font-medium">{pick.contestantName}</span>
+                      <span className="mt-0.5 block truncate text-2xs text-muted">{pick.teamName}</span>
                     </span>
                   </li>
                 ))}
@@ -301,9 +294,7 @@ export function DraftRoom(props: DraftRoomProps) {
                   <span className="mt-0.5 block truncate text-2xs text-muted">{team.ownerName}</span>
                 </span>
                 {team.id === props.onTheClockTeamId && (
-                  <span className="pill bg-brand-gold-soft text-2xs text-brand-gold-deep">
-                    on the clock
-                  </span>
+                  <span className="pill bg-brand-gold-soft text-2xs text-brand-gold-deep">on the clock</span>
                 )}
               </li>
             ))}
@@ -362,23 +353,13 @@ function LiveDot({ status, syncing }: { status: PulseStatus; syncing: boolean })
       aria-hidden
       className={cn(
         'h-1.5 w-1.5 shrink-0 rounded-full',
-        status !== 'live'
-          ? 'bg-muted'
-          : syncing
-            ? 'animate-pulse bg-brand-gold'
-            : 'bg-brand-gold-deep',
+        status !== 'live' ? 'bg-muted' : syncing ? 'animate-pulse bg-brand-gold' : 'bg-brand-gold-deep',
       )}
     />
   );
 }
 
-function StartDraftPanel({
-  leagueId,
-  isCommissioner,
-}: {
-  leagueId: string;
-  isCommissioner: boolean;
-}) {
+function StartDraftPanel({ leagueId, isCommissioner }: { leagueId: string; isCommissioner: boolean }) {
   const [state, formAction] = useFormState<ActionState, FormData>(startDraftAction, {});
   const [pending, setPending] = useState(false);
 

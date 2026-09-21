@@ -78,7 +78,13 @@ export default async function AccountPage() {
           Career totals
         </h2>
         <dl className="grid grid-cols-2 gap-3 sm:grid-cols-5">
-          <Stat label="Total points" value={String(account.totalPoints)} tone="gold" glyph="tally" className="col-span-2" />
+          <Stat
+            label="Total points"
+            value={String(account.totalPoints)}
+            tone="gold"
+            glyph="tally"
+            className="col-span-2"
+          />
           <Stat label="Leagues" value={String(account.leaguesPlayed)} />
           <Stat
             label="Best finish"
@@ -118,10 +124,7 @@ export default async function AccountPage() {
               <h2 id="current-run" className="section-title">
                 This season
               </h2>
-              <Link
-                href={`/leagues/${current.leagueId}`}
-                className="shrink-0 text-2xs text-brand-gold-deep"
-              >
+              <Link href={`/leagues/${current.leagueId}`} className="shrink-0 text-2xs text-brand-gold-deep">
                 {current.leagueName} →
               </Link>
             </div>
@@ -135,8 +138,8 @@ export default async function AccountPage() {
                 </span>
                 {current.rank > 0 && (
                   <Sticker tone={current.rank === 1 ? 'gold' : 'ink'} size="sm" className="shrink-0">
-                    {current.rank === 1 && <Doodle kind="crown" className="-ml-0.5 h-4 w-4" />}#{current.rank} of{' '}
-                    {current.teamCount}
+                    {current.rank === 1 && <Doodle kind="crown" className="-ml-0.5 h-4 w-4" />}#{current.rank}{' '}
+                    of {current.teamCount}
                   </Sticker>
                 )}
               </div>
@@ -152,8 +155,7 @@ export default async function AccountPage() {
           {account.rows.length === 0 ? (
             <div className="rounded-card border border-dashed border-hairline p-5">
               <p className="max-w-measure text-xs leading-relaxed text-muted">
-                You have not played a season yet. Join or create a league and your results will
-                build up here.
+                You have not played a season yet. Join or create a league and your results will build up here.
               </p>
               <Link href="/leagues/new" prefetch={false} className="btn-primary btn-sm mt-3">
                 Create a league
@@ -168,8 +170,8 @@ export default async function AccountPage() {
           )}
           {past.length === 0 && account.rows.length > 0 && (
             <p className="mt-3 text-2xs text-muted">
-              Finished seasons stay here permanently, with the score you ended on — even if the
-              league is deleted later.
+              Finished seasons stay here permanently, with the score you ended on — even if the league is
+              deleted later.
             </p>
           )}
         </Reveal>
@@ -179,8 +181,7 @@ export default async function AccountPage() {
             Friends
           </h2>
           <p className="mb-4 max-w-measure text-2xs leading-relaxed text-muted">
-            Friends can be invited into a league in one tap, and get an alert with the code already
-            filled in.
+            Friends can be invited into a league in one tap, and get an alert with the code already filled in.
           </p>
           <FriendsPanel overview={friends} />
         </Reveal>
@@ -193,8 +194,8 @@ export default async function AccountPage() {
               Push alerts
             </h2>
             <p className="mb-4 max-w-measure text-2xs leading-relaxed text-muted">
-              The same alerts as the bell, delivered to this device even when Comp Beast is closed.
-              Turn it on separately on each phone or computer you use.
+              The same alerts as the bell, delivered to this device even when Comp Beast is closed. Turn it on
+              separately on each phone or computer you use.
             </p>
             <PushToggle publicKey={vapidKey} />
           </Reveal>
@@ -245,7 +246,9 @@ function Stat({
     <div className={cn(tone ? STAT_TONE[tone] : 'card', 'relative p-4', className)}>
       {glyph && <Doodle kind={glyph} tone="paper" className="absolute right-3 top-3 h-7 w-7 rotate-6" />}
       <dt className="text-2xs font-bold uppercase tracking-wide text-tile-muted">{label}</dt>
-      <dd className={cn('mt-1 font-display leading-none tracking-wide', wide && tone ? 'text-6xl' : 'text-3xl')}>
+      <dd
+        className={cn('mt-1 font-display leading-none tracking-wide', wide && tone ? 'text-6xl' : 'text-3xl')}
+      >
         {value}
       </dd>
       {hint && <p className="mt-1.5 text-2xs leading-tight text-tile-muted">{hint}</p>}
@@ -277,9 +280,7 @@ function SeasonRow({ row }: { row: SeasonHistoryRow }) {
       </span>
 
       <span className="shrink-0 text-right">
-        <span className="block font-display text-xl leading-none tracking-wide">
-          {row.totalPoints}
-        </span>
+        <span className="block font-display text-xl leading-none tracking-wide">{row.totalPoints}</span>
         {last && (
           <span className={`mt-1 block text-2xs tabular-nums ${pointsTone(last.cyclePoints)}`}>
             {formatPoints(last.cyclePoints)} last

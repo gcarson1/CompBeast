@@ -93,7 +93,11 @@ export function SignedOutLanding({
             Free fantasy leagues for {showName}
           </Sticker>
         </p>
-        <Doodle kind="camera" tone="sky" className="absolute right-0 -top-3 h-10 w-10 -rotate-12 animate-rise [animation-delay:90ms]" />
+        <Doodle
+          kind="camera"
+          tone="sky"
+          className="absolute right-0 -top-3 h-10 w-10 -rotate-12 animate-rise [animation-delay:90ms]"
+        />
 
         <h1 className="mt-3 animate-rise font-display text-5xl leading-[0.92] tracking-wide [animation-delay:60ms] sm:text-[64px] lg:text-[76px]">
           DRAFT THE HOUSE.
@@ -202,11 +206,14 @@ export function SignedOutLanding({
               </table>
             </div>
             <figcaption className="mt-2 text-2xs text-muted">
-              {facts.scoring.rows.length} of {facts.eventCount} scored events. A dash means the ruleset
-              does not score that event.{' '}
+              {facts.scoring.rows.length} of {facts.eventCount} scored events. A dash means the ruleset does
+              not score that event.{' '}
               {/* Underlined because it sits inside running text; colour
                   alone is not a distinguishable link (WCAG 1.4.1). */}
-              <Link href="/rules" className="text-brand-gold-deep underline decoration-brand-gold-deep/40 underline-offset-2">
+              <Link
+                href="/rules"
+                className="text-brand-gold-deep underline decoration-brand-gold-deep/40 underline-offset-2"
+              >
                 See the full table →
               </Link>
             </figcaption>
@@ -220,12 +227,17 @@ export function SignedOutLanding({
             overhang needs above the tiles. */}
         <dl className="mt-5 grid grid-cols-2 gap-3 pt-6 sm:grid-cols-4">
           {facts.stats.map((stat, i) => (
-            <div key={stat.label} className={`${STAT_TONES[i % STAT_TONES.length]} relative flex flex-col p-4`}>
+            <div
+              key={stat.label}
+              className={`${STAT_TONES[i % STAT_TONES.length]} relative flex flex-col p-4`}
+            >
               {i === facts.stats.length - 1 && (
                 <BeastDoodle mood="wink" className="absolute -right-3 -top-8 h-16 w-16 rotate-6" />
               )}
               <dd className="order-1 font-display text-3xl leading-none tracking-wide">{stat.value}</dd>
-              <dt className="order-2 mt-2 text-2xs font-semibold leading-snug text-tile-muted">{stat.label}</dt>
+              <dt className="order-2 mt-2 text-2xs font-semibold leading-snug text-tile-muted">
+                {stat.label}
+              </dt>
             </div>
           ))}
         </dl>
@@ -397,7 +409,10 @@ function deriveFacts(season: LandingSeason | null, rulesets: RuleBook): Facts {
   const defaultPoints = new Map<string, number>();
   if (defaultRuleset) {
     for (const link of defaultRuleset.eventDefinitions) {
-      defaultPoints.set(link.eventDefinition.code, Number(link.pointsOverride ?? link.eventDefinition.points));
+      defaultPoints.set(
+        link.eventDefinition.code,
+        Number(link.pointsOverride ?? link.eventDefinition.points),
+      );
     }
   }
 
@@ -422,9 +437,14 @@ function deriveFacts(season: LandingSeason | null, rulesets: RuleBook): Facts {
       return [{ label: def.label, points: rulesets.map((r) => pointsIn(r, code)) }];
     });
 
-    const example = ['HOH_WIN', 'VETO_WIN', 'NOMINATED', 'WEEK_SURVIVED', 'REACHED_JURY', 'PLACEMENT_WINNER'].map(
-      (code) => defaultPoints.get(code),
-    );
+    const example = [
+      'HOH_WIN',
+      'VETO_WIN',
+      'NOMINATED',
+      'WEEK_SURVIVED',
+      'REACHED_JURY',
+      'PLACEMENT_WINNER',
+    ].map((code) => defaultPoints.get(code));
     const hasExample = example.every((p) => p !== undefined);
     const [hoh, veto, nominated, survived, jury, winner] = example.map((p) => formatPoints(p ?? 0));
 
@@ -442,7 +462,12 @@ function deriveFacts(season: LandingSeason | null, rulesets: RuleBook): Facts {
     { value: `${minRoster}–${maxRoster}`, label: 'houseguests per roster' },
     ...(eventCount > 0 ? [{ value: String(eventCount), label: 'scored events' }] : []),
     ...(rulesets.length > 0
-      ? [{ value: String(rulesets.length), label: rulesets.length === 1 ? 'scoring ruleset' : 'scoring rulesets' }]
+      ? [
+          {
+            value: String(rulesets.length),
+            label: rulesets.length === 1 ? 'scoring ruleset' : 'scoring rulesets',
+          },
+        ]
       : []),
   ];
 
@@ -524,7 +549,7 @@ function buildFaq(facts: Facts, emailAlerts: boolean): FaqItem[] {
   const rulesetList =
     facts.rulesetNames.length > 1
       ? `${facts.rulesetNames.slice(0, -1).join(', ')} or ${facts.rulesetNames.at(-1)}`
-      : facts.rulesetNames[0] ?? '';
+      : (facts.rulesetNames[0] ?? '');
 
   const scoringAnswer =
     facts.rulesetCount > 0

@@ -84,7 +84,14 @@ export function BeastDoodle({
         />
       ) : (
         <>
-          <circle cx="36" cy="30" r={mood === 'shock' ? 12 : 11} fill="#FFFFFF" stroke="#1A1206" strokeWidth="2.2" />
+          <circle
+            cx="36"
+            cy="30"
+            r={mood === 'shock' ? 12 : 11}
+            fill="#FFFFFF"
+            stroke="#1A1206"
+            strokeWidth="2.2"
+          />
           <circle cx="37" cy="31" r={mood === 'shock' ? 4 : 6} fill="#1A1206" />
           <circle cx="39" cy="28.5" r="1.8" fill="#FFFFFF" />
         </>
@@ -102,11 +109,7 @@ export function BeastDoodle({
             strokeWidth="2.2"
             strokeLinejoin="round"
           />
-          <path
-            d="M24 45.5l2.5 3 2.5-3 3 3.5 3-3.5 3 3.5 3-3.5 2.5 3 2.5-3"
-            fill="#FFFFFF"
-            stroke="none"
-          />
+          <path d="M24 45.5l2.5 3 2.5-3 3 3.5 3-3.5 3 3.5 3-3.5 2.5 3 2.5-3" fill="#FFFFFF" stroke="none" />
         </>
       )}
 

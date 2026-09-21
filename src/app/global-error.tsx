@@ -23,7 +23,9 @@ export default function GlobalError({
 
   return (
     <html lang="en">
-      <body style={{ margin: 0, background: '#0F172A', color: '#F8FAFC', fontFamily: 'system-ui, sans-serif' }}>
+      <body
+        style={{ margin: 0, background: '#0F172A', color: '#F8FAFC', fontFamily: 'system-ui, sans-serif' }}
+      >
         <main style={{ maxWidth: 420, margin: '15vh auto', padding: '0 24px', textAlign: 'center' }}>
           <h1 style={{ fontSize: 22, margin: '0 0 8px' }}>That didn&apos;t load</h1>
           <p style={{ color: '#94A3B8', fontSize: 14, lineHeight: 1.5, margin: '0 0 20px' }}>

@@ -73,8 +73,7 @@ export function CompBeastLogo({ className = 'h-8' }: { className?: string }) {
           link's accessible name ("Comp Beast home") then no longer contains
           its visible label, which is a WCAG 2.5.3 failure. */}
       <div className="flex items-baseline font-display tracking-wider text-2xl">
-        <span className="text-ink">COMP</span>{' '}
-        <span className="ml-1 text-brand-gold">BEAST</span>
+        <span className="text-ink">COMP</span> <span className="ml-1 text-brand-gold">BEAST</span>
       </div>
     </div>
   );

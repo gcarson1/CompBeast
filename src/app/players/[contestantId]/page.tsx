@@ -16,11 +16,7 @@ export const dynamic = 'force-dynamic';
 // this route, so an unknown id is a real 404 (see the season page).
 const loadPlayer = cache((contestantId: string) => getContestantProfile(contestantId));
 
-export async function generateMetadata({
-  params,
-}: {
-  params: { contestantId: string };
-}): Promise<Metadata> {
+export async function generateMetadata({ params }: { params: { contestantId: string } }): Promise<Metadata> {
   const player = await loadPlayer(params.contestantId);
   if (!player) notFound();
 
@@ -38,9 +34,7 @@ export default async function PlayerPage({ params }: { params: { contestantId: s
   const player = await loadPlayer(params.contestantId);
   if (!player) notFound();
 
-  const meta = player.metadata as
-    | { occupation?: string; hometown?: string; age?: number }
-    | null;
+  const meta = player.metadata as { occupation?: string; hometown?: string; age?: number } | null;
 
   const leagues = player.draftPicks.map((pick) => ({
     leagueId: pick.team.league.id,

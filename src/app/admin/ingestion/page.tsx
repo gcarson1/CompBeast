@@ -97,8 +97,8 @@ export default async function IngestionPage() {
       </Link>
       <h1 className="mt-2 text-3xl font-semibold tracking-tight">Ingestion</h1>
       <p className="mt-0.5 text-xs text-muted">
-        Automatically captured results. High-confidence events publish on their own; anything
-        inferred waits here.
+        Automatically captured results. High-confidence events publish on their own; anything inferred waits
+        here.
       </p>
 
       <div className="card mt-4 grid grid-cols-3 divide-x divide-hairline p-4 text-center">
@@ -112,8 +112,7 @@ export default async function IngestionPage() {
         {seasons.length === 0 ? (
           <p className="card p-4 text-xs text-muted">
             No season has been bootstrapped yet. Run{' '}
-            <code className="text-2xs">npx tsx scripts/ingest.ts bootstrap &lt;slug&gt;</code>{' '}
-            first.
+            <code className="text-2xs">npx tsx scripts/ingest.ts bootstrap &lt;slug&gt;</code> first.
           </p>
         ) : (
           <div className="space-y-2">

@@ -28,12 +28,42 @@ export interface Badge {
 
 /** Ascending by threshold; the order the shelf renders in. */
 export const BADGES: readonly Badge[] = [
-  { slug: 'houseguest', name: 'Houseguest', threshold: 1, blurb: 'You moved in. Your first points are on the board.' },
-  { slug: 'comp-winner', name: 'Comp Winner', threshold: 100, blurb: 'A hundred lifetime points — about a third of a season.' },
-  { slug: 'head-of-household', name: 'Head of Household', threshold: 250, blurb: 'A full season of scoring, or one very good roster.' },
-  { slug: 'jury-member', name: 'Jury Member', threshold: 500, blurb: 'Two seasons deep. You have seen a finale from the inside.' },
-  { slug: 'finalist', name: 'Finalist', threshold: 1000, blurb: 'A thousand points. Four seasons, or two dominant ones.' },
-  { slug: 'comp-beast', name: 'Comp Beast', threshold: 2500, blurb: 'A decade of play. The badge the app is named after.' },
+  {
+    slug: 'houseguest',
+    name: 'Houseguest',
+    threshold: 1,
+    blurb: 'You moved in. Your first points are on the board.',
+  },
+  {
+    slug: 'comp-winner',
+    name: 'Comp Winner',
+    threshold: 100,
+    blurb: 'A hundred lifetime points — about a third of a season.',
+  },
+  {
+    slug: 'head-of-household',
+    name: 'Head of Household',
+    threshold: 250,
+    blurb: 'A full season of scoring, or one very good roster.',
+  },
+  {
+    slug: 'jury-member',
+    name: 'Jury Member',
+    threshold: 500,
+    blurb: 'Two seasons deep. You have seen a finale from the inside.',
+  },
+  {
+    slug: 'finalist',
+    name: 'Finalist',
+    threshold: 1000,
+    blurb: 'A thousand points. Four seasons, or two dominant ones.',
+  },
+  {
+    slug: 'comp-beast',
+    name: 'Comp Beast',
+    threshold: 2500,
+    blurb: 'A decade of play. The badge the app is named after.',
+  },
 ];
 
 export function earnedBadges(points: number): Badge[] {

@@ -111,7 +111,8 @@ export const updateLeagueSchema = z.object({
       .trim()
       .max(400, 'That webhook URL is too long')
       .refine((url) => parseWebhookUrl(url) !== null, {
-        message: 'Paste a Discord or Slack incoming-webhook URL (discord.com/api/webhooks/… or hooks.slack.com/services/…)',
+        message:
+          'Paste a Discord or Slack incoming-webhook URL (discord.com/api/webhooks/… or hooks.slack.com/services/…)',
       })
       .nullable(),
   ),

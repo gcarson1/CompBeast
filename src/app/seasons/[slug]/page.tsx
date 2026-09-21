@@ -83,8 +83,8 @@ export default async function SeasonPage({ params }: { params: { slug: string } 
 
       {isArchived ? (
         <p className="mt-4 rounded-card border border-hairline bg-surface/60 p-3 text-2xs leading-relaxed text-muted">
-          This season has wrapped, so it is view-only. Leagues can only be created for seasons that
-          are still airing or yet to start.
+          This season has wrapped, so it is view-only. Leagues can only be created for seasons that are still
+          airing or yet to start.
         </p>
       ) : (
         <Link

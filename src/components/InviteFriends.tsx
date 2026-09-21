@@ -34,8 +34,8 @@ export function InviteFriends({
         <h2 className="mb-2 text-lg font-semibold">Invite friends</h2>
         <div className="rounded-card border border-dashed border-hairline p-4">
           <p className="max-w-measure text-xs leading-relaxed text-muted">
-            Add friends and you can drop them into a league in one tap, instead of copying the
-            invite code into a message.
+            Add friends and you can drop them into a league in one tap, instead of copying the invite code
+            into a message.
           </p>
           <Link href="/account" prefetch={false} className="btn-ghost btn-sm mt-3">
             Find friends
@@ -59,9 +59,7 @@ export function InviteFriends({
             <Avatar name={friend.name} photoUrl={friend.avatarUrl} size={34} />
             <span className="min-w-0 flex-1">
               <span className="block truncate text-sm font-medium">{friend.name}</span>
-              {friend.handle && (
-                <span className="block truncate text-2xs text-muted">@{friend.handle}</span>
-              )}
+              {friend.handle && <span className="block truncate text-2xs text-muted">@{friend.handle}</span>}
             </span>
             {friend.alreadyIn ? (
               <span className="pill shrink-0 bg-canvas text-2xs text-muted">Already in</span>
@@ -96,9 +94,7 @@ function InviteForm({
   }, [state, friend.name]);
 
   if (sent) {
-    return (
-      <span className="pill shrink-0 bg-brand-gold-soft text-2xs text-brand-gold-deep">Invited</span>
-    );
+    return <span className="pill shrink-0 bg-brand-gold-soft text-2xs text-brand-gold-deep">Invited</span>;
   }
 
   return (

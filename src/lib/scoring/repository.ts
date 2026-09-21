@@ -192,11 +192,18 @@ export async function recalculateLeague(
   });
 
   // cycleId -> [{ teamId, cumulative }] so ranks can be assigned per cycle.
-  const perCycle = new Map<string, Array<{ teamId: string; cyclePoints: number; cumulativePoints: number }>>();
+  const perCycle = new Map<
+    string,
+    Array<{ teamId: string; cyclePoints: number; cumulativePoints: number }>
+  >();
   for (const team of snapshot.teams) {
     for (const row of cumulativeByCycle(team, cycles)) {
       const bucket = perCycle.get(row.cycleId) ?? [];
-      bucket.push({ teamId: team.teamId, cyclePoints: row.cyclePoints, cumulativePoints: row.cumulativePoints });
+      bucket.push({
+        teamId: team.teamId,
+        cyclePoints: row.cyclePoints,
+        cumulativePoints: row.cumulativePoints,
+      });
       perCycle.set(row.cycleId, bucket);
     }
   }

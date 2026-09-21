@@ -47,10 +47,7 @@ export function SeasonSourceCard({
   year: number;
 }) {
   const [syncState, sync] = useFormState<IngestionActionState, FormData>(runSyncAction, {});
-  const [bootstrapState, bootstrap] = useFormState<IngestionActionState, FormData>(
-    runBootstrapAction,
-    {},
-  );
+  const [bootstrapState, bootstrap] = useFormState<IngestionActionState, FormData>(runBootstrapAction, {});
 
   const message = syncState.message ?? bootstrapState.message;
   const error = syncState.error ?? bootstrapState.error;
@@ -84,14 +81,8 @@ export function SeasonSourceCard({
 }
 
 export function CandidateCard({ candidate }: { candidate: PendingCandidate }) {
-  const [approveState, approve] = useFormState<IngestionActionState, FormData>(
-    approveCandidateAction,
-    {},
-  );
-  const [rejectState, reject] = useFormState<IngestionActionState, FormData>(
-    rejectCandidateAction,
-    {},
-  );
+  const [approveState, approve] = useFormState<IngestionActionState, FormData>(approveCandidateAction, {});
+  const [rejectState, reject] = useFormState<IngestionActionState, FormData>(rejectCandidateAction, {});
 
   const error = approveState.error ?? rejectState.error;
 
@@ -132,8 +123,7 @@ export function CandidateCard({ candidate }: { candidate: PendingCandidate }) {
 
       {!candidate.resolvable && (
         <p className="mt-3 text-2xs text-danger-deep">
-          Missing a matched houseguest or week — this cannot be published until the season is
-          re-bootstrapped.
+          Missing a matched houseguest or week — this cannot be published until the season is re-bootstrapped.
         </p>
       )}
 
@@ -164,7 +154,12 @@ export function CandidateCard({ candidate }: { candidate: PendingCandidate }) {
 function SubmitButton({ label, pendingLabel }: { label: string; pendingLabel: string }) {
   const { pending } = useFormStatus();
   return (
-    <button type="submit" disabled={pending} aria-busy={pending} className="btn-primary text-xs disabled:opacity-50">
+    <button
+      type="submit"
+      disabled={pending}
+      aria-busy={pending}
+      className="btn-primary text-xs disabled:opacity-50"
+    >
       {pending ? pendingLabel : label}
     </button>
   );

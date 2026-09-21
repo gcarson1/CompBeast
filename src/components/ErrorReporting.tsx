@@ -23,7 +23,8 @@ export function ErrorReporting() {
     if (!dsn) return;
 
     const buffered: Array<{ error: unknown; hint: string }> = [];
-    const onError = (event: ErrorEvent) => buffered.push({ error: event.error ?? event.message, hint: 'error' });
+    const onError = (event: ErrorEvent) =>
+      buffered.push({ error: event.error ?? event.message, hint: 'error' });
     const onRejection = (event: PromiseRejectionEvent) =>
       buffered.push({ error: event.reason, hint: 'unhandledrejection' });
     window.addEventListener('error', onError);

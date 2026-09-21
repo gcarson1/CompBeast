@@ -61,9 +61,7 @@ export function NotificationBell({ initialCount }: { initialCount: number }) {
   }, [pathname]);
 
   const label =
-    count === 0
-      ? 'Notifications'
-      : `Notifications, ${count} unread${count >= 100 ? ' or more' : ''}`;
+    count === 0 ? 'Notifications' : `Notifications, ${count} unread${count >= 100 ? ' or more' : ''}`;
 
   return (
     <Link
