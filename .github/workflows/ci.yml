@@ -1,0 +1,50 @@
+name: CI
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+
+concurrency:
+  group: ci-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  check:
+    name: Typecheck, lint, format, dead code, tests
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    services:
+      # The three database-backed suites skip themselves without a reachable
+      # database; running one here is what makes them actually execute in CI.
+      postgres:
+        image: postgres:16
+        env:
+          POSTGRES_USER: compbeast
+          POSTGRES_PASSWORD: compbeast
+          POSTGRES_DB: compbeast
+        ports: ['5432:5432']
+        options: >-
+          --health-cmd "pg_isready -U compbeast"
+          --health-interval 5s
+          --health-timeout 5s
+          --health-retries 10
+    env:
+      DATABASE_URL: postgresql://compbeast:compbeast@localhost:5432/compbeast?schema=public
+      # Placeholder keys: nothing in the checks reaches Clerk, but the SDK
+      # refuses to load without a publishable key present.
+      NEXT_PUBLIC_CLERK_PUBLISHABLE_KEY: pk_test_Y2xlcmsuY29tcGJlYXN0LmNpJA
+      CLERK_SECRET_KEY: sk_test_ci
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version-file: .nvmrc
+          cache: npm
+      - run: npm ci
+      - run: npm run typecheck
+      - run: npm run lint
+      - run: npm run format:check
+      - run: npm run lint:dead
+      - run: npx prisma db push --skip-generate
+      - run: npm test

@@ -1,9 +1,11 @@
-const { withSentryConfig } = require('@sentry/nextjs');
+const { withSentryConfig } = require('@sentry/nextjs/config');
 const imageHosts = require('./image-hosts');
 
 /** @type {import('next').NextConfig} */
 const nextConfig = {
   reactStrictMode: true,
+  // Nothing useful is gained by announcing the framework in a response header.
+  poweredByHeader: false,
   experimental: {
     // src/instrumentation.ts — boots Sentry per runtime. Still behind a flag
     // on Next 14.
@@ -31,6 +33,39 @@ const nextConfig = {
       // a loading skeleton and no content. A 308 consolidates every signal
       // pointed at the bare domain onto the page that actually carries it.
       { source: '/', destination: '/leagues', permanent: true },
+      // Players are browsed per season; the bare list has no page of its own.
+      { source: '/players', destination: '/seasons', permanent: true },
+    ];
+  },
+  /**
+   * Baseline hardening headers on every response. No Content-Security-Policy
+   * yet: Clerk, Vercel Analytics and Speed Insights each inject scripts and
+   * connect to their own origins, and a CSP that is not maintained alongside
+   * them breaks sign-in on the next SDK update. The headers below have no
+   * such moving parts.
+   */
+  async headers() {
+    return [
+      {
+        source: '/(.*)',
+        headers: [
+          // The email preview page frames its own templates; anything else
+          // framing this app is clickjacking.
+          { key: 'X-Frame-Options', value: 'SAMEORIGIN' },
+          { key: 'X-Content-Type-Options', value: 'nosniff' },
+          // Full URL on same-origin navigation (the app reads `redirect_url`),
+          // origin only when leaving — league ids do not belong in third-party
+          // referrer logs.
+          { key: 'Referrer-Policy', value: 'strict-origin-when-cross-origin' },
+          {
+            key: 'Permissions-Policy',
+            value: 'camera=(), microphone=(), geolocation=(), payment=(), usb=()',
+          },
+          // Vercel already serves HSTS on *.vercel.app; this covers a custom
+          // domain and is harmless where it duplicates.
+          { key: 'Strict-Transport-Security', value: 'max-age=63072000; includeSubDomains' },
+        ],
+      },
     ];
   },
 };

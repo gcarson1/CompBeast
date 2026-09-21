@@ -1,0 +1,8 @@
+.next
+node_modules
+.claude
+package-lock.json
+tsconfig.tsbuildinfo
+src/lib/ingestion/__fixtures__
+src/lib/social-feed/__fixtures__
+README.md
