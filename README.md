@@ -1,12 +1,15 @@
 # Comp Beast
 
-Fantasy leagues for reality TV. Multi-tenant, show-agnostic, with the CBS *Big Brother*
-rule set implemented for the MVP.
+Fantasy leagues for reality TV. Multi-tenant and show-agnostic, with *Big Brother* and
+*Survivor* rule sets shipped.
 
-The platform core knows nothing about Big Brother. Shows, seasons, contestants, and — most
-importantly — **scoring rules** are all rows in the database. Supporting *Survivor* or
-*The Traitors* means adding a rule catalogue and a seed script, not editing the scoring
-engine, the API, or the UI.
+The platform core knows nothing about any one show. Shows, seasons, contestants, and — most
+importantly — **scoring rules** are all rows in the database. Each show is a catalogue in
+`src/lib/shows/` (its events, rulesets and vocabulary) that the seed installs; adding
+*The Traitors* means adding a sibling file, not editing the scoring engine, the API, or
+the UI. Show-scoped pages read their words — houseguest or castaway, week or episode,
+evicted or voted out — from the show's lexicon, and wear the show's accent colour through
+`<ShowTheme>`; everything outside a show's pages speaks for the platform.
 
 ## Stack
 
@@ -59,10 +62,12 @@ formatting in place. The GitHub Actions workflow in `.github/workflows/ci.yml` r
 same chain against a real Postgres, so the database-backed suites execute there rather
 than skipping themselves.
 
-The seed creates a 16-houseguest **Demo Season** (slug `demo-big-brother`, deliberately
-namespaced away from real season slugs so ingestion can claim those), three scoring
-rulesets, a four-team demo league (invite code `DEMO-BB27`) with a completed snake draft,
-and three weeks of aired results. Season dates are anchored relative to today, so a fresh
+The seed installs every show in `SHOW_CATALOGUE` (its events and three rulesets each), then
+creates a 16-houseguest Big Brother **Demo Season** (slug `demo-big-brother`, deliberately
+namespaced away from real season slugs so ingestion can claim those), a four-team demo
+league (invite code `DEMO-BB27`) with a completed snake draft and three weeks of aired
+results, and an upcoming 18-castaway Survivor **Demo Season** (`demo-survivor`) with a cast
+and episodes but nothing scored. Season dates are anchored relative to today, so a fresh
 seed always lands mid-season with the next week's roster lock still ahead of you.
 
 ## Architecture
@@ -114,7 +119,8 @@ players' feet when a commissioner edits a rule; `ruleset` restates history on pu
 
 ### Rule sets
 
-Three ship for Big Brother, selectable per league:
+Three ship for each show, selectable per league (a league can only pick a ruleset from
+its season's show — the server refuses a mismatch):
 
 - **Classic** — competition and eviction outcomes only; everything is verifiable from the
   broadcast, so there is nothing to argue about.
@@ -203,14 +209,18 @@ standings to each league's chat afterwards (below) when new results reached a le
 ### Three layers
 
 ```
-adapter  → parses one site's markup into RawSeasonFacts
-           (knows HTML, knows nothing about our schema)
-mapper   → RawSeasonFacts into candidate events using a show's rule codes
-           (knows the show, knows nothing about HTML)
-pipeline → resolves candidates against the database and publishes them
+adapter  → parses one site's markup into that show's RawSeasonFacts, and
+           declares which show it covers (knows HTML, knows nothing about our schema)
+mapper   → a show's facts into candidate events using that show's rule codes
+           (knows the show, knows nothing about HTML); registered by show slug
+pipeline → resolves candidates against the database and publishes them; reads
+           only the show-agnostic part of the facts (which cycles aired, who left)
 ```
 
-A new site needs only a new adapter. A new show needs only a new mapper.
+The pipeline pairs adapter and mapper through the season's show and refuses a source
+that covers a different show. A new site needs only a new adapter. A new show needs a
+facts shape, a mapper and a registry entry — `SurvivorSeasonFacts` and `mapSurvivorSeason`
+are in place and tested ahead of any Survivor results site being parsed.
 
 ### Nothing writes straight to the ledger
 
@@ -539,13 +549,15 @@ link, tagged "League closed".
 
 ### Badges
 
-Six tiers on lifetime points, defined in `src/lib/badges.ts`: Houseguest (1),
-Comp Winner (100), Head of Household (250), Jury Member (500), Finalist (1,000)
-and Comp Beast (2,500). The thresholds are set against real numbers: in the
-completed Big Brother 27 season the average houseguest scored about 52 points
-under Classic rules, so a default five-houseguest roster comes out near 260 for
-a season — the ladder is a first point, a third of a season, a season, two,
-four, and a decade at the top.
+Six tiers on lifetime points, defined in `src/lib/badges.ts`: Castmate (1),
+Comp Winner (100), Power Player (250), Jury Member (500), Finalist (1,000)
+and Comp Beast (2,500). The names are the arc of any reality competition rather
+than one show's titles, because the ladder spans every league an account has
+played. The thresholds are set against real numbers: in the completed Big
+Brother 27 season the average contestant scored about 52 points under Classic
+rules, so a default five-player roster comes out near 260 for a season — the
+ladder is a first point, a third of a season, a season, two, four, and a decade
+at the top.
 
 Badges are derived from the account's total, never stored, so there is no row
 to fall out of sync with the ledger and nothing to backfill. Because that total
