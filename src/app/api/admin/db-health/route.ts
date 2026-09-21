@@ -65,7 +65,7 @@ export async function GET() {
       ok: error === null,
       // 'pooled' is the healthy answer. 'direct-capped' works but is holding
       // real sockets; 'direct' means neither defence is active.
-      mode: datasourceMode,
+      mode: datasourceMode(),
       env: describeDatasourceEnv(),
       latencyMs: Date.now() - started,
       server,

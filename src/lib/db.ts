@@ -70,30 +70,35 @@ export function describeDatasourceEnv(): Record<string, string> {
 }
 
 /**
- * Which endpoint won, for the admin health check.
+ * Which endpoint wins, for the admin health check.
  *
  * Reported rather than assumed: the whole fix above depends on an environment
  * variable being set correctly in a place this code cannot read, and "I
  * believe it is pooled" is not something to find out you were wrong about
  * during someone's draft.
+ *
+ * Derived from the environment on every call rather than recorded when the
+ * client is built. This used to be a module-level `let` set inside
+ * `createClient`, and the health route always read it as `'unset'`: Next
+ * bundles each route separately, the client is shared through `globalThis`,
+ * so the route's own copy of this module never ran `createClient` and never
+ * saw the assignment. The check was reporting on a bundle, not the database.
  */
-export let datasourceMode: DatasourceMode = 'unset';
+export function datasourceMode(): DatasourceMode {
+  return resolveDatasource().mode;
+}
 
-function resolveDatasourceUrl(): string | undefined {
+function resolveDatasource(): { url: string | undefined; mode: DatasourceMode } {
   const pooled = process.env.PRISMA_DATABASE_URL;
-  if (pooled && /^prisma(\+postgres)?:\/\//i.test(pooled)) {
-    datasourceMode = 'pooled';
-    return pooled;
-  }
+  if (pooled && /^prisma(\+postgres)?:\/\//i.test(pooled)) return { url: pooled, mode: 'pooled' };
 
   const direct = process.env.DATABASE_URL;
-  if (!direct) return undefined;
-  datasourceMode = 'direct';
+  if (!direct) return { url: undefined, mode: 'unset' };
 
   // A non-TCP URL has no client-side pool to size, and a long-lived local
   // process wants a normal pool — the cap below is a serverless remedy and
   // would only make `npm run dev` slower.
-  if (!/^postgres(ql)?:\/\//i.test(direct) || !process.env.VERCEL) return direct;
+  if (!/^postgres(ql)?:\/\//i.test(direct) || !process.env.VERCEL) return { url: direct, mode: 'direct' };
 
   /**
    * 2. If we are on the direct endpoint anyway, hold one socket per instance.
@@ -113,10 +118,9 @@ function resolveDatasourceUrl(): string | undefined {
     for (const [key, value] of Object.entries(serverlessPool)) {
       if (!url.searchParams.has(key)) url.searchParams.set(key, value);
     }
-    datasourceMode = 'direct-capped';
-    return url.toString();
+    return { url: url.toString(), mode: 'direct-capped' };
   } catch {
-    return direct;
+    return { url: direct, mode: 'direct' };
   }
 }
 
@@ -144,7 +148,7 @@ const sleep = (ms: number) => new Promise((resolve) => setTimeout(resolve, ms));
 
 function createClient() {
   const base = new PrismaClient({
-    datasourceUrl: resolveDatasourceUrl(),
+    datasourceUrl: resolveDatasource().url,
     log: process.env.NODE_ENV === 'development' ? ['warn', 'error'] : ['error'],
   });
 

@@ -17,7 +17,7 @@ export default async function NotificationsPage() {
       <Link href="/leagues" className="text-xs text-muted">
         ← Home
       </Link>
-      <h1 className="mb-4 mt-2 text-3xl font-semibold tracking-tight">Alerts</h1>
+      <h1 className="headline mb-4 mt-3 text-4xl">Alerts</h1>
       <NotificationList notifications={notifications} />
     </div>
   );

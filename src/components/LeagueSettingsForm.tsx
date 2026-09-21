@@ -257,7 +257,7 @@ export function DeleteLeaguePanel({
 
   return (
     <section className="mt-10 rounded-card border border-danger/30 p-4">
-      <h2 className="text-base font-semibold text-danger-deep">Delete this league</h2>
+      <h2 className="headline text-xl text-danger-deep">Delete this league</h2>
       <p className="mt-1 max-w-measure text-2xs leading-relaxed text-muted">
         Standings, rosters, draft results and the whole feed go with it, for all {memberCount}{' '}
         {memberCount === 1 ? 'manager' : 'managers'}. Everyone keeps the points they scored here on their own

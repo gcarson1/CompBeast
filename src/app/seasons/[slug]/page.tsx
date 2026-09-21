@@ -3,7 +3,12 @@ import Link from 'next/link';
 import { notFound } from 'next/navigation';
 import { cache } from 'react';
 import { Avatar } from '@/components/Avatar';
+import { BeastDoodle } from '@/components/doodles/BeastDoodle';
+import { Doodle } from '@/components/doodles/Doodle';
 import { JsonLd } from '@/components/JsonLd';
+import { MotionCard } from '@/components/motion/MotionCard';
+import { Reveal } from '@/components/motion/Reveal';
+import { Sticker } from '@/components/Sticker';
 import { absoluteUrl, breadcrumbList, tvSeriesNode } from '@/lib/seo';
 import { formatPoints, pointsTone } from '@/lib/ui';
 import { getSeasonScoreboard } from '@/server/queries';
@@ -71,38 +76,47 @@ export default async function SeasonPage({ params }: { params: { slug: string } 
         ← Seasons
       </Link>
 
-      <div className="mt-2 flex items-start justify-between gap-3">
-        <div className="min-w-0">
-          <h1 className="truncate text-3xl font-semibold tracking-tight">{season.name}</h1>
-          <p className="mt-0.5 text-xs text-muted">
-            {season.showName} · {season.year} · scored with {rulesetName} rules
-          </p>
-        </div>
-        {isArchived && <span className="pill shrink-0 bg-canvas text-2xs text-muted">Finished</span>}
-      </div>
+      <header className="relative mt-4 pr-20 sm:pr-28">
+        <BeastDoodle
+          mood={isArchived ? 'grin' : 'shock'}
+          className="absolute -right-2 -top-3 h-20 w-20 rotate-6 sm:-right-3 sm:-top-5 sm:h-24 sm:w-24"
+        />
+        <Sticker tone={isArchived ? 'ink' : 'gold'} size="lg" tilt="l">
+          {isArchived ? 'Finished' : season.status === 'ACTIVE' ? 'Airing now' : 'Upcoming'}
+        </Sticker>
+        <h1 className="headline mt-4 text-5xl sm:text-6xl">{season.name}</h1>
+        <p className="mt-3 text-xs text-muted">
+          {season.showName} · {season.year} · scored with {rulesetName} rules
+        </p>
+      </header>
 
       {isArchived ? (
-        <p className="mt-4 rounded-card border border-hairline bg-surface/60 p-3 text-2xs leading-relaxed text-muted">
+        <p className="card mt-6 max-w-measure p-4 text-2xs leading-relaxed text-muted">
           This season has wrapped, so it is view-only. Leagues can only be created for seasons that are still
           airing or yet to start.
         </p>
       ) : (
-        <Link
-          href="/leagues/new"
-          prefetch={false}
-          className="mt-4 flex items-center justify-between rounded-card border border-brand-gold/30 bg-surface p-4 text-ink transition active:scale-[0.99]"
-        >
-          <span>
-            <span className="block text-base font-semibold">Start a league</span>
-            <span className="mt-0.5 block text-xs text-muted">This season is still in play</span>
-          </span>
-          <span className="pill bg-brand-gold text-on-gold">Create</span>
-        </Link>
+        <MotionCard tilt className="card-pop-gold relative mt-8">
+          <Doodle kind="door" tone="paper" className="absolute -right-2 -top-3 h-9 w-9 rotate-6" />
+          <Link
+            href="/leagues/new"
+            prefetch={false}
+            className="flex items-center justify-between gap-4 rounded-card p-5"
+          >
+            <span className="min-w-0">
+              <span className="headline block text-2xl">Start a league</span>
+              <span className="mt-1 block text-xs text-tile-muted">This season is still in play</span>
+            </span>
+            <span className="btn btn-sm shrink-0 bg-pop-gold-ink text-brand-gold-deep">Create →</span>
+          </Link>
+        </MotionCard>
       )}
 
-      <section className="mt-6">
-        <h2 className="text-lg font-semibold">Player scores</h2>
-        <p className="mb-2 text-2xs text-muted">
+      <Reveal as="section" className="mt-10" aria-labelledby="scores-heading">
+        <h2 id="scores-heading" className="section-title">
+          Player scores
+        </h2>
+        <p className="mb-3 mt-2 text-2xs text-muted">
           Ranked by fantasy points, which is not the same as how they placed on the show.
         </p>
 
@@ -112,8 +126,11 @@ export default async function SeasonPage({ params }: { params: { slug: string } 
           <ul className="card divide-y divide-hairline">
             {players.map((player, index) => (
               <li key={player.contestantId}>
-                <Link href={`/players/${player.contestantId}`} className="flex items-center gap-3 p-4">
-                  <span className="w-6 shrink-0 text-center text-xs font-semibold tabular-nums text-muted">
+                <Link
+                  href={`/players/${player.contestantId}`}
+                  className="flex items-center gap-3 p-4 transition duration-200 ease-soft hover:bg-surface-raised"
+                >
+                  <span className="w-6 shrink-0 text-center font-display text-md tabular-nums text-muted">
                     {index + 1}
                   </span>
                   <Avatar
@@ -136,7 +153,7 @@ export default async function SeasonPage({ params }: { params: { slug: string } 
             ))}
           </ul>
         )}
-      </section>
+      </Reveal>
     </div>
   );
 }

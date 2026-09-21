@@ -76,7 +76,7 @@ export function NotificationBell({ initialCount }: { initialCount: number }) {
           // aria-hidden because the count is already in the link's own label;
           // announcing it twice is worse than not styling it at all.
           aria-hidden
-          className="absolute -right-0.5 -top-0.5 grid h-4 min-w-[1rem] place-items-center rounded-full bg-danger px-1 text-[10px] font-bold leading-none text-white ring-2 ring-canvas"
+          className="absolute -right-0.5 -top-0.5 grid h-[1.125rem] min-w-[1.125rem] place-items-center rounded-full bg-danger px-1 text-2xs font-bold leading-none text-white ring-2 ring-canvas"
         >
           {count > 99 ? '99+' : count}
         </span>

@@ -298,9 +298,7 @@ function SeasonRow({ row }: { row: SeasonHistoryRow }) {
             {STATUS_LABEL[row.seasonStatus]}
           </Sticker>
         )}
-        {row.archived && (
-          <span className="mt-1 block text-[11px] leading-tight text-muted">League closed</span>
-        )}
+        {row.archived && <span className="mt-1 block text-2xs leading-tight text-muted">League closed</span>}
       </span>
     </>
   );

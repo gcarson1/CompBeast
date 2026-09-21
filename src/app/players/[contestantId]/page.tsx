@@ -5,9 +5,10 @@ import { cache } from 'react';
 import { Avatar } from '@/components/Avatar';
 import { JsonLd } from '@/components/JsonLd';
 import { PlayerTabs } from '@/components/PlayerTabs';
+import { Sticker } from '@/components/Sticker';
 import { getCurrentUser } from '@/lib/auth';
 import { absoluteUrl, breadcrumbList } from '@/lib/seo';
-import { formatPoints, pointsTone } from '@/lib/ui';
+import { formatPoints } from '@/lib/ui';
 import { getContestantLeaguesForViewer, getContestantProfile } from '@/server/queries';
 
 export const dynamic = 'force-dynamic';
@@ -52,22 +53,31 @@ export default async function PlayerPage({ params }: { params: { contestantId: s
         ← {player.season.name}
       </Link>
 
-      <div className="mt-4 flex flex-col items-center text-center">
-        <Avatar name={player.name} photoUrl={player.photoUrl} size={84} dimmed={!player.isActive} />
-        <h1 className="mt-3 text-2xl font-semibold tracking-tight">{player.name}</h1>
-        <p className="mt-0.5 text-xs text-muted">
-          {player.isActive ? 'In the house' : `Evicted · ${player.eliminatedCycle?.label ?? '—'}`}
-        </p>
-        <p className={`mt-2 text-4xl font-semibold tabular-nums ${pointsTone(player.totalPoints)}`}>
+      <header className="relative mt-4 flex items-center gap-4">
+        <Avatar name={player.name} photoUrl={player.photoUrl} size={72} dimmed={!player.isActive} />
+        <div className="min-w-0 flex-1">
+          <h1 className="headline truncate text-4xl">{player.name}</h1>
+          <p className="mt-2 flex flex-wrap items-center gap-2 text-xs text-muted">
+            <Sticker tone={player.isActive ? 'mint' : 'ink'} size="sm">
+              {player.isActive ? 'In the house' : `Evicted · ${player.eliminatedCycle?.label ?? '—'}`}
+            </Sticker>
+            <span className="truncate">
+              {player.season.show.name} · {player.season.name}
+            </span>
+          </p>
+        </div>
+      </header>
+
+      <div className="card-pop-gold relative mt-6 p-5">
+        <p className="text-2xs font-bold uppercase tracking-wide text-tile-muted">Season points</p>
+        <p className="mt-1 font-display text-6xl leading-none tracking-wide">
           {formatPoints(player.totalPoints)}
         </p>
-        <p className="text-2xs uppercase tracking-wide text-muted">Season points</p>
-      </div>
-
-      <div className="card mt-4 grid grid-cols-3 divide-x divide-hairline p-3 text-center">
-        <Fact label="Age" value={meta?.age ? String(meta.age) : '—'} />
-        <Fact label="From" value={meta?.hometown?.split(',')[0] ?? '—'} />
-        <Fact label="Job" value={meta?.occupation ?? '—'} />
+        <dl className="mt-4 grid grid-cols-3 gap-3 border-t border-tile-line pt-4">
+          <Fact label="Age" value={meta?.age ? String(meta.age) : '—'} />
+          <Fact label="From" value={meta?.hometown?.split(',')[0] ?? '—'} />
+          <Fact label="Job" value={meta?.occupation ?? '—'} />
+        </dl>
       </div>
 
       <PlayerTabs
@@ -82,9 +92,9 @@ export default async function PlayerPage({ params }: { params: { contestantId: s
 
 function Fact({ label, value }: { label: string; value: string }) {
   return (
-    <div className="px-1">
-      <div className="truncate text-xs font-semibold">{value}</div>
-      <div className="mt-0.5 text-2xs uppercase tracking-wide text-muted">{label}</div>
+    <div className="min-w-0">
+      <dt className="text-2xs font-bold uppercase tracking-wide text-tile-muted">{label}</dt>
+      <dd className="mt-0.5 truncate text-sm font-semibold">{value}</dd>
     </div>
   );
 }

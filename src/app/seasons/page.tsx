@@ -1,7 +1,10 @@
 import type { Metadata } from 'next';
 import Link from 'next/link';
 import { cache } from 'react';
+import { Doodle } from '@/components/doodles/Doodle';
 import { JsonLd } from '@/components/JsonLd';
+import { Reveal, RevealGroup } from '@/components/motion/Reveal';
+import { Sticker } from '@/components/Sticker';
 import { absoluteUrl, breadcrumbList } from '@/lib/seo';
 import { getSeasonsByStatus } from '@/server/queries';
 
@@ -24,16 +27,11 @@ export async function generateMetadata(): Promise<Metadata> {
   };
 }
 
-const STATUS_TONE: Record<string, string> = {
-  ACTIVE: 'bg-brand-gold-soft text-brand-gold-deep',
-  UPCOMING: 'bg-brand-velvet/20 text-violet-300',
-  COMPLETED: 'bg-canvas text-muted',
-};
-
-const STATUS_LABEL: Record<string, string> = {
-  ACTIVE: 'Airing now',
-  UPCOMING: 'Upcoming',
-  COMPLETED: 'Finished',
+// Spelled out for Tailwind's content scan; the tone is the sticker's.
+const STATUS: Record<string, { label: string; tone: 'gold' | 'lavender' | 'ink' }> = {
+  ACTIVE: { label: 'Airing now', tone: 'gold' },
+  UPCOMING: { label: 'Upcoming', tone: 'lavender' },
+  COMPLETED: { label: 'Finished', tone: 'ink' },
 };
 
 export default async function SeasonsPage() {
@@ -42,52 +40,62 @@ export default async function SeasonsPage() {
   return (
     <div className="pt-2">
       <JsonLd data={breadcrumbList([{ name: 'Seasons', path: '/seasons' }])} />
-      <h1 className="text-4xl font-semibold tracking-tight">Seasons</h1>
-      <p className="mb-5 text-xs text-muted">
+      <h1 className="headline text-4xl">Seasons</h1>
+      <p className="mt-2 max-w-measure text-xs text-muted">
         Play along with a season that is still running, or look back at one that has wrapped.
       </p>
 
-      <section>
-        <h2 className="mb-2 text-lg font-semibold">Open for leagues</h2>
+      <section className="mt-8" aria-labelledby="open-heading">
+        <h2 id="open-heading" className="section-title mb-3">
+          Open for leagues
+        </h2>
         {open.length === 0 ? (
           <p className="card p-4 text-xs text-muted">
             Nothing is airing right now. Check back when the next season starts.
           </p>
         ) : (
-          <ul className="space-y-3">
-            {open.map((season) => (
-              <li key={season.id}>
-                <Link
-                  href={`/seasons/${season.slug}`}
-                  className="card block p-4 transition active:scale-[0.99]"
-                >
-                  <div className="flex items-start justify-between gap-3">
-                    <span className="min-w-0">
-                      <span className="block truncate text-md font-semibold">{season.name}</span>
-                      <span className="mt-0.5 block truncate text-xs text-muted">
-                        {season.show.name} · {season._count.contestants} players
+          // Two-up from `sm`, so a pair of open seasons sits side by side
+          // rather than as two full-width bars with nothing to their right.
+          <RevealGroup as="ul" className="grid grid-cols-1 gap-4 pt-3 sm:grid-cols-2" step={60}>
+            {open.map((season) => {
+              const status = STATUS[season.status] ?? STATUS.UPCOMING;
+              return (
+                <Reveal as="li" key={season.id} className="card card-lift relative">
+                  <Sticker
+                    tone={status.tone}
+                    tilt="r"
+                    seed={season.id}
+                    className="absolute -right-2 -top-3 z-10"
+                  >
+                    {status.label}
+                  </Sticker>
+                  <Link href={`/seasons/${season.slug}`} className="flex h-full flex-col rounded-card p-4">
+                    <span className="clay clay-sky h-11 w-11 font-display text-lg leading-none">
+                      {String(season.year).slice(-2)}
+                    </span>
+                    <span className="mt-3 block truncate text-base font-semibold">{season.name}</span>
+                    <span className="mt-0.5 block truncate text-2xs text-muted">
+                      {season.show.name} · {season._count.contestants} players
+                    </span>
+                    <span className="mt-auto flex items-center justify-between border-t border-hairline pt-3">
+                      <span className="text-2xs text-muted">
+                        {season._count.leagues} {season._count.leagues === 1 ? 'league' : 'leagues'}
                       </span>
+                      <span className="text-2xs font-medium text-brand-gold-deep">View season →</span>
                     </span>
-                    <span className={`pill shrink-0 text-2xs ${STATUS_TONE[season.status]}`}>
-                      {STATUS_LABEL[season.status]}
-                    </span>
-                  </div>
-                  <div className="mt-3 flex items-center justify-between border-t border-hairline pt-3">
-                    <span className="text-2xs text-muted">
-                      {season._count.leagues} {season._count.leagues === 1 ? 'league' : 'leagues'}
-                    </span>
-                    <span className="text-2xs font-medium text-brand-gold-deep">View season →</span>
-                  </div>
-                </Link>
-              </li>
-            ))}
-          </ul>
+                  </Link>
+                </Reveal>
+              );
+            })}
+          </RevealGroup>
         )}
       </section>
 
-      <section className="mt-7">
-        <h2 className="mb-1 text-lg font-semibold">Archive</h2>
-        <p className="mb-2 text-2xs text-muted">
+      <Reveal as="section" className="mt-10" aria-labelledby="archive-heading">
+        <h2 id="archive-heading" className="eyebrow mb-1">
+          Archive
+        </h2>
+        <p className="mb-3 max-w-measure text-2xs leading-relaxed text-muted">
           Finished seasons are read-only — the whole cast is already known, so there is no game left to draft.
         </p>
         {archived.length === 0 ? (
@@ -96,8 +104,11 @@ export default async function SeasonsPage() {
           <ul className="card divide-y divide-hairline">
             {archived.map((season) => (
               <li key={season.id}>
-                <Link href={`/seasons/${season.slug}`} className="flex items-center gap-3 p-4">
-                  <span className="grid h-10 w-10 shrink-0 place-items-center rounded-full bg-canvas text-2xs font-semibold tabular-nums text-muted">
+                <Link
+                  href={`/seasons/${season.slug}`}
+                  className="flex items-center gap-3 p-4 transition duration-200 ease-soft hover:bg-surface-raised"
+                >
+                  <span className="clay clay-slate h-10 w-10 font-display text-md leading-none">
                     {String(season.year).slice(-2)}
                   </span>
                   <span className="min-w-0 flex-1">
@@ -106,21 +117,13 @@ export default async function SeasonsPage() {
                       {season.show.name} · {season._count.contestants} players
                     </span>
                   </span>
-                  <ChevronIcon />
+                  <Doodle kind="lock" tone="paper" className="h-6 w-6 shrink-0 -rotate-6 opacity-70" />
                 </Link>
               </li>
             ))}
           </ul>
         )}
-      </section>
+      </Reveal>
     </div>
-  );
-}
-
-function ChevronIcon() {
-  return (
-    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#94A3B8" strokeWidth="2">
-      <path d="m9 6 6 6-6 6" strokeLinecap="round" strokeLinejoin="round" />
-    </svg>
   );
 }

@@ -5,6 +5,7 @@ import { useEffect, useState } from 'react';
 import { useFormState, useFormStatus } from 'react-dom';
 import { toast } from 'sonner';
 import { Avatar } from '@/components/Avatar';
+import { Sticker } from '@/components/Sticker';
 import { inviteFriendAction, type ActionState } from '@/server/actions';
 import type { InvitableFriend } from '@/server/social';
 
@@ -30,8 +31,10 @@ export function InviteFriends({
 }) {
   if (friends.length === 0) {
     return (
-      <section className="mt-6">
-        <h2 className="mb-2 text-lg font-semibold">Invite friends</h2>
+      <section className="mt-10" aria-labelledby="invite-heading">
+        <h2 id="invite-heading" className="eyebrow mb-3">
+          Invite friends
+        </h2>
         <div className="rounded-card border border-dashed border-hairline p-4">
           <p className="max-w-measure text-xs leading-relaxed text-muted">
             Add friends and you can drop them into a league in one tap, instead of copying the invite code
@@ -46,9 +49,11 @@ export function InviteFriends({
   }
 
   return (
-    <section className="mt-6">
-      <div className="mb-2 flex items-baseline justify-between gap-3">
-        <h2 className="text-lg font-semibold">Invite friends</h2>
+    <section className="mt-10" aria-labelledby="invite-heading">
+      <div className="mb-3 flex items-baseline justify-between gap-3">
+        <h2 id="invite-heading" className="eyebrow">
+          Invite friends
+        </h2>
         <span className="text-2xs text-muted">
           {seatsLeft === 0 ? 'League full' : `${seatsLeft} ${seatsLeft === 1 ? 'seat' : 'seats'} left`}
         </span>
@@ -62,7 +67,9 @@ export function InviteFriends({
               {friend.handle && <span className="block truncate text-2xs text-muted">@{friend.handle}</span>}
             </span>
             {friend.alreadyIn ? (
-              <span className="pill shrink-0 bg-canvas text-2xs text-muted">Already in</span>
+              <Sticker tone="ink" size="sm" className="shrink-0">
+                Already in
+              </Sticker>
             ) : (
               <InviteForm leagueId={leagueId} friend={friend} disabled={seatsLeft === 0} />
             )}

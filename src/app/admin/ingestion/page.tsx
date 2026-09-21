@@ -1,5 +1,7 @@
 import Link from 'next/link';
 import { CandidateCard, SeasonSourceCard, type PendingCandidate } from '@/components/IngestionReview';
+import { StatStrip } from '@/components/StatStrip';
+import { Sticker } from '@/components/Sticker';
 import { getCurrentUser } from '@/lib/auth';
 import { prisma } from '@/lib/db';
 import { relativeTime } from '@/lib/ui';
@@ -11,11 +13,13 @@ export const dynamic = 'force-dynamic';
 // start, and the failure mode is a half-written season, so buy the headroom.
 export const maxDuration = 60;
 
-const RUN_TONE: Record<string, string> = {
-  SUCCESS: 'bg-brand-gold-soft text-brand-gold-deep',
-  RUNNING: 'bg-canvas text-muted',
-  EMPTY: 'bg-warn/20 text-warn',
-  FAILED: 'bg-danger-soft text-danger-deep',
+// Sticker tones per run status. EMPTY is the "a parser silently broke"
+// signal (see README), so it gets the same red as a failure.
+const RUN_TONE: Record<string, 'gold' | 'ink' | 'red'> = {
+  SUCCESS: 'gold',
+  RUNNING: 'ink',
+  EMPTY: 'red',
+  FAILED: 'red',
 };
 
 export default async function IngestionPage() {
@@ -26,9 +30,9 @@ export default async function IngestionPage() {
         <Link href="/leagues" className="text-xs text-muted">
           ← Leagues
         </Link>
-        <div className="card mt-6 p-6 text-center">
-          <h1 className="text-lg font-semibold">Admins only</h1>
-          <p className="mt-1 text-xs text-muted">
+        <div className="card mt-6 p-6">
+          <h1 className="headline text-2xl">Admins only</h1>
+          <p className="mt-2 max-w-measure text-xs text-muted">
             Ingestion review rewrites scores across every league on a season.
           </p>
         </div>
@@ -95,20 +99,29 @@ export default async function IngestionPage() {
       <Link href="/leagues" className="text-xs text-muted">
         ← Leagues
       </Link>
-      <h1 className="mt-2 text-3xl font-semibold tracking-tight">Ingestion</h1>
-      <p className="mt-0.5 text-xs text-muted">
+      <h1 className="headline mt-3 text-4xl">Ingestion</h1>
+      <p className="mt-2 max-w-measure text-xs text-muted">
         Automatically captured results. High-confidence events publish on their own; anything inferred waits
         here.
       </p>
 
-      <div className="card mt-4 grid grid-cols-3 divide-x divide-hairline p-4 text-center">
-        <Stat label="Published" value={(tally.AUTO_PUBLISHED ?? 0) + (tally.PUBLISHED ?? 0)} />
-        <Stat label="To review" value={tally.PENDING ?? 0} />
-        <Stat label="Rejected" value={tally.REJECTED ?? 0} />
-      </div>
+      <StatStrip
+        className="mt-6"
+        items={[
+          { label: 'Published', value: String((tally.AUTO_PUBLISHED ?? 0) + (tally.PUBLISHED ?? 0)) },
+          {
+            label: 'To review',
+            value: String(tally.PENDING ?? 0),
+            tone: tally.PENDING ? 'text-brand-gold-deep' : undefined,
+          },
+          { label: 'Rejected', value: String(tally.REJECTED ?? 0) },
+        ]}
+      />
 
-      <section className="mt-6">
-        <h2 className="mb-2 text-lg font-semibold">Sources</h2>
+      <section className="mt-8" aria-labelledby="sources-heading">
+        <h2 id="sources-heading" className="section-title mb-3">
+          Sources
+        </h2>
         {seasons.length === 0 ? (
           <p className="card p-4 text-xs text-muted">
             No season has been bootstrapped yet. Run{' '}
@@ -130,9 +143,14 @@ export default async function IngestionPage() {
         )}
       </section>
 
-      <section className="mt-6">
-        <h2 className="mb-2 text-lg font-semibold">
-          Needs review {candidates.length > 0 && `(${candidates.length})`}
+      <section className="mt-8" aria-labelledby="review-heading">
+        <h2 id="review-heading" className="section-title mb-3">
+          Needs review
+          {candidates.length > 0 && (
+            <span className="font-sans text-sm normal-case tracking-normal text-muted">
+              {candidates.length}
+            </span>
+          )}
         </h2>
         {candidates.length === 0 ? (
           <p className="card p-4 text-xs text-muted">Nothing waiting. Everything parsed cleanly.</p>
@@ -145,8 +163,10 @@ export default async function IngestionPage() {
         )}
       </section>
 
-      <section className="mt-6">
-        <h2 className="mb-2 text-lg font-semibold">Recent runs</h2>
+      <section className="mt-8" aria-labelledby="runs-heading">
+        <h2 id="runs-heading" className="eyebrow mb-3">
+          Recent runs
+        </h2>
         {runs.length === 0 ? (
           <p className="card p-4 text-xs text-muted">No syncs have run yet.</p>
         ) : (
@@ -162,23 +182,14 @@ export default async function IngestionPage() {
                     {run.error && ` · ${run.error}`}
                   </span>
                 </span>
-                <span className={`pill shrink-0 text-2xs ${RUN_TONE[run.status] ?? 'bg-canvas text-muted'}`}>
+                <Sticker tone={RUN_TONE[run.status] ?? 'ink'} size="sm" className="shrink-0">
                   {run.status.toLowerCase()}
-                </span>
+                </Sticker>
               </li>
             ))}
           </ul>
         )}
       </section>
-    </div>
-  );
-}
-
-function Stat({ label, value }: { label: string; value: number }) {
-  return (
-    <div>
-      <div className="text-xl font-semibold tabular-nums">{value}</div>
-      <div className="mt-0.5 text-2xs uppercase tracking-wide text-muted">{label}</div>
     </div>
   );
 }

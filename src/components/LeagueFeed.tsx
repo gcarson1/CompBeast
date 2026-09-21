@@ -74,9 +74,11 @@ export function LeagueFeed({
   const over = remaining < 0;
 
   return (
-    <section className="mt-6">
-      <div className="mb-2 flex items-baseline justify-between">
-        <h2 className="text-lg font-semibold">Trash talk</h2>
+    <section className="mt-10" aria-labelledby="feed-heading">
+      <div className="mb-3 flex items-end justify-between">
+        <h2 id="feed-heading" className="section-title">
+          Trash talk
+        </h2>
         <span className="flex items-center gap-1.5 text-2xs text-muted">
           {/* No dot for a viewer who cannot poll — a signed-out reader of a
               public league. Claiming "live" there would be untrue, and

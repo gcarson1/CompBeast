@@ -3,6 +3,10 @@ import Link from 'next/link';
 import { notFound, redirect } from 'next/navigation';
 import { cache } from 'react';
 import { Avatar } from '@/components/Avatar';
+import { Doodle } from '@/components/doodles/Doodle';
+import { Reveal } from '@/components/motion/Reveal';
+import { StatStrip } from '@/components/StatStrip';
+import { Sticker } from '@/components/Sticker';
 import { getCurrentUser } from '@/lib/auth';
 import { formatPoints, pointsTone } from '@/lib/ui';
 import { canViewLeague, getTeamDetail } from '@/server/queries';
@@ -31,32 +35,62 @@ export default async function TeamPage({ params }: { params: { teamId: string } 
   // link a friend sent them.
   if (!(await canViewLeague(team.leagueId, user?.id ?? null))) redirect(`/leagues/${team.leagueId}`);
 
+  const rank = score?.rank ?? 0;
+  const stillIn = roster.filter((player) => player.isActive).length;
+
   return (
     <div className="pt-2">
       <Link href={`/leagues/${team.leagueId}`} className="text-xs text-muted">
         ← League
       </Link>
 
-      <div className="mt-3 flex items-center gap-3">
-        <Avatar name={team.ownerName ?? team.name} size={52} />
+      <header className="relative mt-4 flex items-center gap-4">
+        <span className="relative shrink-0">
+          <Avatar name={team.ownerName ?? team.name} size={56} />
+          {rank === 1 && <Doodle kind="crown" className="absolute -right-2.5 -top-2.5 h-7 w-7 rotate-12" />}
+        </span>
         <div className="min-w-0">
-          <h1 className="truncate text-2xl font-semibold tracking-tight">{team.name}</h1>
-          <p className="text-xs text-muted">{team.ownerName}</p>
+          <h1 className="headline truncate text-4xl">{team.name}</h1>
+          <p className="mt-1.5 flex min-w-0 items-center gap-2 text-xs text-muted">
+            <span className="truncate">{team.ownerName ?? 'Unclaimed'}</span>
+            {rank > 0 && (
+              <Sticker tone={rank === 1 ? 'gold' : 'ink'} size="sm" className="shrink-0">
+                #{rank}
+              </Sticker>
+            )}
+          </p>
         </div>
-      </div>
+      </header>
 
-      <div className="card mt-4 grid grid-cols-3 divide-x divide-hairline p-4 text-center">
-        <Stat label="Total" value={`${score?.totalPoints ?? 0}`} />
-        <Stat label="Rank" value={score?.rank ? `#${score.rank}` : '—'} />
-        <Stat label="Last week" value={formatPoints(score?.lastCyclePoints ?? 0)} />
-      </div>
+      <StatStrip
+        className="mt-6"
+        items={[
+          { label: 'Total', value: `${score?.totalPoints ?? 0}` },
+          { label: 'Rank', value: rank ? `#${rank}` : '—' },
+          {
+            label: 'Last week',
+            value: formatPoints(score?.lastCyclePoints ?? 0),
+            tone: pointsTone(score?.lastCyclePoints ?? 0),
+          },
+        ]}
+      />
 
-      <section className="mt-6">
-        <h2 className="mb-2 text-lg font-semibold">Roster</h2>
+      <Reveal as="section" className="mt-8" aria-labelledby="roster-heading">
+        <div className="mb-3 flex items-end justify-between gap-3">
+          <h2 id="roster-heading" className="section-title">
+            Roster
+          </h2>
+          <span className="text-2xs text-muted">
+            {stillIn}/{roster.length} still in
+          </span>
+        </div>
         <ul className="card divide-y divide-hairline">
           {roster.map((player) => (
             <li key={player.contestantId}>
-              <Link href={`/players/${player.contestantId}`} className="flex items-center gap-3 p-4">
+              <Link
+                href={`/players/${player.contestantId}`}
+                className="flex items-center gap-3 p-4 transition duration-200 ease-soft hover:bg-surface-raised"
+              >
                 <Avatar name={player.name} photoUrl={player.photoUrl} size={42} dimmed={!player.isActive} />
                 <span className="min-w-0 flex-1">
                   <span className="block truncate text-base font-semibold">{player.name}</span>
@@ -71,11 +105,13 @@ export default async function TeamPage({ params }: { params: { teamId: string } 
             </li>
           ))}
         </ul>
-      </section>
+      </Reveal>
 
       {score && score.cycles.length > 0 && (
-        <section className="mt-6">
-          <h2 className="mb-2 text-lg font-semibold">Week by week</h2>
+        <Reveal as="section" className="mt-8" aria-labelledby="weeks-heading">
+          <h2 id="weeks-heading" className="eyebrow mb-3">
+            Week by week
+          </h2>
           <div className="card divide-y divide-hairline">
             {/*
               Newest week first. Copied before reversing because `reverse()`
@@ -86,8 +122,8 @@ export default async function TeamPage({ params }: { params: { teamId: string } 
             */}
             {[...score.cycles].reverse().map((cycle) => (
               <details key={cycle.cycleId} className="group">
-                <summary className="flex cursor-pointer list-none items-center justify-between p-4">
-                  <span className="text-base font-medium">{cycle.label}</span>
+                <summary className="flex cursor-pointer list-none items-center justify-between p-4 text-muted transition hover:text-ink">
+                  <span className="text-base font-medium text-ink">{cycle.label}</span>
                   <span className="flex items-center gap-2">
                     <span className={`text-base font-semibold tabular-nums ${pointsTone(cycle.points)}`}>
                       {formatPoints(cycle.points)}
@@ -110,17 +146,8 @@ export default async function TeamPage({ params }: { params: { teamId: string } 
               </details>
             ))}
           </div>
-        </section>
+        </Reveal>
       )}
-    </div>
-  );
-}
-
-function Stat({ label, value }: { label: string; value: string }) {
-  return (
-    <div>
-      <div className="text-xl font-semibold tabular-nums">{value}</div>
-      <div className="mt-0.5 text-2xs uppercase tracking-wide text-muted">{label}</div>
     </div>
   );
 }
@@ -132,8 +159,9 @@ function ChevronIcon() {
       height="16"
       viewBox="0 0 24 24"
       fill="none"
-      stroke="#94A3B8"
+      stroke="currentColor"
       strokeWidth="2"
+      aria-hidden
       className="transition group-open:rotate-180"
     >
       <path d="m6 9 6 6 6-6" strokeLinecap="round" strokeLinejoin="round" />

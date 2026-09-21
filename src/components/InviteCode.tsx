@@ -159,7 +159,7 @@ export function InviteCode({ code, leagueName }: { code: string; leagueName: str
         className="rounded-card border border-hairline bg-surface p-0 text-ink shadow-card backdrop:bg-black/70 backdrop:backdrop-blur-sm"
       >
         <div className="w-[min(20rem,calc(100vw-2.5rem))] p-5 text-center">
-          <h2 className="text-lg font-semibold">Scan to join</h2>
+          <h2 className="headline text-2xl">Scan to join</h2>
           <p className="mt-1 text-2xs leading-relaxed text-muted">
             Point a phone camera at this to open {leagueName} with the code already filled in.
           </p>

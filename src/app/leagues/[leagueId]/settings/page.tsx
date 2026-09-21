@@ -46,8 +46,8 @@ export default async function LeagueSettingsPage({ params }: { params: { leagueI
       <Link href={`/leagues/${league.id}`} className="text-xs text-muted">
         ← {league.name}
       </Link>
-      <h1 className="mt-2 text-3xl font-semibold tracking-tight">League settings</h1>
-      <p className="mb-6 mt-0.5 text-xs text-muted">
+      <h1 className="headline mt-3 text-4xl">League settings</h1>
+      <p className="mb-6 mt-2 text-xs text-muted">
         {league.season.show.name} · {league.season.name}
       </p>
 

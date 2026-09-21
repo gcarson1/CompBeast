@@ -35,7 +35,7 @@ export default function Error({ error, reset }: { error: Error & { digest?: stri
           </svg>
         </span>
 
-        <h1 className="mt-4 text-xl font-semibold tracking-tight">That didn&apos;t load</h1>
+        <h1 className="headline mt-4 text-2xl">That didn&apos;t load</h1>
         <p className="mx-auto mt-2 max-w-xs text-sm leading-relaxed text-muted">
           Something went wrong on our side. Your leagues and scores are safe — this was just the page failing
           to build.

@@ -24,12 +24,12 @@ export default async function NewLeaguePage() {
         <Link href="/leagues" className="text-xs text-muted">
           ← Leagues
         </Link>
-        <div className="card mt-6 p-6 text-center">
-          <h1 className="text-lg font-semibold">No seasons open</h1>
-          <p className="mt-1 text-xs text-muted">
+        <div className="card mt-6 p-6">
+          <h1 className="headline text-2xl">No seasons open</h1>
+          <p className="mt-2 max-w-measure text-xs leading-relaxed text-muted">
             Every season we have data for has already finished. You can still browse their results.
           </p>
-          <Link href="/seasons" className="btn-primary mt-4 inline-flex">
+          <Link href="/seasons" className="btn-primary mt-4">
             Browse seasons
           </Link>
         </div>
@@ -42,7 +42,7 @@ export default async function NewLeaguePage() {
       <Link href="/leagues" className="text-xs text-muted">
         ← Leagues
       </Link>
-      <h1 className="mb-5 mt-2 text-3xl font-semibold tracking-tight">Create a league</h1>
+      <h1 className="headline mb-6 mt-3 text-4xl">Create a league</h1>
       <CreateLeagueForm
         seasons={seasons.map((s) => ({ id: s.id, name: s.name, showName: s.show.name }))}
         rulesets={rulesets}

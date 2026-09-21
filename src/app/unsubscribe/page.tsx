@@ -96,7 +96,7 @@ function Shell({ title, children }: { title: string; children: React.ReactNode }
   return (
     <div className="pt-10">
       <div className="card p-6">
-        <h1 className="text-xl font-semibold tracking-tight">{title}</h1>
+        <h1 className="headline text-2xl">{title}</h1>
         <div className="mt-2">{children}</div>
       </div>
     </div>

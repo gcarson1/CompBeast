@@ -32,8 +32,8 @@ export default async function DraftPage({ params }: { params: { leagueId: string
       <Link href={`/leagues/${params.leagueId}`} className="text-xs text-muted">
         ← {overview.name}
       </Link>
-      <h1 className="mt-2 text-3xl font-semibold tracking-tight">Draft</h1>
-      <p className="mt-0.5 text-xs text-muted">
+      <h1 className="headline mt-3 text-4xl">Draft</h1>
+      <p className="mt-2 text-xs text-muted">
         {league.draftType.toLowerCase()} · {league.rosterSize} rounds · {teams.length} teams
       </p>
 

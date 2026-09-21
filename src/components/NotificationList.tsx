@@ -42,8 +42,8 @@ export function NotificationList({ notifications }: { notifications: Notificatio
 
       {notifications.length === 0 ? (
         <div className="rounded-card border border-dashed border-hairline p-6">
-          <h2 className="text-base font-semibold">Nothing yet</h2>
-          <p className="mt-1 max-w-measure text-xs leading-relaxed text-muted">
+          <h2 className="headline text-2xl">Nothing yet</h2>
+          <p className="mt-2 max-w-measure text-xs leading-relaxed text-muted">
             League invites, friend requests and draft alerts land here. Add a friend from your account page to
             get started.
           </p>

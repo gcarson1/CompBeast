@@ -5,6 +5,7 @@ import { useEffect, useMemo, useRef, useState } from 'react';
 import { AnimatePresence, motion } from 'framer-motion';
 import { toast } from 'sonner';
 import { Avatar } from '@/components/Avatar';
+import { Sticker } from '@/components/Sticker';
 import { useLeaguePulse, type PulseStatus } from '@/lib/live';
 import { cn } from '@/lib/ui';
 import { draftPickAction, startDraftAction, type ActionState } from '@/server/actions';
@@ -116,8 +117,9 @@ export function DraftRoom(props: DraftRoomProps) {
                 </span>
               </span>
               <span className="shrink-0 text-right">
-                <span className="pill bg-canvas text-2xs tabular-nums text-muted">
-                  {props.currentPickNumber} / {props.totalPicks}
+                <span className="font-display text-2xl leading-none tracking-wide tabular-nums">
+                  {props.currentPickNumber}
+                  <span className="text-muted"> / {props.totalPicks}</span>
                 </span>
                 <span className="mt-1 block text-2xs text-muted">
                   Round {props.currentRound} of {props.totalRounds}
@@ -200,9 +202,9 @@ export function DraftRoom(props: DraftRoomProps) {
                           {contestant.name}
                         </span>
                         {!contestant.isActive && (
-                          <span className="pill shrink-0 bg-danger-soft text-[11px] leading-none text-danger-deep">
+                          <Sticker tone="red" size="sm" className="shrink-0">
                             evicted
-                          </span>
+                          </Sticker>
                         )}
                       </span>
                       <span className="mt-0.5 block truncate text-2xs text-muted">

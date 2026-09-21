@@ -2,6 +2,7 @@
 
 import { useEffect, useState } from 'react';
 import { toast } from 'sonner';
+import { Sticker } from '@/components/Sticker';
 
 type State = 'checking' | 'unsupported' | 'needs-install' | 'denied' | 'off' | 'on' | 'busy';
 
@@ -110,9 +111,13 @@ export function PushToggle({ publicKey }: { publicKey: string }) {
           <p className="mt-1 max-w-measure text-2xs leading-relaxed text-muted">{description[state]}</p>
         </div>
         {state === 'on' ? (
-          <span className="pill shrink-0 bg-brand-gold-soft text-2xs text-brand-gold-deep">On</span>
+          <Sticker tone="gold" size="sm" className="shrink-0">
+            On
+          </Sticker>
         ) : state === 'off' || state === 'busy' ? null : (
-          <span className="pill shrink-0 bg-canvas text-2xs text-muted">Off</span>
+          <Sticker tone="ink" size="sm" className="shrink-0">
+            Off
+          </Sticker>
         )}
       </div>
       {(state === 'off' || state === 'on' || state === 'busy') && (

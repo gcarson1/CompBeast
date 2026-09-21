@@ -1,5 +1,6 @@
 import type { Metadata } from 'next';
 import { JsonLd } from '@/components/JsonLd';
+import { Sticker } from '@/components/Sticker';
 import { absoluteUrl, breadcrumbList } from '@/lib/seo';
 import { formatPoints, pointsTone } from '@/lib/ui';
 import { getRuleBook } from '@/server/queries';
@@ -25,12 +26,12 @@ export default async function RulesPage() {
   return (
     <div className="pt-2">
       <JsonLd data={breadcrumbList([{ name: 'Scoring rules', path: '/rules' }])} />
-      <h1 className="text-4xl font-semibold tracking-tight">Scoring</h1>
-      <p className="mb-4 text-xs text-muted">
+      <h1 className="headline text-4xl">Scoring</h1>
+      <p className="mt-2 max-w-measure text-xs text-muted">
         Every league picks one ruleset. Commissioners can swap rulesets before the draft.
       </p>
 
-      <div className="space-y-4">
+      <div className="mt-6 space-y-4">
         {rulesets.map((ruleset) => {
           const grouped = new Map<string, Array<{ id: string; label: string; points: number }>>();
           for (const link of ruleset.eventDefinitions) {
@@ -50,26 +51,26 @@ export default async function RulesPage() {
               <summary className="flex cursor-pointer list-none items-start justify-between gap-3 p-4">
                 <div className="min-w-0">
                   <div className="flex items-center gap-2">
-                    <h2 className="text-md font-semibold">{ruleset.name}</h2>
+                    <h2 className="headline text-xl">{ruleset.name}</h2>
                     {/* Beside the heading, not inside it, so the outline reads
                         "Classic" rather than "Classic default". */}
                     {ruleset.isDefault && (
-                      <span className="pill bg-brand-gold-soft px-2 py-0.5 text-2xs font-medium text-brand-gold-deep">
+                      <Sticker tone="gold" size="sm">
                         default
-                      </span>
+                      </Sticker>
                     )}
                   </div>
                   <p className="mt-1 text-2xs leading-relaxed text-muted">{ruleset.description}</p>
                 </div>
-                <span className="pill shrink-0 bg-canvas text-2xs text-muted">
-                  {ruleset.eventDefinitions.length}
+                <span className="shrink-0 text-2xs tabular-nums text-muted">
+                  {ruleset.eventDefinitions.length} rules
                 </span>
               </summary>
 
               <div className="border-t border-hairline">
                 {[...grouped.entries()].map(([category, rules]) => (
                   <div key={category}>
-                    <h3 className="bg-canvas/60 px-4 py-2 text-2xs font-semibold uppercase tracking-wide text-muted">
+                    <h3 className="eyebrow bg-canvas/60 px-4 py-2">
                       {CATEGORY_LABELS[category] ?? category}
                     </h3>
                     <ul className="divide-y divide-hairline">

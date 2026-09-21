@@ -3,6 +3,7 @@ import Link from 'next/link';
 import { cache } from 'react';
 import { SignUp } from '@clerk/nextjs';
 import { JoinLeagueForm } from '@/components/LeagueForms';
+import { Sticker } from '@/components/Sticker';
 import { getCurrentUser } from '@/lib/auth';
 import { absoluteUrl } from '@/lib/seo';
 import { getLeagueInvite, type LeagueInvite } from '@/server/queries';
@@ -76,8 +77,8 @@ export default async function JoinLeaguePage({ searchParams }: Params) {
         <InviteCard invite={invite} />
       ) : (
         <>
-          <h1 className="mt-2 text-3xl font-semibold tracking-tight">Join a league</h1>
-          <p className="mt-0.5 text-xs text-muted">
+          <h1 className="headline mt-3 text-4xl">Join a league</h1>
+          <p className="mt-2 max-w-measure text-xs text-muted">
             {code
               ? 'That code did not match a league. Check it with your commissioner — codes are eight characters.'
               : 'Ask the commissioner for the invite code, or scan their QR code.'}
@@ -97,10 +98,10 @@ export default async function JoinLeaguePage({ searchParams }: Params) {
         </div>
       ) : (
         <section className="mt-6" aria-labelledby="join-signup">
-          <h2 id="join-signup" className="text-lg font-semibold">
+          <h2 id="join-signup" className="section-title">
             {invite ? 'Create your free account to join' : 'Sign in to join a league'}
           </h2>
-          <p className="mb-4 mt-0.5 max-w-measure text-2xs leading-relaxed text-muted">
+          <p className="mb-4 mt-2 max-w-measure text-2xs leading-relaxed text-muted">
             It takes a minute. You&apos;ll come straight back here with the invite filled in.
           </p>
           {/* Hash routing: this is not the dedicated sign-up route, so the
@@ -130,28 +131,24 @@ function InviteCard({ invite }: { invite: LeagueInvite }) {
             ? 'Full'
             : `${seatsLeft} ${seatsLeft === 1 ? 'seat' : 'seats'} open`;
 
+  const open = seatsLeft > 0 && invite.draftStatus === 'NOT_STARTED' && invite.seasonStatus !== 'COMPLETED';
+
   return (
-    <header className="mt-2">
-      <p className="text-2xs font-semibold uppercase tracking-[0.18em] text-brand-gold-deep">
+    <header className="mt-3">
+      <Sticker tone="gold" size="lg" tilt="l">
         {invite.commissionerName ? `${invite.commissionerName} invited you` : "You're invited"}
-      </p>
-      <h1 className="mt-2 text-3xl font-semibold tracking-tight">{invite.name}</h1>
-      <p className="mt-1 text-xs text-muted">
+      </Sticker>
+      <h1 className="headline mt-4 text-5xl">{invite.name}</h1>
+      <p className="mt-3 text-xs text-muted">
         {invite.showName} · {invite.seasonName} · {invite.rosterSize} houseguests per team
       </p>
       <div className="mt-3 flex flex-wrap items-center gap-2">
-        <span className="pill bg-canvas text-2xs text-muted">
+        <Sticker tone="ink" size="sm">
           {invite.teamCount} of {invite.maxTeams} seats filled
-        </span>
-        <span
-          className={`pill text-2xs ${
-            seatsLeft > 0 && invite.draftStatus === 'NOT_STARTED' && invite.seasonStatus !== 'COMPLETED'
-              ? 'bg-brand-gold-soft text-brand-gold-deep'
-              : 'bg-canvas text-muted'
-          }`}
-        >
+        </Sticker>
+        <Sticker tone={open ? 'mint' : 'ink'} size="sm">
           {state}
-        </span>
+        </Sticker>
       </div>
     </header>
   );

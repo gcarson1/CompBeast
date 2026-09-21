@@ -13,7 +13,7 @@ export default function NotFound() {
           404
         </span>
 
-        <h1 className="mt-3 text-xl font-semibold tracking-tight">Evicted</h1>
+        <h1 className="headline mt-3 text-2xl">Evicted</h1>
         <p className="mx-auto mt-2 max-w-xs text-sm leading-relaxed text-muted">
           This page isn&apos;t in the house. It may have been removed, or the link may be wrong.
         </p>

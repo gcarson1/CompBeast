@@ -4,6 +4,7 @@ import { useEffect, useState } from 'react';
 import { useFormState, useFormStatus } from 'react-dom';
 import { toast } from 'sonner';
 import { Avatar } from '@/components/Avatar';
+import { Sticker } from '@/components/Sticker';
 import {
   removeFriendAction,
   respondToFriendRequestAction,
@@ -21,9 +22,7 @@ export function FriendsPanel({ overview }: { overview: FriendOverview }) {
 
       {incoming.length > 0 && (
         <section>
-          <h3 className="mb-2 text-xs font-semibold uppercase tracking-[0.14em] text-muted">
-            Waiting on you ({incoming.length})
-          </h3>
+          <h3 className="eyebrow mb-2">Waiting on you ({incoming.length})</h3>
           <ul className="card divide-y divide-hairline">
             {incoming.map((request) => (
               <li key={request.friendshipId} className="flex items-center gap-3 p-3">
@@ -43,9 +42,7 @@ export function FriendsPanel({ overview }: { overview: FriendOverview }) {
       )}
 
       <section>
-        <h3 className="mb-2 text-xs font-semibold uppercase tracking-[0.14em] text-muted">
-          Friends ({friends.length})
-        </h3>
+        <h3 className="eyebrow mb-2">Friends ({friends.length})</h3>
         {friends.length === 0 ? (
           <p className="rounded-btn border border-dashed border-hairline p-4 text-2xs leading-relaxed text-muted">
             No friends yet. Search above by name, handle, or their full email address — then you can invite
@@ -71,9 +68,7 @@ export function FriendsPanel({ overview }: { overview: FriendOverview }) {
 
       {outgoing.length > 0 && (
         <section>
-          <h3 className="mb-2 text-xs font-semibold uppercase tracking-[0.14em] text-muted">
-            Waiting on them ({outgoing.length})
-          </h3>
+          <h3 className="eyebrow mb-2">Waiting on them ({outgoing.length})</h3>
           <ul className="card divide-y divide-hairline">
             {outgoing.map((request) => (
               <li key={request.friendshipId} className="flex items-center gap-3 p-3">
@@ -199,14 +194,24 @@ function SearchRowAction({ result }: { result: FriendSearchResult }) {
   }, [state, result.name]);
 
   if (result.relation === 'FRIENDS') {
-    return <span className="pill shrink-0 bg-canvas text-2xs text-muted">Friends</span>;
+    return (
+      <Sticker tone="mint" size="sm" className="shrink-0">
+        Friends
+      </Sticker>
+    );
   }
   if (result.relation === 'REQUEST_SENT' || sent) {
-    return <span className="pill shrink-0 bg-canvas text-2xs text-muted">Requested</span>;
+    return (
+      <Sticker tone="ink" size="sm" className="shrink-0">
+        Requested
+      </Sticker>
+    );
   }
   if (result.relation === 'REQUEST_RECEIVED') {
     return (
-      <span className="pill shrink-0 bg-brand-velvet-soft text-2xs text-brand-velvet-deep">Asked you</span>
+      <Sticker tone="lavender" size="sm" className="shrink-0">
+        Asked you
+      </Sticker>
     );
   }
 
