@@ -607,21 +607,6 @@ Half that fix lives in an environment variable this code cannot read, so
 connections are currently open. `"mode":"pooled"` is the best answer; `"direct-capped"`
 works and is what runs today.
 
-## Auth instances
-
-Clerk has two kinds of instance and they do not share users. The **development**
-instance (`pk_test_` / `sk_test_`, sign-in hosted on `accounts.dev`) is capped at 100 users
-and is what local development and every Vercel preview use — previews live on
-`*.vercel.app`, which a production instance cannot serve. The **production** instance
-(`pk_live_` / `sk_live_`) needs a domain you control, because Clerk's Frontend API, Account
-Portal and email sending are all CNAMEs under it. So the Vercel keys are split by
-environment: Production holds the live pair, Preview and Development hold the test pair.
-
-Clerk user ids are per instance. `User.authId` is re-keyed by verified email in
-`src/lib/auth.ts` when the id no longer matches, so switching instances costs a member
-nothing but signing in again with the same email; without that, the unique index on `email`
-would fail every returning member's first sign-in. Only a verified address may adopt a row.
-
 ## Observability
 
 `@vercel/analytics` and `@vercel/speed-insights` are mounted in the root layout and are

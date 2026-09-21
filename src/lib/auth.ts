@@ -34,13 +34,6 @@ const SELECT = {
  * There's no webhook — the row is created lazily, the first time a signed-in
  * visitor hits a page that asks who they are, which is simpler than standing
  * up webhook signature verification for an app this size.
- *
- * A row whose `authId` no longer matches is re-keyed by email rather than
- * recreated. Clerk ids are per instance, so moving from the development
- * instance to a production one hands every returning member a brand-new id;
- * without this the `create` below would trip the unique index on `email` and
- * every existing account would 500 on sign-in. Everything else in the schema
- * hangs off `User.id`, so adopting the row keeps leagues, teams and picks.
  */
 export async function getCurrentUser(): Promise<SessionUser | null> {
   const clerkUser = await currentUser();
@@ -62,28 +55,10 @@ export async function getCurrentUser(): Promise<SessionUser | null> {
     return existing;
   }
 
-  const primaryEmail =
-    clerkUser.emailAddresses.find((e) => e.id === clerkUser.primaryEmailAddressId) ??
-    clerkUser.emailAddresses[0];
-  const email = primaryEmail?.emailAddress;
+  const email =
+    clerkUser.emailAddresses.find((e) => e.id === clerkUser.primaryEmailAddressId)?.emailAddress ??
+    clerkUser.emailAddresses[0]?.emailAddress;
   if (!email) return null; // Clerk allows email-less accounts (e.g. phone-only); unsupported here.
-
-  // Only a verified address may claim an existing row — otherwise anyone could
-  // sign up as you@example.com and inherit your leagues. Clerk verifies at
-  // sign-up by default (and Google addresses arrive verified), so this is a
-  // guard against a dashboard misconfiguration, not the normal path. An
-  // unverified match falls through to `create` and fails on the email index,
-  // which is the right outcome: loud, and nothing is handed over.
-  if (primaryEmail.verification?.status === 'verified') {
-    const orphan = await prisma.user.findUnique({ where: { email }, select: { id: true } });
-    if (orphan) {
-      return prisma.user.update({
-        where: { id: orphan.id },
-        data: { authId: clerkUser.id },
-        select: SELECT,
-      });
-    }
-  }
 
   const name = [clerkUser.firstName, clerkUser.lastName].filter(Boolean).join(' ') || null;
 
