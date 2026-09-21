@@ -18,6 +18,7 @@ engine, the API, or the UI.
 | Styling | Tailwind CSS |
 | Validation | Zod |
 | Tests | Vitest |
+| Checks | ESLint (`next/core-web-vitals`), Prettier, knip; all run in CI |
 | Deploy | Vercel |
 
 ## Getting started
@@ -51,6 +52,12 @@ npm run dev
 
 If you change `.env` while `npm run dev` is already running, restart it — Next.js reads
 environment variables at boot, not per request.
+
+`npm run check` runs everything CI runs — typecheck, lint, format check, dead-code scan
+(knip) and the tests — and is the thing to run before pushing. `npm run format` fixes
+formatting in place. The GitHub Actions workflow in `.github/workflows/ci.yml` runs the
+same chain against a real Postgres, so the database-backed suites execute there rather
+than skipping themselves.
 
 The seed creates a 16-houseguest **Demo Season** (slug `demo-big-brother`, deliberately
 namespaced away from real season slugs so ingestion can claim those), three scoring
@@ -124,8 +131,8 @@ live in the catalogue and each ruleset selects via `pointsOverride`.
 | --- | --- |
 | `GET /api/leagues/[leagueId]/leaderboard` | League standings |
 | `GET /api/teams/[teamId]/score?breakdown=true` | Team total, roster, per-cycle lines |
-| `POST /api/admin/events` | Batch-insert ledger rows as an episode airs |
-| `DELETE /api/admin/events` | Retroactive correction (soft-void + recalculate) |
+| `POST /api/admin/events` | Batch-insert ledger rows as an episode airs (platform admin) |
+| `DELETE /api/admin/events` | Retroactive correction (soft-void + recalculate) (platform admin) |
 
 Server Actions in `src/server/actions.ts` cover league creation, joining, draft start, and
 picks.
@@ -556,11 +563,33 @@ and stops at the last cycle that actually aired — cumulative totals carry forw
 through unscored weeks, so plotting the whole season would draw a long flat tail
 that reads as a team who stopped scoring.
 
+## Visibility
+
+`League.isPublic` decides who can *read* a league. It never decides who can join —
+joining always needs the invite code, which is the credential.
+
+- **Private** (the default): the league page, every team page in it, the draft room and
+  the JSON routes answer only to active members. Anyone else who reaches the page by
+  link sees the league's name, season and a way in — sign in, or the join form — and
+  nothing about its standings, rosters or feed.
+- **Public**: readable by anyone with the link, signed in or not; the feed is read-only
+  for non-members.
+
+One rule, in one place: `canViewLeague` in `src/server/queries.ts` for the pages that
+hold only an id, and the same `isPublic || member` test inline where the league row is
+already loaded. For a while the flag gated the JSON routes and nothing else, so a private
+league's standings were readable by anyone holding the id; `access.test.ts` pins the
+rule from both sides.
+
+The public player page (`/players/[id]`, indexed) shows which of *the viewer's* leagues
+drafted a houseguest, and nothing signed out. It used to list every league in the
+database that had — private leagues' names and team names included.
+
 ## League feed
 
 Each league has its own trash-talk feed on `/leagues/[leagueId]` — posting, Hype/Shade
-reactions, and delete by the author or the commissioner. Membership is the gate, so
-knowing a league's id is not enough to read or write it.
+reactions, and delete by the author or the commissioner. Membership is the gate for
+posting; reading follows the league's visibility (below).
 
 Messages soft-delete. Removing one mid-argument should not orphan the reactions hanging
 off it, and a commissioner needs to see that something *was* removed rather than have it
@@ -588,6 +617,17 @@ rather than retrying a settled answer forever.
 Counts rather than timestamps: a soft-deleted message and an un-hyped post both move a
 count, and neither moves a `max(createdAt)`.
 
+## Motion
+
+Framer Motion is loaded once, late, from the root `MotionProvider`: every animated element
+is an `m.*` component (the shell renders as a plain element on the server and picks up
+hover, tap, spring, layout and exit support when the feature chunk arrives after
+hydration), and the provider is `strict`, so a `motion.*` import anywhere in the tree is a
+development error rather than a silent 30 KB added to that page. `domMax` rather than
+`domAnimation` because the leaderboard and the feed animate `layout`. Entrances that must
+be visible before JavaScript — the landing hero, the scroll-in `Reveal` — are CSS, for the
+Largest-Contentful-Paint reasons documented on the `rise` keyframe in `tailwind.config.ts`.
+
 ## Database connections
 
 Production drafts were crashing a few picks in with `P2037 — too many connections for role
@@ -605,7 +645,10 @@ not `P1017`, where the write may have committed).
 Half that fix lives in an environment variable this code cannot read, so
 `/api/admin/db-health` reports which endpoint won, the role's connection limit and how many
 connections are currently open. `"mode":"pooled"` is the best answer; `"direct-capped"`
-works and is what runs today.
+works and is what runs today. The mode is derived from the environment on every call
+rather than recorded when the client is built — Next bundles each route separately and
+the client is shared through `globalThis`, so a value set inside `createClient` was never
+visible to the route reporting it.
 
 ## Observability
 
@@ -637,9 +680,10 @@ npm test
 Pure unit tests cover attribution, voiding, ruleset filtering, snapshot vs. restated
 scoring, tie ranking, float drift, and draft order/validation.
 
-Three files talk to a real database instead: `league-social.test.ts` (joining, the feed,
-the home rail), `draft.test.ts` (the pick fan-out and snake order), and `social.test.ts`
-(friendships, notifications, league settings and deletion). These cover the things pure
+Four files talk to a real database instead: `league-social.test.ts` (joining, the feed,
+the home rail), `draft.test.ts` (the pick fan-out and snake order), `social.test.ts`
+(friendships, notifications, league settings and deletion) and `access.test.ts` (who may
+read a league, what a player page reveals, who is on the block). These cover the things pure
 unit tests cannot reach — a friendship is only correct if it reads the same from *both*
 directions, a notification is only useful if it survives the thing it describes being
 deleted, and the settings rules exist to stop a database being corrupted mid-draft. Each
