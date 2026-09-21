@@ -37,6 +37,13 @@ export default async function PlayerPage({ params }: { params: { contestantId: s
   if (!player) notFound();
 
   const meta = player.metadata as { occupation?: string; hometown?: string; age?: number } | null;
+  // Only what the source actually knows. Ingested casts often arrive with
+  // none of these, and a row of three dashes reads as a page that broke.
+  const facts = [
+    meta?.age ? { label: 'Age', value: String(meta.age) } : null,
+    meta?.hometown ? { label: 'From', value: meta.hometown.split(',')[0] } : null,
+    meta?.occupation ? { label: 'Job', value: meta.occupation } : null,
+  ].filter((fact): fact is { label: string; value: string } => fact !== null);
   // The viewer's own leagues only — this page is public and indexed.
   const leagues = await getContestantLeaguesForViewer(player.id, user?.id ?? null);
 
@@ -73,11 +80,13 @@ export default async function PlayerPage({ params }: { params: { contestantId: s
         <p className="mt-1 font-display text-6xl leading-none tracking-wide">
           {formatPoints(player.totalPoints)}
         </p>
-        <dl className="mt-4 grid grid-cols-3 gap-3 border-t border-tile-line pt-4">
-          <Fact label="Age" value={meta?.age ? String(meta.age) : '—'} />
-          <Fact label="From" value={meta?.hometown?.split(',')[0] ?? '—'} />
-          <Fact label="Job" value={meta?.occupation ?? '—'} />
-        </dl>
+        {facts.length > 0 && (
+          <dl className="mt-4 grid grid-cols-3 gap-3 border-t border-tile-line pt-4">
+            {facts.map((fact) => (
+              <Fact key={fact.label} label={fact.label} value={fact.value} />
+            ))}
+          </dl>
+        )}
       </div>
 
       <PlayerTabs
