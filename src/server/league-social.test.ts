@@ -23,10 +23,30 @@ import { getHomeLeagues, getLeagueMessages, getLeagueOverview } from './queries'
  */
 const prisma = new PrismaClient();
 
+/*
+ * The readiness probe runs at module level, on purpose. `describe.skipIf`
+ * reads `dbReady` when the file is collected, so a check that only ran in
+ * `beforeAll` could not skip anything: against a database that had been
+ * pushed but never seeded (CI's, before it learned to seed) every test ran
+ * and every test failed. An unreachable database and an un-seeded one are
+ * treated the same — there is no season to attach a league to.
+ */
 let dbReady = false;
+let seasonId = '';
+let rulesetId = '';
 try {
-  await prisma.$queryRaw`SELECT 1`;
-  dbReady = true;
+  const season = await prisma.season.findFirst({
+    where: { status: { not: 'COMPLETED' } },
+    select: { id: true, showId: true },
+  });
+  const ruleset = season
+    ? await prisma.scoringRuleset.findFirst({ where: { showId: season.showId }, select: { id: true } })
+    : null;
+  if (season && ruleset) {
+    seasonId = season.id;
+    rulesetId = ruleset.id;
+    dbReady = true;
+  }
 } catch {
   dbReady = false;
 }
@@ -35,8 +55,6 @@ const stamp = `test-${Date.now()}-${Math.random().toString(36).slice(2, 7)}`;
 const userIds: string[] = [];
 const leagueIds: string[] = [];
 
-let seasonId = '';
-let rulesetId = '';
 let alice = '';
 let bob = '';
 let cara = '';
@@ -75,24 +93,6 @@ async function inviteCodeFor(leagueId: string): Promise<string> {
 
 beforeAll(async () => {
   if (!dbReady) return;
-
-  const season = await prisma.season.findFirst({
-    where: { status: { not: 'COMPLETED' } },
-    select: { id: true, showId: true },
-  });
-  const ruleset = season
-    ? await prisma.scoringRuleset.findFirst({ where: { showId: season.showId }, select: { id: true } })
-    : null;
-
-  // An un-seeded database has no season to attach a league to. Treat that the
-  // same as having no database rather than failing every assertion.
-  if (!season || !ruleset) {
-    dbReady = false;
-    return;
-  }
-
-  seasonId = season.id;
-  rulesetId = ruleset.id;
   [alice, bob, cara, outsider] = await Promise.all([
     makeUser('alice'),
     makeUser('bob'),

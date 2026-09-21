@@ -32,10 +32,25 @@ import {
  */
 const prisma = new PrismaClient();
 
+// Module-level so `describe.skipIf` sees the answer — see league-social.test.ts.
 let dbReady = false;
+let seasonId = '';
+let rulesetId = '';
+let altRulesetId = '';
 try {
-  await prisma.$queryRaw`SELECT 1`;
-  dbReady = true;
+  const season = await prisma.season.findFirst({
+    where: { status: { not: 'COMPLETED' }, cycles: { some: {} } },
+    select: { id: true, showId: true },
+  });
+  const rulesets = season
+    ? await prisma.scoringRuleset.findMany({ where: { showId: season.showId }, select: { id: true } })
+    : [];
+  if (season && rulesets.length > 0) {
+    seasonId = season.id;
+    rulesetId = rulesets[0].id;
+    altRulesetId = rulesets[1]?.id ?? rulesets[0].id;
+    dbReady = true;
+  }
 } catch {
   dbReady = false;
 }
@@ -44,9 +59,6 @@ const stamp = `social-${Date.now()}-${Math.random().toString(36).slice(2, 7)}`;
 const userIds: string[] = [];
 const leagueIds: string[] = [];
 
-let seasonId = '';
-let rulesetId = '';
-let altRulesetId = '';
 let ana = '';
 let ben = '';
 let cleo = '';
@@ -97,22 +109,6 @@ async function befriend(a: string, b: string) {
 
 beforeAll(async () => {
   if (!dbReady) return;
-
-  const season = await prisma.season.findFirst({
-    where: { status: { not: 'COMPLETED' }, cycles: { some: {} } },
-    select: { id: true, showId: true },
-  });
-  const rulesets = season
-    ? await prisma.scoringRuleset.findMany({ where: { showId: season.showId }, select: { id: true } })
-    : [];
-  if (!season || rulesets.length === 0) {
-    dbReady = false;
-    return;
-  }
-
-  seasonId = season.id;
-  rulesetId = rulesets[0].id;
-  altRulesetId = rulesets[1]?.id ?? rulesets[0].id;
   [ana, ben, cleo] = await Promise.all([
     makeUser('ana', 'Ana Tester'),
     makeUser('ben', 'Ben Tester'),

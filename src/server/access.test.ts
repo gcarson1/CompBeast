@@ -17,10 +17,25 @@ import { canViewLeague, getContestantLeaguesForViewer, getTeamAtRiskNames } from
  */
 const prisma = new PrismaClient();
 
+// Module-level so `describe.skipIf` sees the answer — see league-social.test.ts.
 let dbReady = false;
+let seasonId = '';
+let showId = '';
+let rulesetId = '';
 try {
-  await prisma.$queryRaw`SELECT 1`;
-  dbReady = true;
+  const season = await prisma.season.findFirst({
+    where: { status: { not: 'COMPLETED' }, contestants: { some: {} }, cycles: { some: {} } },
+    select: { id: true, showId: true },
+  });
+  const ruleset = season
+    ? await prisma.scoringRuleset.findFirst({ where: { showId: season.showId }, select: { id: true } })
+    : null;
+  if (season && ruleset) {
+    seasonId = season.id;
+    showId = season.showId;
+    rulesetId = ruleset.id;
+    dbReady = true;
+  }
 } catch {
   dbReady = false;
 }
@@ -30,9 +45,6 @@ const userIds: string[] = [];
 const leagueIds: string[] = [];
 const scoredEventIds: string[] = [];
 
-let seasonId = '';
-let showId = '';
-let rulesetId = '';
 let commissioner = '';
 let member = '';
 let stranger = '';
@@ -62,22 +74,6 @@ async function makeLeague(isPublic: boolean) {
 
 beforeAll(async () => {
   if (!dbReady) return;
-
-  const season = await prisma.season.findFirst({
-    where: { status: { not: 'COMPLETED' }, contestants: { some: {} }, cycles: { some: {} } },
-    select: { id: true, showId: true },
-  });
-  const ruleset = season
-    ? await prisma.scoringRuleset.findFirst({ where: { showId: season.showId }, select: { id: true } })
-    : null;
-  if (!season || !ruleset) {
-    dbReady = false;
-    return;
-  }
-
-  seasonId = season.id;
-  showId = season.showId;
-  rulesetId = ruleset.id;
   [commissioner, member, stranger] = await Promise.all([
     makeUser('commissioner'),
     makeUser('member'),

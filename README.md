@@ -687,8 +687,10 @@ read a league, what a player page reveals, who is on the block). These cover the
 unit tests cannot reach — a friendship is only correct if it reads the same from *both*
 directions, a notification is only useful if it survives the thing it describes being
 deleted, and the settings rules exist to stop a database being corrupted mid-draft. Each
-file skips itself when no database is reachable, so `npm test` stays green on a machine
-that has never run `db:push`.
+file skips itself when no database is reachable *or seeded* — the probe runs at module
+level, where `describe.skipIf` can see it — so `npm test` stays green on a machine that has
+never run `db:push`, and reports the skips rather than hiding them. CI seeds its database
+so those suites actually run there.
 
 Every database-backed file was checked by reintroducing the bug it exists for and
 confirming the right tests — and only those — fail. Breaking the symmetric friendship

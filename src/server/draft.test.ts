@@ -15,10 +15,29 @@ import { createLeague, joinLeague, makeDraftPick, startDraft } from './mutations
  */
 const prisma = new PrismaClient();
 
+// Module-level so `describe.skipIf` sees the answer — see league-social.test.ts.
 let dbReady = false;
+let seasonId = '';
+let rulesetId = '';
+let cycleCount = 0;
+let contestantIds: string[] = [];
 try {
-  await prisma.$queryRaw`SELECT 1`;
-  dbReady = true;
+  const season = await prisma.season.findFirst({
+    where: { status: { not: 'COMPLETED' }, contestants: { some: {} }, cycles: { some: {} } },
+    select: { id: true, showId: true },
+  });
+  const ruleset = season
+    ? await prisma.scoringRuleset.findFirst({ where: { showId: season.showId }, select: { id: true } })
+    : null;
+  if (season && ruleset) {
+    seasonId = season.id;
+    rulesetId = ruleset.id;
+    cycleCount = await prisma.cycle.count({ where: { seasonId } });
+    contestantIds = (
+      await prisma.contestant.findMany({ where: { seasonId }, select: { id: true }, take: 6 })
+    ).map((c) => c.id);
+    dbReady = contestantIds.length >= 5;
+  }
 } catch {
   dbReady = false;
 }
@@ -27,10 +46,6 @@ const stamp = `draft-${Date.now()}-${Math.random().toString(36).slice(2, 7)}`;
 const userIds: string[] = [];
 const leagueIds: string[] = [];
 
-let seasonId = '';
-let rulesetId = '';
-let cycleCount = 0;
-let contestantIds: string[] = [];
 let alice = '';
 let bob = '';
 
@@ -79,31 +94,6 @@ async function startedLeague() {
 
 beforeAll(async () => {
   if (!dbReady) return;
-
-  const season = await prisma.season.findFirst({
-    where: { status: { not: 'COMPLETED' }, contestants: { some: {} }, cycles: { some: {} } },
-    select: { id: true, showId: true },
-  });
-  const ruleset = season
-    ? await prisma.scoringRuleset.findFirst({ where: { showId: season.showId }, select: { id: true } })
-    : null;
-  if (!season || !ruleset) {
-    dbReady = false;
-    return;
-  }
-
-  seasonId = season.id;
-  rulesetId = ruleset.id;
-  cycleCount = await prisma.cycle.count({ where: { seasonId } });
-  contestantIds = (
-    await prisma.contestant.findMany({ where: { seasonId }, select: { id: true }, take: 6 })
-  ).map((c) => c.id);
-
-  if (contestantIds.length < 5) {
-    dbReady = false;
-    return;
-  }
-
   [alice, bob] = await Promise.all([makeUser('alice'), makeUser('bob')]);
 });
 

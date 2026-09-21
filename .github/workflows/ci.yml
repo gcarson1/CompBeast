@@ -47,4 +47,8 @@ jobs:
       - run: npm run format:check
       - run: npm run lint:dead
       - run: npx prisma db push --skip-generate
+      # The database-backed suites need a season to attach leagues to; on an
+      # un-seeded database they skip themselves, and 77 tests silently not
+      # running is not a green build.
+      - run: npm run db:seed
       - run: npm test
