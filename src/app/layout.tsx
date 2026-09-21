@@ -9,7 +9,7 @@ import { AppHeader } from '@/components/AppHeader';
 import { BottomNav } from '@/components/BottomNav';
 import { ErrorReporting } from '@/components/ErrorReporting';
 import { JsonLd } from '@/components/JsonLd';
-import { AmbientShapes } from '@/components/motion/AmbientShapes';
+import { AmbientStickers } from '@/components/motion/AmbientStickers';
 import { MotionProvider } from '@/components/motion/MotionProvider';
 import { ServiceWorkerRegistrar } from '@/components/ServiceWorkerRegistrar';
 import { getCurrentUser } from '@/lib/auth';
@@ -125,8 +125,8 @@ export default async function RootLayout({ children }: { children: React.ReactNo
               unfinished layout. A single soft gold bloom behind the header
               does that without pretending to be a desktop redesign. */}
           <div className="pointer-events-none fixed inset-x-0 top-0 -z-10 h-[420px] bg-[radial-gradient(60%_100%_at_50%_0%,rgba(245,158,11,0.10),transparent_70%)]" />
-          {/* The drifting shapes behind the tiles (see AmbientShapes.tsx). */}
-          <AmbientShapes />
+          {/* Faint stickers drifting in the desktop gutters (see AmbientStickers.tsx). */}
+          <AmbientStickers />
           <div className="flex min-h-dvh flex-col">
             <AppHeader
               isPlatformAdmin={user?.isPlatformAdmin ?? false}

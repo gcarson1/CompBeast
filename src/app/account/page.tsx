@@ -63,7 +63,7 @@ export default async function AccountPage() {
           <p className="mt-1.5 flex min-w-0 items-center gap-2 text-xs text-muted">
             <span className="truncate">{user.handle ? `@${user.handle}` : user.email}</span>
             {badge && (
-              <Sticker tone="gold" tilt="r" className="shrink-0">
+              <Sticker tone="gold" size="sm" className="shrink-0">
                 {badge.name}
               </Sticker>
             )}
@@ -102,7 +102,7 @@ export default async function AccountPage() {
       <RevealGroup step={80}>
         <Reveal as="section" className="mt-8" aria-labelledby="badges">
           <div className="mb-3 flex items-baseline justify-between gap-3">
-            <h2 id="badges" className="headline">
+            <h2 id="badges" className="section-title">
               Badges
             </h2>
             <span className="text-2xs text-muted">
@@ -115,7 +115,7 @@ export default async function AccountPage() {
         {current && (
           <Reveal as="section" className="mt-8" aria-labelledby="current-run">
             <div className="mb-3 flex items-baseline justify-between gap-3">
-              <h2 id="current-run" className="headline">
+              <h2 id="current-run" className="section-title">
                 This season
               </h2>
               <Link
@@ -134,8 +134,8 @@ export default async function AccountPage() {
                   </span>
                 </span>
                 {current.rank > 0 && (
-                  <Sticker tone={current.rank === 1 ? 'gold' : 'ink'} tilt="l" className="shrink-0">
-                    {current.rank === 1 && <Doodle kind="crown" className="-ml-1 h-4 w-4" />}#{current.rank} of{' '}
+                  <Sticker tone={current.rank === 1 ? 'gold' : 'ink'} size="sm" className="shrink-0">
+                    {current.rank === 1 && <Doodle kind="crown" className="-ml-0.5 h-4 w-4" />}#{current.rank} of{' '}
                     {current.teamCount}
                   </Sticker>
                 )}
@@ -146,7 +146,7 @@ export default async function AccountPage() {
         )}
 
         <Reveal as="section" className="mt-8" aria-labelledby="seasons">
-          <h2 id="seasons" className="headline mb-3">
+          <h2 id="seasons" className="eyebrow mb-3">
             Season history
           </h2>
           {account.rows.length === 0 ? (
@@ -175,7 +175,7 @@ export default async function AccountPage() {
         </Reveal>
 
         <Reveal as="section" className="mt-10" aria-labelledby="friends">
-          <h2 id="friends" className="headline mb-1">
+          <h2 id="friends" className="eyebrow mb-1">
             Friends
           </h2>
           <p className="mb-4 max-w-measure text-2xs leading-relaxed text-muted">
@@ -189,7 +189,7 @@ export default async function AccountPage() {
             email switches, a control that governs nothing is worse than none. */}
         {vapidKey && (
           <Reveal as="section" className="mt-10" aria-labelledby="push-heading">
-            <h2 id="push-heading" className="headline mb-1">
+            <h2 id="push-heading" className="eyebrow mb-1">
               Push alerts
             </h2>
             <p className="mb-4 max-w-measure text-2xs leading-relaxed text-muted">
@@ -202,7 +202,7 @@ export default async function AccountPage() {
 
         {/* id="email" is the anchor every email footer links back to. */}
         <Reveal as="section" className="mt-10 scroll-mt-6" id="email" aria-labelledby="email-heading">
-          <h2 id="email-heading" className="headline mb-1">
+          <h2 id="email-heading" className="eyebrow mb-1">
             Email alerts
           </h2>
           <p className="mb-4 max-w-measure text-2xs leading-relaxed text-muted">
@@ -289,11 +289,11 @@ function SeasonRow({ row }: { row: SeasonHistoryRow }) {
 
       <span className="w-20 shrink-0 text-right">
         {row.rank > 0 ? (
-          <Sticker tone={row.rank === 1 && row.settled ? 'gold' : 'ink'} tilt="l" seed={row.id}>
+          <Sticker tone={row.rank === 1 && row.settled ? 'gold' : 'ink'} size="sm">
             #{row.rank}
           </Sticker>
         ) : (
-          <Sticker tone="ink" tilt="r" seed={row.id}>
+          <Sticker tone="ink" size="sm">
             {STATUS_LABEL[row.seasonStatus]}
           </Sticker>
         )}

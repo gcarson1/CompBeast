@@ -1,7 +1,6 @@
 import Link from 'next/link';
 import { LiveTicker, type TickerCastMember } from '@/components/LiveTicker';
 import { SocialFeed } from '@/components/SocialFeed';
-import { Sticker } from '@/components/Sticker';
 import type { SocialBuzz } from '@/lib/social-feed';
 import type { SeasonHeadline } from '@/server/queries';
 
@@ -46,14 +45,14 @@ export function LiveSection({
     <div className="space-y-6">
       {featured && featured.cast.length > 0 && (
         <div>
-          <div className="mb-3 flex items-center justify-between">
-            <Sticker tone="gold" tilt="l">
-              <span className="h-1.5 w-1.5 animate-pulse rounded-full bg-danger" />
+          <div className="mb-3 flex items-end justify-between gap-3">
+            <h2 className="section-title">
               Airing now
-            </Sticker>
+              <span aria-hidden className="h-2 w-2 animate-pulse rounded-full bg-danger" />
+            </h2>
             <Link
               href={`/seasons/${featured.seasonSlug}`}
-              className="text-2xs text-brand-gold-deep"
+              className="text-xs text-brand-gold-deep"
             >
               {featured.seasonName} →
             </Link>

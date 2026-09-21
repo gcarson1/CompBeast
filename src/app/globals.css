@@ -152,12 +152,32 @@
   }
 
   /*
-   * Section headline: the display face, which until now only the landing
-   * hero and the score readouts used. Uppercase and tracked, at a size that
-   * keeps Anton's condensed weight from shouting inside a tile.
+   * The heading system. Three levels, and every page uses all three, so
+   * the eye has somewhere to land and something to skip:
+   *
+   *   `.headline`       the display face (Anton), uppercase — the page title
+   *                     at 4xl–5xl, and the loud text inside a colour tile.
+   *   `.section-title`  a primary section: the display face at 2xl with a
+   *                     short gold bar in front. The bar is the one mark
+   *                     that says "a new part of the page starts here".
+   *   `.eyebrow`        a secondary section or a group label: small, bold,
+   *                     tracked, muted. Reference lists and settings.
+   *
+   * A page gets one `.headline` title and one or two `.section-title`s;
+   * everything else is an eyebrow. When every heading was `.headline`,
+   * the league page read as a stack of equal panes and nothing led.
    */
   .headline {
     @apply font-display text-xl uppercase leading-none tracking-wide;
+  }
+
+  .section-title {
+    @apply headline flex items-center gap-3 text-2xl text-ink
+      before:h-6 before:w-1.5 before:shrink-0 before:rounded-pill before:bg-brand-gold before:content-[''];
+  }
+
+  .eyebrow {
+    @apply text-2xs font-bold uppercase tracking-[0.18em] text-muted;
   }
 
   /* Non-interactive status badge. Buttons deliberately do not build on this —
@@ -267,6 +287,22 @@
     --sticker-tilt: var(--sticker-angle, 0deg);
     transform: rotate(var(--sticker-tilt));
     transition: transform 300ms theme(transitionTimingFunction.spring);
+  }
+
+  /*
+   * Three weights of sticker, because a page where every tag is the same
+   * size reads as one tag repeated. `lg` is a page-level label (the
+   * landing eyebrow, the show tag on a league header): bigger type, a
+   * deeper drop. `sm` is an inline chip (a rank, a "+5", "you"): a thin
+   * edge, no drop, and — by convention at the call sites — no tilt, so
+   * only the one tag that names a tile is ever at an angle.
+   */
+  .sticker-lg {
+    @apply gap-1.5 px-3.5 py-1.5 text-xs shadow-[0_3px_0_rgba(0,0,0,0.35)];
+  }
+
+  .sticker-sm {
+    @apply gap-0.5 border-[1.5px] px-2 py-0.5 shadow-none;
   }
 
   .sticker-gold {

@@ -68,8 +68,8 @@ export function LeagueRail({ leagues, caption }: { leagues: HomeLeagueCard[]; ca
 
   return (
     <div>
-      <div className="mb-2 flex min-h-[36px] items-center justify-between gap-3">
-        <p className="text-xs text-muted">{caption}</p>
+      <div className="mb-3 mt-2 flex min-h-[36px] items-center justify-between gap-3">
+        <p className="text-2xs text-muted">{caption}</p>
         {overflowing && (
           <div className="flex shrink-0 gap-2">
             <RailButton direction="prev" disabled={atStart} onClick={() => page(-1)} />
@@ -156,9 +156,9 @@ function LeagueCard({
             </span>
             <span className="flex shrink-0 flex-col items-end">
               {league.rank > 0 && (
-                <Sticker tone={leading ? 'gold' : 'ink'} tilt="l" seed={league.leagueId}>
+                <Sticker tone={leading ? 'gold' : 'ink'} size="sm">
                   {/* The crown is decoration; "#1" is the fact. */}
-                  {leading && <Doodle kind="crown" className="-ml-1 h-4 w-4" />}#{league.rank}
+                  {leading && <Doodle kind="crown" className="-ml-0.5 h-4 w-4" />}#{league.rank}
                 </Sticker>
               )}
               <span

@@ -34,8 +34,11 @@ const RIGHT = [2, 3, 4, 5, 6.5];
  * while two tags on one page almost never match. Pass an explicit number
  * to place one by hand. A `.card-lift` parent straightens it on hover.
  */
+const SIZE_CLASS = { sm: 'sticker-sm', md: '', lg: 'sticker-lg' } as const;
+
 export function Sticker({
   tone = 'paper',
+  size = 'md',
   tilt,
   seed,
   className,
@@ -44,6 +47,11 @@ export function Sticker({
   ...rest
 }: {
   tone?: Tone;
+  /**
+   * `lg` for a page-level label, `md` for the one tag that names a tile,
+   * `sm` for an inline chip. Chips stay level: pass no `tilt` with `sm`.
+   */
+  size?: keyof typeof SIZE_CLASS;
   tilt?: 'l' | 'r' | number;
   /** Varies the angle between stickers that share a label (rank tags, "+5"s). */
   seed?: string;
@@ -56,7 +64,7 @@ export function Sticker({
 
   return (
     <span
-      className={cn('sticker', TONE_CLASS[tone], className)}
+      className={cn('sticker', TONE_CLASS[tone], SIZE_CLASS[size], className)}
       // `--sticker-angle`, not `--sticker-tilt`: an inline custom property
       // would beat the `.card-lift:hover` rule that levels the tag, so the
       // angle goes in one variable and the hover rule wins on the other.

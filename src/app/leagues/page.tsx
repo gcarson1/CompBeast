@@ -130,6 +130,7 @@ export default async function HomePage() {
         </div>
       </div>
 
+      <h2 className="section-title mt-6">Your leagues</h2>
       <Suspense fallback={<RailSkeleton />}>
         <HomeRail userId={user.id} />
       </Suspense>

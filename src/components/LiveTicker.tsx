@@ -86,20 +86,19 @@ function HeadlineCopy({
 }) {
   return (
     <ol className="marquee-copy flex shrink-0 gap-4 pr-4" aria-hidden={ariaHidden}>
-      {headlines.map((headline, i) => (
+      {headlines.map((headline) => (
         <li key={headline.id} className="w-64 shrink-0">
           <Link
             href={`/seasons/${seasonSlug}`}
             tabIndex={ariaHidden ? -1 : undefined}
             className="card relative flex h-full items-start gap-3 p-3 pr-4 transition duration-200 ease-soft hover:bg-surface-raised"
           >
-            {/* Alternate sides so a run of gains does not tilt in lockstep;
-                the seed makes two "+5"s land at different angles. */}
+            {/* A level chip, not a tilted tag: twelve tags at twelve angles
+                is a wallpaper, and the points are a value, not a label. */}
             <Sticker
               tone={headline.points > 0 ? 'gold' : headline.points < 0 ? 'red' : 'ink'}
-              tilt={i % 2 === 0 ? 'r' : 'l'}
-              seed={headline.id}
-              className="absolute -right-2 -top-3"
+              size="sm"
+              className="absolute -right-1.5 -top-2.5"
             >
               {formatPoints(headline.points)}
             </Sticker>

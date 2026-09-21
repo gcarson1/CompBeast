@@ -89,7 +89,7 @@ export function SignedOutLanding({
             the hero may start at opacity 0 (see the `rise` keyframe). The
             eyebrow is now a sticker; the camera beside it is decoration. */}
         <p className="animate-rise">
-          <Sticker tone="gold" tilt="l">
+          <Sticker tone="gold" size="lg" tilt="l">
             Free fantasy leagues for {showName}
           </Sticker>
         </p>
@@ -311,7 +311,7 @@ function Section({
 }) {
   return (
     <Reveal as="section" className="mt-14" aria-labelledby={id}>
-      <h2 id={id} className="headline text-brand-gold-deep">
+      <h2 id={id} className="section-title">
         {title}
       </h2>
       {lede && <p className="mt-3 max-w-measure text-sm leading-relaxed text-muted">{lede}</p>}

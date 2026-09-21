@@ -171,7 +171,7 @@ export function Leaderboard({
                     <span className="flex items-center gap-1.5 text-base font-semibold">
                       <span className="min-w-0 truncate">{row.teamName}</span>
                       {isMine && (
-                        <Sticker tone="mint" tilt="l" seed={row.teamId} className="shrink-0">
+                        <Sticker tone="mint" size="sm" className="shrink-0">
                           you
                         </Sticker>
                       )}
