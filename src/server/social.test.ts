@@ -38,8 +38,10 @@ let seasonId = '';
 let rulesetId = '';
 let altRulesetId = '';
 try {
+  // Pinned to Big Brother, like every DB suite: a fresh database seeds more
+  // than one show now, and these exercise that show's seeded rulesets.
   const season = await prisma.season.findFirst({
-    where: { status: { not: 'COMPLETED' }, cycles: { some: {} } },
+    where: { show: { slug: 'big-brother' }, status: { not: 'COMPLETED' }, cycles: { some: {} } },
     select: { id: true, showId: true },
   });
   const rulesets = season

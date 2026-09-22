@@ -22,8 +22,15 @@ let rulesetId = '';
 let cycleCount = 0;
 let contestantIds: string[] = [];
 try {
+  // Pinned to Big Brother: these suites record that show's event codes, and
+  // a fresh database seeds more than one show now.
   const season = await prisma.season.findFirst({
-    where: { status: { not: 'COMPLETED' }, contestants: { some: {} }, cycles: { some: {} } },
+    where: {
+      show: { slug: 'big-brother' },
+      status: { not: 'COMPLETED' },
+      contestants: { some: {} },
+      cycles: { some: {} },
+    },
     select: { id: true, showId: true },
   });
   const ruleset = season

@@ -1,6 +1,7 @@
 import { PrismaClient } from '@prisma/client';
 import { BIG_BROTHER_EVENTS } from '../src/lib/shows/big-brother';
-import { SHOW_CATALOGUE, type ShowSpec } from '../src/lib/shows/catalogue';
+import { SHOW_CATALOGUE } from '../src/lib/shows/catalogue';
+import { installShow } from '../src/lib/shows/install';
 import { buildDraftOrder } from '../src/lib/draft/snake';
 import { recalculateLeague } from '../src/lib/scoring/repository';
 
@@ -85,139 +86,14 @@ function cycleDates(sequence: number) {
   return { airsAt, locksAt };
 }
 
-/**
- * Installs one show from the catalogue: the Show row, its rule dictionary and
- * its rulesets. Idempotent, so re-seeding refreshes labels and point values
- * without touching any league's recorded history.
- */
-async function installShow(spec: ShowSpec) {
-  const lexicon = { ...spec.lexicon };
-  const show = await prisma.show.upsert({
-    where: { slug: spec.slug },
-    update: { name: spec.name, lexicon },
-    create: {
-      slug: spec.slug,
-      name: spec.name,
-      format: 'TRADITIONAL_FANTASY_SPORT',
-      lexicon,
-    },
-  });
-
-  const eventDefinitions = new Map<string, string>();
-  for (const event of spec.events) {
-    const data = {
-      label: event.label,
-      category: event.category,
-      points: event.points,
-      isRepeatable: event.isRepeatable ?? true,
-      isPerCycleAward: event.isPerCycleAward ?? false,
-      description: event.description,
-    };
-    const def = await prisma.eventDefinition.upsert({
-      where: { showId_code: { showId: show.id, code: event.code } },
-      update: data,
-      create: { showId: show.id, code: event.code, ...data },
-    });
-    eventDefinitions.set(event.code, def.id);
-  }
-  console.log(`  ${spec.name}: ${eventDefinitions.size} event definitions`);
-
-  const rulesets = new Map<string, string>();
-  for (const rulesetSpec of spec.rulesets) {
-    const ruleset = await prisma.scoringRuleset.upsert({
-      where: { showId_slug: { showId: show.id, slug: rulesetSpec.slug } },
-      update: {
-        name: rulesetSpec.name,
-        description: rulesetSpec.description,
-        isDefault: rulesetSpec.isDefault,
-      },
-      create: {
-        showId: show.id,
-        slug: rulesetSpec.slug,
-        name: rulesetSpec.name,
-        description: rulesetSpec.description,
-        isDefault: rulesetSpec.isDefault,
-      },
-    });
-    rulesets.set(rulesetSpec.slug, ruleset.id);
-
-    const included = spec.events.filter((e) => rulesetSpec.categories.includes(e.category));
-    for (const event of included) {
-      const eventDefinitionId = eventDefinitions.get(event.code)!;
-      const override =
-        rulesetSpec.useBalancedPoints && event.balancedPoints !== undefined ? event.balancedPoints : null;
-      await prisma.scoringRulesetEventDefinition.upsert({
-        where: {
-          scoringRulesetId_eventDefinitionId: { scoringRulesetId: ruleset.id, eventDefinitionId },
-        },
-        update: { pointsOverride: override },
-        create: { scoringRulesetId: ruleset.id, eventDefinitionId, pointsOverride: override },
-      });
-    }
-    console.log(`  ${spec.name}: ruleset "${rulesetSpec.name}" → ${included.length} rules`);
-  }
-
-  return { show, eventDefinitions, rulesets };
-}
-
 async function main() {
   console.log('Seeding Comp Beast…');
 
   const installed = new Map<string, Awaited<ReturnType<typeof installShow>>>();
   for (const spec of SHOW_CATALOGUE) {
-    installed.set(spec.slug, await installShow(spec));
+    installed.set(spec.slug, await installShow(prisma, spec));
   }
   const { show, eventDefinitions, rulesets } = installed.get('big-brother')!;
-
-  // --- Survivor: an upcoming demo season, open for leagues -----------------
-  // Cast and cycles only — nothing has aired, so there is nothing to score.
-  // Enough to draft against and to see the show's vocabulary and colours.
-  const survivor = installed.get('survivor')!.show;
-  const survivorStart = new Date();
-  survivorStart.setUTCDate(survivorStart.getUTCDate() + 14);
-  survivorStart.setUTCHours(0, 0, 0, 0);
-
-  const survivorSeason = await prisma.season.upsert({
-    where: { slug: 'demo-survivor' },
-    update: {},
-    create: {
-      showId: survivor.id,
-      slug: 'demo-survivor',
-      name: 'Demo Season',
-      year: 2026,
-      status: 'UPCOMING',
-      startDate: survivorStart,
-    },
-  });
-
-  for (const castaway of CASTAWAYS) {
-    const existing = await prisma.contestant.findFirst({
-      where: { seasonId: survivorSeason.id, name: castaway.name },
-      select: { id: true },
-    });
-    if (existing) continue;
-    await prisma.contestant.create({
-      data: {
-        seasonId: survivorSeason.id,
-        name: castaway.name,
-        metadata: { occupation: castaway.occupation, hometown: castaway.hometown, tribe: castaway.tribe },
-      },
-    });
-  }
-
-  for (let sequence = 1; sequence <= CYCLE_COUNT; sequence += 1) {
-    const airsAt = new Date(survivorStart);
-    airsAt.setUTCDate(airsAt.getUTCDate() + (sequence - 1) * 7);
-    airsAt.setUTCHours(1, 0, 0, 0);
-    const locksAt = new Date(airsAt.getTime() - 30 * 60 * 1000);
-    const label = sequence === CYCLE_COUNT ? 'Finale' : `Episode ${sequence}`;
-    await prisma.cycle.upsert({
-      where: { seasonId_sequence: { seasonId: survivorSeason.id, sequence } },
-      update: { label, airsAt, locksAt },
-      create: { seasonId: survivorSeason.id, sequence, label, airsAt, locksAt, status: 'UPCOMING' },
-    });
-  }
-  console.log(`  ${CASTAWAYS.length} castaways, ${CYCLE_COUNT} episodes (upcoming)`);
 
   // --- Big Brother: season, houseguests, cycles ----------------------------
   // Deliberately namespaced away from real season slugs (`big-brother-27`):
@@ -268,6 +144,56 @@ async function main() {
     cycles.push({ id: cycle.id, sequence });
   }
   console.log(`  ${cycles.length} cycles`);
+
+  // --- Survivor: an upcoming demo season, open for leagues -----------------
+  // Cast and cycles only — nothing has aired, so there is nothing to score.
+  // Enough to draft against and to see the show's vocabulary and colours.
+  const survivor = installed.get('survivor')!.show;
+  const survivorStart = new Date();
+  survivorStart.setUTCDate(survivorStart.getUTCDate() + 14);
+  survivorStart.setUTCHours(0, 0, 0, 0);
+
+  const survivorSeason = await prisma.season.upsert({
+    where: { slug: 'demo-survivor' },
+    update: {},
+    create: {
+      showId: survivor.id,
+      slug: 'demo-survivor',
+      name: 'Demo Season',
+      year: 2026,
+      status: 'UPCOMING',
+      startDate: survivorStart,
+    },
+  });
+
+  for (const castaway of CASTAWAYS) {
+    const existing = await prisma.contestant.findFirst({
+      where: { seasonId: survivorSeason.id, name: castaway.name },
+      select: { id: true },
+    });
+    if (existing) continue;
+    await prisma.contestant.create({
+      data: {
+        seasonId: survivorSeason.id,
+        name: castaway.name,
+        metadata: { occupation: castaway.occupation, hometown: castaway.hometown, tribe: castaway.tribe },
+      },
+    });
+  }
+
+  for (let sequence = 1; sequence <= CYCLE_COUNT; sequence += 1) {
+    const airsAt = new Date(survivorStart);
+    airsAt.setUTCDate(airsAt.getUTCDate() + (sequence - 1) * 7);
+    airsAt.setUTCHours(1, 0, 0, 0);
+    const locksAt = new Date(airsAt.getTime() - 30 * 60 * 1000);
+    const label = sequence === CYCLE_COUNT ? 'Finale' : `Episode ${sequence}`;
+    await prisma.cycle.upsert({
+      where: { seasonId_sequence: { seasonId: survivorSeason.id, sequence } },
+      update: { label, airsAt, locksAt },
+      create: { seasonId: survivorSeason.id, sequence, label, airsAt, locksAt, status: 'UPCOMING' },
+    });
+  }
+  console.log(`  ${CASTAWAYS.length} castaways, ${CYCLE_COUNT} episodes (upcoming)`);
 
   // --- Demo users & league --------------------------------------------------
   const users = [];
