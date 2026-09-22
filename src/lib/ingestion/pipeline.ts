@@ -67,6 +67,20 @@ function assertAdapterServes(adapter: SeasonSourceAdapter, showSlug: string): vo
 // Season bootstrap
 // ---------------------------------------------------------------------------
 
+/**
+ * A season with a crowned winner is over. One with an aired cycle, or a
+ * premiere already behind us, is in play. Anything else is still to come —
+ * and must say so, or the home page announces it as airing now. Both
+ * bootstrap and every sync apply this, so a season that premiered since it
+ * was bootstrapped flips to ACTIVE on its own.
+ */
+export function seasonStatusFrom(facts: RawSeasonFacts): 'UPCOMING' | 'ACTIVE' | 'COMPLETED' {
+  const hasWinner = facts.placements.some((e) => /winner|sole survivor/i.test(e.placeLabel));
+  const anyAired = facts.weeks.some((w) => w.aired);
+  const premiered = facts.premiereDate !== null && facts.premiereDate.getTime() <= Date.now();
+  return hasWinner ? 'COMPLETED' : anyAired || premiered ? 'ACTIVE' : 'UPCOMING';
+}
+
 export interface BootstrapResult {
   seasonId: string;
   contestantsCreated: number;
@@ -99,14 +113,7 @@ export async function bootstrapSeasonFromSource(input: {
   const lexicon = lexiconFor(show.slug, show.lexicon);
 
   const name = input.seasonName ?? facts.seasonLabel;
-
-  // A season with a crowned winner is over. One with an aired cycle, or a
-  // premiere already behind us, is in play. Anything else is still to come —
-  // and must say so, or the home page announces it as airing now.
-  const hasWinner = facts.placements.some((e) => /winner|sole survivor/i.test(e.placeLabel));
-  const anyAired = facts.weeks.some((w) => w.aired);
-  const premiered = facts.premiereDate !== null && facts.premiereDate.getTime() <= Date.now();
-  const status = hasWinner ? 'COMPLETED' : anyAired || premiered ? 'ACTIVE' : 'UPCOMING';
+  const status = seasonStatusFrom(facts);
 
   const dates = {
     startDate: facts.premiereDate ?? undefined,
@@ -318,7 +325,7 @@ export async function ingestSeason(input: {
 
     const season = await prisma.season.findUnique({
       where: { slug: seasonExternalId },
-      select: { id: true, showId: true, show: { select: { slug: true } } },
+      select: { id: true, showId: true, status: true, show: { select: { slug: true } } },
     });
     if (!season) {
       throw new IngestionError(`Season "${seasonExternalId}" has not been bootstrapped yet.`, sourceSlug);
@@ -328,6 +335,11 @@ export async function ingestSeason(input: {
 
     const facts = input.facts ?? (await adapter.fetchSeason(seasonExternalId));
     const candidates = mapSeason(facts, seasonExternalId);
+
+    const seasonStatus = seasonStatusFrom(facts);
+    if (seasonStatus !== season.status) {
+      await prisma.season.update({ where: { id: season.id }, data: { status: seasonStatus } });
+    }
 
     const [links, cycles, definitions] = await Promise.all([
       prisma.contestantExternalRef.findMany({

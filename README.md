@@ -206,6 +206,18 @@ recording under a platform admin's account. Vercel signs the request with
 so the schedule is inert until the secret is set. Both the button and the cron post
 standings to each league's chat afterwards (below) when new results reached a leaderboard.
 
+### Getting a season into a deployed database
+
+The build runs `scripts/install-shows.ts` (every show in the catalogue: rows, rule
+dictionary, rulesets) and then `scripts/bootstrap-seasons.ts`, which bootstraps and
+syncs each season named in `BOOTSTRAP_SEASONS` — a comma-separated list of
+`source:season-slug:year`, e.g. `wikipedia-survivor:survivor-51:2026`. Both are
+idempotent, so a rebuild refreshes casts and schedules. A source being down logs
+and moves on; it never fails a deploy. The daily cron then keeps every open season
+— airing *or* upcoming — bootstrapped and synced, and flips a season to airing once
+its premiere has passed. The cron needs `CRON_SECRET` set in the project
+environment; without it the route answers 503 and nothing syncs.
+
 ### Three layers
 
 ```
@@ -274,6 +286,13 @@ they placed — scored events alone do not carry that.
 - **[Big Brother Junkies](https://bigbrotherjunkies.com)** — season results grid,
   eviction order, and cast. Their `robots.txt` permits these pages; the client
   identifies itself honestly and fetches one page per sync.
+- **[Wikipedia](https://en.wikipedia.org/wiki/Survivor_51)** — for Survivor: the
+  season article's contestants, season-summary and voting-history tables, expanded
+  from their rowspans into a grid. Cast, tribe per phase, reward and immunity
+  winners, every vote cast, how each person left, the merge and the finish are all
+  stated outright and kept current by the community within hours of an episode.
+  Headshots come from the network's own "Meet the cast" article on Paramount+,
+  matched by name. The adapter is `src/lib/ingestion/sources/wikipedia-survivor.ts`.
 
 Parser tests run against a saved HTML fixture and never hit the network.
 

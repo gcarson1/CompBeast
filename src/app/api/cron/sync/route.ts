@@ -1,6 +1,6 @@
 import { NextResponse } from 'next/server';
 import { prisma } from '@/lib/db';
-import { type IngestionSummary, ingestSeason } from '@/lib/ingestion/pipeline';
+import { type IngestionSummary, bootstrapSeasonFromSource, ingestSeason } from '@/lib/ingestion/pipeline';
 import { announceSeasonResults } from '@/server/league-chat';
 
 export const dynamic = 'force-dynamic';
@@ -43,16 +43,34 @@ export async function GET(request: Request) {
     })) ?? (await prisma.user.findFirst({ orderBy: { createdAt: 'asc' }, select: { id: true } }));
   if (!recorder) return NextResponse.json({ error: 'No users exist yet.' }, { status: 503 });
 
-  // Airing seasons whose cast was linked from a source: that link is what
-  // makes a sync possible, and its slug is the adapter to use.
+  // Open seasons whose cast was linked from a source: that link is what
+  // makes a sync possible, and its slug is the adapter to use. Upcoming
+  // seasons are included so the one that premiered last night is scored
+  // this morning and flips to airing on its own.
   const refs = await prisma.contestantExternalRef.findMany({
-    where: { contestant: { season: { status: 'ACTIVE' } } },
-    select: { sourceSlug: true, contestant: { select: { season: { select: { id: true, slug: true } } } } },
+    where: { contestant: { season: { status: { in: ['ACTIVE', 'UPCOMING'] } } } },
+    select: {
+      sourceSlug: true,
+      contestant: {
+        select: {
+          season: { select: { id: true, slug: true, year: true, show: { select: { slug: true } } } },
+        },
+      },
+    },
   });
-  const targets = new Map<string, { seasonId: string; seasonSlug: string; sourceSlug: string }>();
+  const targets = new Map<
+    string,
+    { seasonId: string; seasonSlug: string; sourceSlug: string; showSlug: string; year: number }
+  >();
   for (const ref of refs) {
-    const { id: seasonId, slug: seasonSlug } = ref.contestant.season;
-    targets.set(`${ref.sourceSlug}:${seasonSlug}`, { seasonId, seasonSlug, sourceSlug: ref.sourceSlug });
+    const { id: seasonId, slug: seasonSlug, year, show } = ref.contestant.season;
+    targets.set(`${ref.sourceSlug}:${seasonSlug}`, {
+      seasonId,
+      seasonSlug,
+      sourceSlug: ref.sourceSlug,
+      showSlug: show.slug,
+      year,
+    });
   }
 
   const results: Array<
@@ -63,6 +81,14 @@ export async function GET(request: Request) {
 
   for (const target of targets.values()) {
     try {
+      // The cast and the schedule move too — tribes are assigned, photos
+      // appear, air dates firm up — and bootstrap is idempotent.
+      await bootstrapSeasonFromSource({
+        sourceSlug: target.sourceSlug,
+        seasonExternalId: target.seasonSlug,
+        showSlug: target.showSlug,
+        year: target.year,
+      });
       const summary = await ingestSeason({
         sourceSlug: target.sourceSlug,
         seasonExternalId: target.seasonSlug,
