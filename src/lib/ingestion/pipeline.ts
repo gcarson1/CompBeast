@@ -399,6 +399,7 @@ export async function ingestSeason(input: {
           cycleId: resolved.cycleId,
           contestantId: resolved.contestantId,
           eventCode: candidate.eventCode,
+          points: candidate.points,
           rawPlayerName: candidate.player.name,
           rawPlayerRef: candidate.player.externalId,
           rawWeekLabel: candidate.weekLabel,
@@ -419,6 +420,7 @@ export async function ingestSeason(input: {
         contestantId: resolved.contestantId!,
         cycleId: resolved.cycleId!,
         definition: definitionByCode.get(candidate.eventCode)!,
+        points: candidate.points,
         recordedById,
         note: `Auto-ingested from ${sourceSlug}`,
       });
@@ -593,10 +595,12 @@ async function publishCandidate(input: {
   contestantId: string;
   cycleId: string;
   definition: { id: string; points: Prisma.Decimal };
+  /** A variable event's own value; a fixed one scores the definition's points. */
+  points?: Prisma.Decimal | number | null;
   recordedById: string;
   note: string;
 }): Promise<string> {
-  const { candidateId, contestantId, cycleId, definition, recordedById, note } = input;
+  const { candidateId, contestantId, cycleId, definition, points, recordedById, note } = input;
 
   return prisma.$transaction(async (tx) => {
     const event = await tx.scoredEvent.create({
@@ -604,7 +608,7 @@ async function publishCandidate(input: {
         contestantId,
         eventDefinitionId: definition.id,
         cycleId,
-        pointsAwarded: definition.points,
+        pointsAwarded: points ?? definition.points,
         note,
         recordedById,
       },
@@ -663,6 +667,7 @@ export async function approveCandidate(candidateId: string, userId: string): Pro
     contestantId: candidate.contestantId,
     cycleId: candidate.cycleId,
     definition,
+    points: candidate.points,
     recordedById: userId,
     note: `Approved from ${candidate.sourceSlug}`,
   });

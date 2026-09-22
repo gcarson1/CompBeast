@@ -11,7 +11,7 @@ export const dynamic = 'force-dynamic';
 export const metadata: Metadata = {
   title: 'Fantasy scoring rules',
   description:
-    'Every scored event and its point value for each show on Comp Beast, under the Classic, Balanced and Drama & Social rulesets — competition wins, idols, nominations, votes, eliminations, jury and finale placements.',
+    'Every scored event and its point value for each show on Comp Beast, under the Classic, Balanced and Drama & Social rulesets, and Lauren’s Way for Big Brother — competition wins, idols, nominations, votes, eliminations, jury and finale placements.',
   alternates: { canonical: absoluteUrl('/rules') },
 };
 
@@ -57,12 +57,22 @@ export default async function RulesPage() {
 
             <div className="mt-4 space-y-4">
               {book.rulesets.map((ruleset) => {
-                const grouped = new Map<string, Array<{ id: string; label: string; points: number }>>();
+                const grouped = new Map<
+                  string,
+                  Array<{ id: string; label: string; points: number; variable: string | null }>
+                >();
                 for (const link of ruleset.eventDefinitions) {
                   const def = link.eventDefinition;
                   const points = Number(link.pointsOverride ?? def.points);
                   const bucket = grouped.get(def.category) ?? [];
-                  bucket.push({ id: def.id, label: def.label, points });
+                  // A variable rule has no single value to print; its
+                  // description says how the value is worked out.
+                  bucket.push({
+                    id: def.id,
+                    label: def.label,
+                    points,
+                    variable: def.isVariable ? (def.description ?? null) : null,
+                  });
                   grouped.set(def.category, bucket);
                 }
 
@@ -87,6 +97,13 @@ export default async function RulesPage() {
                               Default
                             </Tag>
                           )}
+                          {/* Lauren's Way is the league this app replaced, and
+                              the one ruleset that is somebody's. */}
+                          {ruleset.slug === 'laurens-way' && (
+                            <Tag tone="lavender" size="sm">
+                              The original
+                            </Tag>
+                          )}
                         </div>
                         <p className="mt-1 text-2xs leading-relaxed text-muted">{ruleset.description}</p>
                       </div>
@@ -103,17 +120,31 @@ export default async function RulesPage() {
                           </h4>
                           <ul className="divide-y divide-hairline">
                             {rules
-                              .sort((a, b) => b.points - a.points)
+                              // Biggest first; a sliding rule, which has no one value, last.
+                              .sort((a, b) =>
+                                Boolean(a.variable) === Boolean(b.variable)
+                                  ? b.points - a.points
+                                  : a.variable
+                                    ? 1
+                                    : -1,
+                              )
                               .map((rule) => (
                                 <li
                                   key={rule.id}
                                   className="flex items-center justify-between gap-3 px-4 py-2.5"
                                 >
-                                  <span className="min-w-0 flex-1 truncate text-xs">{rule.label}</span>
+                                  <span className="min-w-0 flex-1">
+                                    <span className="block truncate text-xs">{rule.label}</span>
+                                    {rule.variable && (
+                                      <span className="mt-0.5 block text-2xs leading-snug text-muted">
+                                        {rule.variable}
+                                      </span>
+                                    )}
+                                  </span>
                                   <span
-                                    className={`text-xs font-semibold tabular-nums ${pointsTone(rule.points)}`}
+                                    className={`shrink-0 text-xs font-semibold tabular-nums ${pointsTone(rule.points)}`}
                                   >
-                                    {formatPoints(rule.points)}
+                                    {rule.variable ? 'sliding' : formatPoints(rule.points)}
                                   </span>
                                 </li>
                               ))}

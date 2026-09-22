@@ -1,5 +1,11 @@
 import type { BigBrotherSeasonFacts, SeasonMapper } from '../types';
-import { candidateCollector, collectPlayers, pushPlacementsAndJury, pushSurvival } from './shared';
+import {
+  candidateCollector,
+  collectPlayers,
+  pushEvictionOrder,
+  pushPlacementsAndJury,
+  pushSurvival,
+} from './shared';
 
 /**
  * Turns parsed Big Brother facts into candidate scoring events.
@@ -75,9 +81,14 @@ export const mapBigBrotherSeason: SeasonMapper<BigBrotherSeasonFacts> = (facts, 
       // it can equally mean the grid omitted a replacement nomination, so this
       // is flagged rather than trusted.
       if (!week.nominees.some((n) => n.externalId === player.externalId)) {
-        push('EVICTED_BACKDOORED', player, weekNumber, weekLabel, 'LOW', [
+        const reasons = [
           "Evicted without appearing in that week's nominees — possible backdoor, or missing nomination data",
-        ]);
+        ];
+        push('EVICTED_BACKDOORED', player, weekNumber, weekLabel, 'LOW', reasons);
+        // The same inference says they were put up after the veto. Lauren's
+        // Way counts a replacement nomination as a nomination; like the
+        // backdoor, it waits for a reviewer rather than scoring on a guess.
+        push('REPLACEMENT_NOMINEE', player, weekNumber, weekLabel, 'LOW', reasons);
       }
     }
   }
@@ -85,6 +96,7 @@ export const mapBigBrotherSeason: SeasonMapper<BigBrotherSeasonFacts> = (facts, 
   const players = collectPlayers(facts, (week) => [week.hoh, week.veto, week.nominees, week.eliminated]);
   pushSurvival(facts, players, 'WEEK_SURVIVED', push);
   pushPlacementsAndJury(facts, players, push);
+  pushEvictionOrder(facts, players, 'EVICTION_ORDER', push);
 
   return candidates;
 };

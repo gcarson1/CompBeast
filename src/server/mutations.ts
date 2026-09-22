@@ -763,6 +763,12 @@ export const recordEventsSchema = z.object({
         note: z.string().max(280).optional(),
         metadata: z.record(z.unknown()).optional(),
         occurredAt: z.coerce.date().optional(),
+        /**
+         * The value of a variable event (order of eviction), which has no
+         * fixed value of its own. Refused on a fixed-value event, whose
+         * value is the rule book's and not the recorder's to choose.
+         */
+        points: z.number().finite().min(-100).max(100).optional(),
       }),
     )
     .min(1)
@@ -786,13 +792,23 @@ export async function recordEvents(userId: string, input: z.infer<typeof recordE
   const codes = [...new Set(data.events.map((e) => e.eventCode))];
   const definitions = await prisma.eventDefinition.findMany({
     where: { showId: cycle.season.showId, code: { in: codes } },
-    select: { id: true, code: true, points: true },
+    select: { id: true, code: true, points: true, isVariable: true },
   });
   const byCode = new Map(definitions.map((d) => [d.code, d]));
 
   const missing = codes.filter((c) => !byCode.has(c));
   if (missing.length > 0) {
     throw new DomainError(`Unknown event codes: ${missing.join(', ')}`, 'UNKNOWN_EVENT_CODE');
+  }
+
+  for (const event of data.events) {
+    const { isVariable } = byCode.get(event.eventCode)!;
+    if (isVariable && event.points === undefined) {
+      throw new DomainError(`${event.eventCode} needs a points value.`, 'POINTS_REQUIRED');
+    }
+    if (!isVariable && event.points !== undefined) {
+      throw new DomainError(`${event.eventCode} has a fixed value; leave points out.`, 'POINTS_NOT_ALLOWED');
+    }
   }
 
   const contestantIds = [...new Set(data.events.map((e) => e.contestantId))];
@@ -819,7 +835,7 @@ export async function recordEvents(userId: string, input: z.infer<typeof recordE
       contestantId: event.contestantId,
       eventDefinitionId: definition.id,
       cycleId: cycle.id,
-      pointsAwarded: definition.points,
+      pointsAwarded: event.points ?? definition.points,
       note: event.note,
       metadata: event.metadata as Prisma.InputJsonValue | undefined,
       occurredAt: event.occurredAt ?? occurredFallback,
@@ -844,7 +860,12 @@ export async function recordEvents(userId: string, input: z.infer<typeof recordE
   });
 
   const leagueIds = await recalculateLeaguesForCycle(cycle.id);
-  return { created: created.length, leaguesRecalculated: leagueIds.length };
+  return {
+    created: created.length,
+    // Returned so the admin form can offer an immediate undo (a void).
+    ids: created.map((event) => event.id),
+    leaguesRecalculated: leagueIds.length,
+  };
 }
 
 /**

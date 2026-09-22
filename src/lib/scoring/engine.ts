@@ -92,8 +92,10 @@ export function aggregateTeamScores({
       continue;
     }
 
-    const restate = pointsSource === 'ruleset';
-    const points = restate ? rule.points : event.pointsAwarded;
+    // The league's own value first; then, only when restating, the live
+    // catalogue value; otherwise what was recorded.
+    const restate = pointsSource === 'ruleset' && !rule.variable;
+    const points = rule.override ?? (restate ? rule.points : event.pointsAwarded);
 
     const line: ScoreLine = {
       scoredEventId: event.id,
@@ -106,7 +108,7 @@ export function aggregateTeamScores({
       points,
       occurredAt: event.occurredAt,
       isVoided: event.isVoided,
-      wasRestated: restate && points !== event.pointsAwarded,
+      wasRestated: points !== event.pointsAwarded,
     };
 
     // Voided events are excluded from totals but can be surfaced in the
@@ -261,6 +263,7 @@ export function resolveRuleset(input: {
     category: ScoringRule['category'];
     basePoints: number;
     pointsOverride: number | null;
+    isVariable?: boolean;
   }>;
 }): ResolvedRuleset {
   const rules = new Map<string, ScoringRule>();
@@ -271,6 +274,8 @@ export function resolveRuleset(input: {
       label: entry.label,
       category: entry.category,
       points: entry.pointsOverride ?? entry.basePoints,
+      override: entry.pointsOverride,
+      variable: entry.isVariable ?? false,
     });
   }
   return { id: input.id, slug: input.slug, name: input.name, rules };

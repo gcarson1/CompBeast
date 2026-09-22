@@ -1,3 +1,4 @@
+import type { Prisma } from '@prisma/client';
 import { prisma } from '../lib/db';
 import { lexiconFor, type ShowLexicon } from '../lib/shows/lexicon';
 import { FLAGSHIP_SHOW_SLUG } from '../lib/shows/registry';
@@ -443,6 +444,34 @@ export async function getDraftBoard(leagueId: string) {
   return { league, picks, contestants, teams };
 }
 
+/**
+ * A season- or player-level number — a contestant's season points, the
+ * ticker's "+10" — is the show's default ruleset's number, the same one the
+ * season's player scores are ranked by. These two fragments filter a ledger
+ * query to the events that ruleset scores and fetch its value for each: an
+ * event only another ruleset scores (Lauren's Way's order of eviction, a
+ * Drama & Social tear) is not part of it.
+ */
+const IN_DEFAULT_RULESET = {
+  scoringRulesetLinks: { some: { scoringRuleset: { isDefault: true } } },
+} satisfies Prisma.EventDefinitionWhereInput;
+
+const DEFAULT_RULESET_VALUE = {
+  scoringRulesetLinks: {
+    where: { scoringRuleset: { isDefault: true } },
+    select: { pointsOverride: true },
+  },
+} satisfies Prisma.EventDefinitionSelect;
+
+/** The default ruleset's value for a ledger row: its override, else what was recorded. */
+function defaultRulesetPoints(
+  recorded: Prisma.Decimal,
+  links: Array<{ pointsOverride: Prisma.Decimal | null }>,
+): number {
+  const override = links[0]?.pointsOverride;
+  return Number(override ?? recorded);
+}
+
 export async function getContestantProfile(contestantId: string) {
   const contestant = await prisma.contestant.findUnique({
     where: { id: contestantId },
@@ -459,14 +488,14 @@ export async function getContestantProfile(contestantId: string) {
         select: { slug: true, name: true, show: { select: { name: true, slug: true, lexicon: true } } },
       },
       scoredEvents: {
-        where: { isVoided: false },
+        where: { isVoided: false, eventDefinition: IN_DEFAULT_RULESET },
         orderBy: [{ cycle: { sequence: 'asc' } }, { createdAt: 'asc' }],
         select: {
           id: true,
           pointsAwarded: true,
           note: true,
           cycle: { select: { id: true, label: true, sequence: true } },
-          eventDefinition: { select: { code: true, label: true, category: true } },
+          eventDefinition: { select: { code: true, label: true, category: true, ...DEFAULT_RULESET_VALUE } },
         },
       },
     },
@@ -475,7 +504,7 @@ export async function getContestantProfile(contestantId: string) {
 
   const events = contestant.scoredEvents.map((e) => ({
     id: e.id,
-    points: Number(e.pointsAwarded),
+    points: defaultRulesetPoints(e.pointsAwarded, e.eventDefinition.scoringRulesetLinks),
     note: e.note,
     cycleLabel: e.cycle.label,
     cycleSequence: e.cycle.sequence,
@@ -698,7 +727,7 @@ export async function getRuleBooks() {
 export async function getRuleBook(showSlug: string) {
   return prisma.scoringRuleset.findMany({
     where: { show: { slug: showSlug } },
-    orderBy: { isDefault: 'desc' },
+    orderBy: [{ isDefault: 'desc' }, { createdAt: 'asc' }],
     select: {
       id: true,
       slug: true,
@@ -709,7 +738,15 @@ export async function getRuleBook(showSlug: string) {
         select: {
           pointsOverride: true,
           eventDefinition: {
-            select: { id: true, code: true, label: true, category: true, points: true, description: true },
+            select: {
+              id: true,
+              code: true,
+              label: true,
+              category: true,
+              points: true,
+              isVariable: true,
+              description: true,
+            },
           },
         },
       },
@@ -1029,7 +1066,7 @@ export interface SeasonHeadline {
  */
 export async function getRecentHeadlines(seasonId: string, limit = 12): Promise<SeasonHeadline[]> {
   const events = await prisma.scoredEvent.findMany({
-    where: { isVoided: false, contestant: { seasonId } },
+    where: { isVoided: false, contestant: { seasonId }, eventDefinition: IN_DEFAULT_RULESET },
     orderBy: { occurredAt: 'desc' },
     take: limit,
     select: {
@@ -1037,7 +1074,7 @@ export async function getRecentHeadlines(seasonId: string, limit = 12): Promise<
       pointsAwarded: true,
       occurredAt: true,
       contestant: { select: { name: true, photoUrl: true } },
-      eventDefinition: { select: { label: true } },
+      eventDefinition: { select: { label: true, ...DEFAULT_RULESET_VALUE } },
     },
   });
 
@@ -1046,7 +1083,7 @@ export async function getRecentHeadlines(seasonId: string, limit = 12): Promise<
     contestantName: e.contestant.name,
     contestantPhotoUrl: e.contestant.photoUrl,
     eventLabel: e.eventDefinition.label,
-    points: Number(e.pointsAwarded),
+    points: defaultRulesetPoints(e.pointsAwarded, e.eventDefinition.scoringRulesetLinks),
     occurredAt: e.occurredAt,
   }));
 }

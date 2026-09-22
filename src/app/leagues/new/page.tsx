@@ -13,7 +13,7 @@ export default async function NewLeaguePage() {
       select: { id: true, name: true, show: { select: { id: true, name: true } } },
     }),
     prisma.scoringRuleset.findMany({
-      orderBy: { isDefault: 'desc' },
+      orderBy: [{ isDefault: 'desc' }, { createdAt: 'asc' }],
       select: { id: true, showId: true, name: true, description: true, isDefault: true },
     }),
   ]);

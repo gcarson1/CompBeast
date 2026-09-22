@@ -1,5 +1,6 @@
 import Link from 'next/link';
 import { CandidateCard, SeasonSourceCard, type PendingCandidate } from '@/components/IngestionReview';
+import { RecordEvents, type RecordableSeason } from '@/components/RecordEvents';
 import { StatStrip } from '@/components/StatStrip';
 import { Tag } from '@/components/Tag';
 import { getCurrentUser } from '@/lib/auth';
@@ -41,7 +42,7 @@ export default async function IngestionPage() {
     );
   }
 
-  const [pending, runs, seasons, counts] = await Promise.all([
+  const [pending, runs, seasons, counts, recordable] = await Promise.all([
     prisma.ingestedEventCandidate.findMany({
       where: { status: 'PENDING' },
       orderBy: [{ confidence: 'asc' }, { createdAt: 'asc' }],
@@ -57,6 +58,7 @@ export default async function IngestionPage() {
         sourceUrl: true,
         contestantId: true,
         cycleId: true,
+        points: true,
         season: { select: { show: { select: { id: true } } } },
       },
     }),
@@ -66,7 +68,45 @@ export default async function IngestionPage() {
       select: { slug: true, name: true, year: true, show: { select: { slug: true } } },
     }),
     prisma.ingestedEventCandidate.groupBy({ by: ['status'], _count: true }),
+    // Everything a hand-recorded event needs, for every season that has weeks:
+    // airing first, then upcoming, then the archive.
+    prisma.season.findMany({
+      where: { cycles: { some: {} } },
+      orderBy: [{ status: 'asc' }, { startDate: 'desc' }],
+      select: {
+        id: true,
+        name: true,
+        status: true,
+        cycles: { orderBy: { sequence: 'asc' }, select: { id: true, label: true, airsAt: true } },
+        contestants: { orderBy: { name: 'asc' }, select: { id: true, name: true, isActive: true } },
+        show: {
+          select: {
+            eventDefinitions: {
+              where: { isPerCycleAward: false },
+              orderBy: [{ category: 'asc' }, { points: 'desc' }],
+              select: { code: true, label: true, category: true, points: true, isVariable: true },
+            },
+          },
+        },
+      },
+    }),
   ]);
+
+  const now = Date.now();
+  const STATUS_ORDER = { ACTIVE: 0, UPCOMING: 1, COMPLETED: 2 } as const;
+  const recordableSeasons: RecordableSeason[] = [...recordable]
+    .sort((a, b) => STATUS_ORDER[a.status] - STATUS_ORDER[b.status])
+    .map((season) => ({
+      id: season.id,
+      name: season.name,
+      cycles: season.cycles.map((c) => ({ id: c.id, label: c.label })),
+      currentCycleId:
+        season.cycles.filter((c) => c.airsAt && c.airsAt.getTime() <= now).at(-1)?.id ??
+        season.cycles[0]?.id ??
+        null,
+      contestants: season.contestants,
+      events: season.show.eventDefinitions.map((d) => ({ ...d, points: Number(d.points) })),
+    }));
 
   // Resolve labels/points so a reviewer sees what approving actually awards.
   const showIds = [...new Set(pending.map((c) => c.season.show.id))];
@@ -82,7 +122,8 @@ export default async function IngestionPage() {
       id: c.id,
       eventCode: c.eventCode,
       eventLabel: definition?.label ?? null,
-      points: definition ? Number(definition.points) : null,
+      // A variable event (order of eviction) carries its own value.
+      points: c.points !== null ? Number(c.points) : definition ? Number(definition.points) : null,
       playerName: c.rawPlayerName,
       weekLabel: c.rawWeekLabel,
       confidence: c.confidence,
@@ -148,6 +189,17 @@ export default async function IngestionPage() {
             )}
           </div>
         )}
+      </section>
+
+      <section className="mt-8" aria-labelledby="record-heading">
+        <h2 id="record-heading" className="section-title mb-1">
+          Record events
+        </h2>
+        <p className="mb-3 max-w-measure text-2xs leading-relaxed text-muted">
+          What the results page never says — Have-Nots, the Blockbuster, twists, America&apos;s Favorite.
+          Lauren&apos;s Way scores these; every league on the season is rescored as soon as they land.
+        </p>
+        <RecordEvents seasons={recordableSeasons} />
       </section>
 
       <section className="mt-8" aria-labelledby="review-heading">

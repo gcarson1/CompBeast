@@ -1,4 +1,4 @@
-import type { EventDefinitionSpec, RulesetSpec } from './catalogue';
+import { RECORDED, type EventDefinitionSpec, type RulesetSpec } from './spec';
 
 /**
  * Big Brother rule catalogue.
@@ -126,6 +126,32 @@ export const BIG_BROTHER_EVENTS: EventDefinitionSpec[] = [
     points: -3,
     description: 'Saddled with a punishment, penalty, or in-game disadvantage.',
   },
+  // Opt-in: scored only by a ruleset that names them (Lauren's Way, below), so
+  // adding them left Classic, Balanced and Drama & Social exactly as they were.
+  {
+    code: 'SAVED_BY_VETO',
+    label: 'Pulled off the block by the veto',
+    category: 'COMPETITION_GAMEPLAY',
+    points: 3,
+    optIn: true,
+    description: 'Taken off the block by another houseguest using the Power of Veto.',
+  },
+  {
+    code: 'HAVE_NOT',
+    label: 'Become a Have-Not',
+    category: 'COMPETITION_GAMEPLAY',
+    points: -2,
+    optIn: true,
+    description: 'Made a Have-Not for the week — slop, cold showers and no bed.',
+  },
+  {
+    code: 'TWIST_SELECTED',
+    label: 'Picked for a twist',
+    category: 'COMPETITION_GAMEPLAY',
+    points: 4,
+    optIn: true,
+    description: "Chosen to take part in a season's twist, such as Big Brother 28's time capsule.",
+  },
   {
     code: 'BATTLE_OF_THE_BLOCK_WIN',
     label: 'Win Battle of the Block',
@@ -176,6 +202,20 @@ export const BIG_BROTHER_EVENTS: EventDefinitionSpec[] = [
     description: 'Left the game involuntarily — expelled, removed, or medically withdrawn.',
   },
   {
+    code: 'EVICTION_ORDER',
+    label: 'Evicted — order of eviction',
+    category: 'ELIMINATION_ENDGAME',
+    // The unit: each eviction is recorded at −1 for every houseguest who
+    // finishes ahead of you, so the first of 17 out loses 16 and the
+    // runner-up loses 1. The ingestion mapper works it out from placements.
+    points: -1,
+    isVariable: true,
+    isRepeatable: false,
+    optIn: true,
+    description:
+      'The earlier you leave, the more it costs: one point for every houseguest who finishes ahead of you. The first out of 17 loses 16; the runner-up loses 1.',
+  },
+  {
     code: 'REACHED_JURY',
     label: 'Reach the jury',
     category: 'ELIMINATION_ENDGAME',
@@ -215,6 +255,15 @@ export const BIG_BROTHER_EVENTS: EventDefinitionSpec[] = [
     balancedPoints: 15,
     isRepeatable: false,
     description: 'Runner-up at the finale.',
+  },
+  {
+    code: 'AMERICAS_FAVORITE',
+    label: "Win America's Favorite Player",
+    category: 'ELIMINATION_ENDGAME',
+    points: 8,
+    isRepeatable: false,
+    optIn: true,
+    description: "Voted America's Favorite Player by viewers at the finale.",
   },
   {
     code: 'PLACEMENT_THIRD',
@@ -297,6 +346,43 @@ export const BIG_BROTHER_RULESETS: RulesetSpec[] = [
     isDefault: false,
     categories: ['COMPETITION_GAMEPLAY', 'ELIMINATION_ENDGAME', 'SOCIAL_DRAMA'],
     useBalancedPoints: false,
+  },
+  /**
+   * Lauren's Way: the house rules of the Big Brother league Comp Beast grew
+   * out of, copied from the BB28 spreadsheet Lauren kept for it. Every value
+   * is hers, and `lauren.test.ts` replays her season against this table.
+   *
+   * Her columns, and what each one is here:
+   *   HOH +5, POV +3 (win it, or be pulled off the block by it), BB +4
+   *   (win the Blockbuster), SC +2 (the week-one safety comp), TC +4 (picked
+   *   for the time capsule), TCP +2 (win a time-capsule power), NOM −3 (a
+   *   replacement nomination is a nomination), HN −2 (Have-Not), STV +1
+   *   (survive the vote), X −1…−16 (order of eviction), WIN +10, RU +7,
+   *   AFP +8.
+   */
+  {
+    slug: 'laurens-way',
+    name: 'Lauren’s Way',
+    description:
+      'Named for Lauren, who built the Big Brother league this app grew out of, and scored exactly the way her spreadsheet did: +5 HOH, +3 veto, +4 Blockbuster, −3 on the block, −2 for slop, +1 for surviving the vote, and an eviction penalty that grows the earlier you leave. The winner takes +10, the runner-up +7, America’s Favorite +8.',
+    isDefault: false,
+    points: {
+      HOH_WIN: 5,
+      VETO_WIN: 3,
+      SAVED_BY_VETO: 3,
+      BLOCKBUSTER_WIN: 4,
+      SPECIAL_COMP_WIN: 2,
+      TWIST_SELECTED: 4,
+      SPECIAL_POWER_WIN: 2,
+      NOMINATED: -3,
+      REPLACEMENT_NOMINEE: -3,
+      HAVE_NOT: -2,
+      SURVIVED_BLOCK: 1,
+      EVICTION_ORDER: RECORDED,
+      PLACEMENT_WINNER: 10,
+      PLACEMENT_RUNNER_UP: 7,
+      AMERICAS_FAVORITE: 8,
+    },
   },
 ];
 

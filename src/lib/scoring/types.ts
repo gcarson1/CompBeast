@@ -17,6 +17,18 @@ export interface ScoringRule {
   category: EventCategory;
   /** Effective point value for this ruleset (override already applied). */
   points: number;
+  /**
+   * The ruleset's own value for this event, when it sets one — Balanced's +5
+   * for an HOH, Lauren's Way's −3 for a nomination. It always wins: it is what
+   * the league chose, and the ledger's snapshot only records the catalogue's
+   * value at the time.
+   */
+  override: number | null;
+  /**
+   * The value is set per occurrence (order of eviction), so the recorded
+   * value is the value — there is no catalogue value to restate it to.
+   */
+  variable: boolean;
 }
 
 export interface ResolvedRuleset {
@@ -58,14 +70,16 @@ export interface TeamRef {
 }
 
 /**
- * Which point value wins when the ledger snapshot disagrees with the league's
- * current ruleset.
+ * Which point value wins when the ledger snapshot disagrees with the
+ * catalogue's current value. A ruleset's own override wins in both modes —
+ * the snapshot records the catalogue value at the time, not the league's.
  *
  * - `snapshot` (default): honor the value recorded at the time. Settled weeks
- *   never move under players' feet because a commissioner edited a rule.
- * - `ruleset`: re-resolve every event against the live ruleset. This is the
- *   retroactive-correction path — used when a rule value is genuinely wrong and
- *   the league wants history restated.
+ *   never move under players' feet because a catalogue value was edited.
+ * - `ruleset`: re-resolve every fixed-value event against the live catalogue.
+ *   This is the retroactive-correction path — used when a rule value is
+ *   genuinely wrong and the league wants history restated. A variable event
+ *   keeps its recorded value: there is nothing to restate it to.
  */
 export type PointsSource = 'snapshot' | 'ruleset';
 
@@ -88,7 +102,7 @@ export interface ScoreLine {
   points: number;
   occurredAt: Date;
   isVoided: boolean;
-  /** True when `points` came from the ruleset rather than the stored snapshot. */
+  /** True when `points` differs from the stored snapshot — a ruleset override, or a restatement. */
   wasRestated: boolean;
 }
 

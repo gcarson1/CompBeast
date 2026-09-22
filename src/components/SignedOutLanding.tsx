@@ -266,31 +266,38 @@ export function SignedOutLanding({
                         {show.scoring!.lede}
                       </p>
                     </figcaption>
-                    {/* `table-fixed` with the event column at 40%: a phone is
-                        335px wide inside the gutters, and left to auto-layout
-                        the fourth column fell off the edge behind a scrollbar
-                        nobody sees. */}
+                    {/* `table-fixed`: a phone is 335px wide inside the gutters,
+                        and left to auto-layout the last column fell off the
+                        edge behind a scrollbar nobody sees. The event column
+                        takes 40% while a show has three rulesets and 30% once
+                        it has four (Big Brother, with Lauren's Way); the
+                        ruleset names are set in normal case with tight side
+                        padding so "Balanced" fits and "Lauren's Way" wraps
+                        between its words rather than through them. */}
                     <div className="card overflow-hidden">
                       <table className="w-full table-fixed text-xs">
                         <caption className="sr-only">
                           Point values for selected {show.showName} events under each Comp Beast ruleset
                         </caption>
                         <colgroup>
-                          <col className="w-[40%]" />
+                          <col className={show.scoring!.columns.length > 3 ? 'w-[30%]' : 'w-[40%]'} />
                           {show.scoring!.columns.map((column) => (
                             <col key={column.id} />
                           ))}
                         </colgroup>
                         <thead>
-                          <tr className="bg-canvas/60 text-2xs uppercase tracking-wide text-muted">
-                            <th scope="col" className="px-3 py-2.5 text-left font-semibold">
+                          <tr className="bg-canvas/60 text-2xs text-muted">
+                            <th
+                              scope="col"
+                              className="px-3 py-2.5 text-left font-semibold uppercase tracking-wide"
+                            >
                               Event
                             </th>
                             {show.scoring!.columns.map((column) => (
                               <th
                                 key={column.id}
                                 scope="col"
-                                className="px-2 py-2.5 text-right font-semibold"
+                                className="py-2.5 pl-0.5 pr-2 text-right align-bottom font-semibold leading-tight"
                               >
                                 {column.name}
                               </th>
@@ -309,7 +316,7 @@ export function SignedOutLanding({
                               {row.points.map((points, i) => (
                                 <td
                                   key={show.scoring!.columns[i].id}
-                                  className={`px-2 py-2.5 text-right font-semibold tabular-nums ${
+                                  className={`py-2.5 pl-0.5 pr-2 text-right font-semibold tabular-nums ${
                                     points === null ? 'text-muted' : pointsTone(points)
                                   }`}
                                 >
@@ -607,7 +614,20 @@ function deriveFacts(input: LandingShow[]): Facts {
     names.length > 1 ? `${names.slice(0, -1).join(', ')} and ${names.at(-1)}` : (names[0] ?? '');
   const onAir = input.map(onAirLine).filter((line): line is { text: string; live: boolean } => line !== null);
   const totalEvents = shows.reduce((sum, s) => sum + s.eventCount, 0);
-  const rulesetsPerShow = shows[0]?.rulesetNames.length ?? 0;
+  const rulesetCounts = shows.map((s) => s.rulesetNames.length);
+  const fewest = Math.min(...rulesetCounts);
+  const most = Math.max(...rulesetCounts);
+  const rulesetsPerShow = fewest === most ? String(most) : `${fewest}–${most}`;
+  // A show's own house rules, beyond the three every show has — today,
+  // Lauren's Way for Big Brother.
+  const houseRules = shows.flatMap((show) =>
+    show.rulesetNames
+      .filter((name) => name.startsWith('Lauren'))
+      .map(
+        (name) =>
+          `${show.showName} also has ${name}, the house rules of the fan league ${SITE_NAME} grew out of, where an eviction costs more the earlier it comes. `,
+      ),
+  );
 
   const stats = [
     { value: `${minTeams}–${maxTeams}`, label: 'teams per league' },
@@ -620,7 +640,7 @@ function deriveFacts(input: LandingShow[]): Facts {
 
   const scoringCell =
     totalEvents > 0
-      ? `${totalEvents} scored events at fixed values across ${shows.length} ${shows.length === 1 ? 'show' : 'shows'}; ${rulesetsPerShow} rulesets per show`
+      ? `${totalEvents} scored events at set values across ${shows.length} ${shows.length === 1 ? 'show' : 'shows'}; ${rulesetsPerShow} rulesets per show`
       : 'Fixed rulesets chosen before the draft';
 
   return {
@@ -628,7 +648,7 @@ function deriveFacts(input: LandingShow[]): Facts {
     onAir,
     showsLede: `${SITE_NAME} runs leagues for ${showList}. Each show keeps its own rule book, its own words and its own colours; a league belongs to one season of one show, and everything else — the draft, the standings, the chat — works the same way for both.`,
     howItWorks: `A league lasts one season. A commissioner creates it, picks a scoring ruleset and opens between ${minTeams} and ${maxTeams} team seats, shared by invite code or QR code. Every team snake-drafts contestants onto a roster of up to ${maxRoster}, each episode's results are scored as they air, and the leaderboard ranks every team live until the finale.`,
-    scoringLede: `Every event has a fixed point value, and every league picks one of ${rulesetsPerShow} rulesets for its show before the draft: Classic scores only what the broadcast shows, Balanced turns the variance down, and Drama & Social adds the alliances, blowups and tears. Every point on a leaderboard traces to the aired result that produced it.`,
+    scoringLede: `Every event has a set point value, and every league picks a ruleset for its show before the draft: Classic scores only what the broadcast shows, Balanced turns the variance down, and Drama & Social adds the alliances, blowups and tears. ${houseRules.join('')}Every point on a leaderboard traces to the aired result that produced it.`,
     leagueSetup: `Leagues hold between ${minTeams} and ${maxTeams} teams, and each roster carries ${minRoster} to ${maxRoster} players, both set by the commissioner before the draft. Rosters are drafted once and stay fixed for the season. Each episode shows a roster lock time — ${DEFAULT_LOCK_OFFSET_MINUTES} minutes before airtime by default, and a commissioner can move it up to ${maxLockHours} hours earlier.`,
     stats,
     comparison: `Most fantasy leagues for reality TV still live in a spreadsheet and a group chat, where one person keys in every result and settles every dispute. ${SITE_NAME} replaces that with an auditable ledger: results are captured from published season results, every correction is recorded, and standings recompute from the ledger rather than from a formula somebody edited.`,

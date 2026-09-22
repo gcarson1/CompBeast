@@ -19,6 +19,8 @@ export type PushCandidate = (
    * third vote against someone — so each gets its own dedupe key.
    */
   refSuffix?: string,
+  /** The value of a variable event; see `CandidateEvent.points`. */
+  points?: number,
 ) => void;
 
 export function candidateCollector(seasonExternalId: string): {
@@ -34,6 +36,7 @@ export function candidateCollector(seasonExternalId: string): {
     confidence = 'HIGH',
     reasons = [],
     refSuffix,
+    points,
   ) => {
     candidates.push({
       sourceRef: `${seasonExternalId}:${weekLabel.toLowerCase()}:${code}:${player.externalId}${refSuffix ? `:${refSuffix}` : ''}`,
@@ -43,6 +46,7 @@ export function candidateCollector(seasonExternalId: string): {
       weekLabel,
       confidence,
       reasons,
+      ...(points === undefined ? {} : { points }),
     });
   };
   return { candidates, push };
@@ -87,6 +91,37 @@ export function pushSurvival(
       if (gone.has(externalId)) continue;
       push(code, player, week.weekNumber, week.weekLabel);
     }
+  }
+}
+
+/**
+ * The order of eviction, scored: every houseguest who left costs one point
+ * for each houseguest who finished ahead of them — the first of seventeen out
+ * is recorded at −16, the runner-up at −1, the winner not at all. Pinned to
+ * the cycle they left in (the finale's cycle for the runner-up), and read from
+ * the placement table, so a double eviction still gives each evictee their
+ * own place in the order.
+ */
+export function pushEvictionOrder(
+  facts: RawSeasonFacts,
+  players: Map<string, RawPlayerRef>,
+  code: string,
+  push: PushCandidate,
+): void {
+  const aired = facts.weeks.filter((week) => week.aired);
+  const finalWeek = aired.at(-1);
+  const leftIn = new Map<string, RawCycleResult>();
+  for (const week of aired) {
+    for (const player of week.eliminated) leftIn.set(player.externalId, week);
+  }
+
+  for (const entry of facts.placements) {
+    const placement = placementFromLabel(entry.placeLabel);
+    if (placement === null || placement < 2) continue;
+    const week = leftIn.get(entry.player.externalId) ?? finalWeek;
+    if (!week) continue;
+    const player = players.get(entry.player.externalId) ?? entry.player;
+    push(code, player, week.weekNumber, week.weekLabel, 'HIGH', [], undefined, -(placement - 1));
   }
 }
 

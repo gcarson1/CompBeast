@@ -31,6 +31,7 @@ export async function loadResolvedRuleset(rulesetId: string): Promise<ResolvedRu
       category: link.eventDefinition.category,
       basePoints: toNumber(link.eventDefinition.points),
       pointsOverride: link.pointsOverride === null ? null : toNumber(link.pointsOverride),
+      isVariable: link.eventDefinition.isVariable,
     })),
   });
 }

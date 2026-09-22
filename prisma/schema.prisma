@@ -571,6 +571,10 @@ model EventDefinition {
   /// true when the event is expected once per cycle for each surviving
   /// contestant (e.g. "weeks in the house") and can be auto-generated
   isPerCycleAward Boolean       @default(false)
+  /// true when the value is set per occurrence rather than fixed — the order
+  /// of eviction costs the first houseguest out more than the last. `points`
+  /// is then the unit, and each ledger row carries its own `pointsAwarded`.
+  isVariable      Boolean       @default(false)
   description     String?
   createdAt       DateTime      @default(now())
 
@@ -695,6 +699,9 @@ model IngestedEventCandidate {
   contestant        Contestant?     @relation(fields: [contestantId], references: [id])
   /// EventDefinition.code this maps to, resolved at publish time.
   eventCode         String
+  /// The value a variable event carries (see EventDefinition.isVariable);
+  /// null for a fixed-value event, which takes the definition's points.
+  points            Decimal?        @db.Decimal(6, 2)
   /// What the source actually said, kept verbatim so a reviewer can judge a
   /// bad parse without re-fetching the page.
   rawPlayerName     String

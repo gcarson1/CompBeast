@@ -1,7 +1,10 @@
-import type { EventCategory } from '../scoring/types';
 import { BIG_BROTHER_EVENTS, BIG_BROTHER_RULESETS } from './big-brother';
 import { BIG_BROTHER_LEXICON, SURVIVOR_LEXICON, type ShowLexicon } from './lexicon';
+import type { EventDefinitionSpec, RulesetSpec } from './spec';
 import { SURVIVOR_EVENTS, SURVIVOR_RULESETS } from './survivor';
+
+export { RECORDED, rulesetRules } from './spec';
+export type { EventDefinitionSpec, ResolvedRule, RulesetSpec } from './spec';
 
 /**
  * The shows the seed knows how to install.
@@ -11,33 +14,6 @@ import { SURVIVOR_EVENTS, SURVIVOR_RULESETS } from './survivor';
  * EventDefinition rows; they never import from here, which is what keeps a
  * show's rules a data change rather than a code change everywhere else.
  */
-
-export interface EventDefinitionSpec {
-  code: string;
-  label: string;
-  category: EventCategory;
-  /** Point value used by the "Classic" ruleset. */
-  points: number;
-  /**
-   * Alternate value for the lower-variance "Balanced" ruleset. Several rules
-   * were authored as "+10 or +5"; rather than forcing one, both live here and
-   * each ruleset picks via pointsOverride.
-   */
-  balancedPoints?: number;
-  isRepeatable?: boolean;
-  isPerCycleAward?: boolean;
-  description?: string;
-}
-
-export interface RulesetSpec {
-  slug: string;
-  name: string;
-  description: string;
-  isDefault: boolean;
-  categories: EventCategory[];
-  /** Use `balancedPoints` where a rule defines one. */
-  useBalancedPoints: boolean;
-}
 
 export interface ShowSpec {
   slug: string;

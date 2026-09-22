@@ -1,4 +1,4 @@
-import type { EventDefinitionSpec, RulesetSpec } from './catalogue';
+import type { EventDefinitionSpec, RulesetSpec } from './spec';
 
 /**
  * Survivor rule catalogue.

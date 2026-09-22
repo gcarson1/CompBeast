@@ -3,6 +3,7 @@ import { join } from 'node:path';
 import { describe, expect, it } from 'vitest';
 import { mapSurvivorSeason } from '../ingestion/mappers/survivor';
 import { wikipediaSurvivorAdapter } from '../ingestion/sources/wikipedia-survivor';
+import { rulesetRules } from './catalogue';
 import { SURVIVOR_EVENTS, SURVIVOR_RULESETS } from './survivor';
 
 /**
@@ -24,15 +25,7 @@ const SEASONS = [
 
 function pointsFor(rulesetSlug: string): Map<string, number> {
   const ruleset = SURVIVOR_RULESETS.find((r) => r.slug === rulesetSlug)!;
-  const points = new Map<string, number>();
-  for (const event of SURVIVOR_EVENTS) {
-    if (!ruleset.categories.includes(event.category)) continue;
-    points.set(
-      event.code,
-      ruleset.useBalancedPoints && event.balancedPoints !== undefined ? event.balancedPoints : event.points,
-    );
-  }
-  return points;
+  return new Map([...rulesetRules(ruleset, SURVIVOR_EVENTS)].map(([code, rule]) => [code, rule.points]));
 }
 
 function scoreSeason(file: string, slug: string, rulesetSlug: string) {

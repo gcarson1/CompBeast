@@ -15,7 +15,7 @@ export default async function Image() {
       'Snake-draft the real cast of Big Brother or Survivor with friends, score every comp win, blindside and elimination as episodes air, and chase a live leaderboard all season.',
     stats: [
       { value: `${LEAGUE_LIMITS.minTeams}–${LEAGUE_LIMITS.maxTeams}`, label: 'teams per league' },
-      { value: '3', label: 'scoring rulesets' },
+      { value: 'Live', label: 'leaderboards' },
       { value: 'Free', label: 'to play' },
     ],
   });

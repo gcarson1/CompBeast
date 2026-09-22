@@ -162,6 +162,12 @@ export interface CandidateEvent {
   confidence: Confidence;
   /** Why confidence is below HIGH. Empty for clean matches. */
   reasons: string[];
+  /**
+   * The value of a variable event (the order of eviction), worked out by the
+   * mapper from what the source states. Absent for a fixed-value event, which
+   * scores the EventDefinition's points.
+   */
+  points?: number;
 }
 
 /** "Winner" → 1, "Runner-Up" → 2, "9th Place" → 9. Null when unplaced. */

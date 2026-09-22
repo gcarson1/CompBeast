@@ -1,5 +1,5 @@
 import type { PrismaClient } from '@prisma/client';
-import type { ShowSpec } from './catalogue';
+import { rulesetRules, type ShowSpec } from './catalogue';
 
 /**
  * Installs one show from the catalogue: the Show row, its rule dictionary and
@@ -30,6 +30,7 @@ export async function installShow(prisma: PrismaClient, spec: ShowSpec) {
       points: event.points,
       isRepeatable: event.isRepeatable ?? true,
       isPerCycleAward: event.isPerCycleAward ?? false,
+      isVariable: event.isVariable ?? false,
       description: event.description,
     };
     const def = await prisma.eventDefinition.upsert({
@@ -60,11 +61,11 @@ export async function installShow(prisma: PrismaClient, spec: ShowSpec) {
     });
     rulesets.set(rulesetSpec.slug, ruleset.id);
 
-    const included = spec.events.filter((e) => rulesetSpec.categories.includes(e.category));
-    for (const event of included) {
-      const eventDefinitionId = eventDefinitions.get(event.code)!;
-      const override =
-        rulesetSpec.useBalancedPoints && event.balancedPoints !== undefined ? event.balancedPoints : null;
+    const rules = rulesetRules(rulesetSpec, spec.events);
+    const linkedIds: string[] = [];
+    for (const [code, { override }] of rules) {
+      const eventDefinitionId = eventDefinitions.get(code)!;
+      linkedIds.push(eventDefinitionId);
       await prisma.scoringRulesetEventDefinition.upsert({
         where: {
           scoringRulesetId_eventDefinitionId: { scoringRulesetId: ruleset.id, eventDefinitionId },
@@ -73,7 +74,12 @@ export async function installShow(prisma: PrismaClient, spec: ShowSpec) {
         create: { scoringRulesetId: ruleset.id, eventDefinitionId, pointsOverride: override },
       });
     }
-    console.log(`  ${spec.name}: ruleset "${rulesetSpec.name}" → ${included.length} rules`);
+    // A rule the ruleset no longer has leaves it, so the database follows the
+    // catalogue in both directions rather than only ever gaining rules.
+    await prisma.scoringRulesetEventDefinition.deleteMany({
+      where: { scoringRulesetId: ruleset.id, eventDefinitionId: { notIn: linkedIds } },
+    });
+    console.log(`  ${spec.name}: ruleset "${rulesetSpec.name}" → ${rules.size} rules`);
   }
 
   // Events the catalogue no longer has. One that was never scored simply

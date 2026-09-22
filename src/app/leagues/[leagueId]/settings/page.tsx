@@ -40,7 +40,7 @@ export default async function LeagueSettingsPage({ params }: { params: { leagueI
     // Same show only — a ruleset from another show has no event definitions
     // this season's cast can score against.
     where: { showId: league.season.showId },
-    orderBy: { isDefault: 'desc' },
+    orderBy: [{ isDefault: 'desc' }, { createdAt: 'asc' }],
     select: { id: true, name: true, description: true },
   });
 

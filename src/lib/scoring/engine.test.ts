@@ -134,7 +134,10 @@ describe('aggregateTeamScores', () => {
     expect(result.outOfRulesetEventIds).toEqual(['e1']);
   });
 
-  it('honors the recorded snapshot by default and restates on demand', () => {
+  it("scores a ruleset's own value over the recorded one, in either mode", () => {
+    // The ledger records the catalogue's +5 for a veto win; this ruleset says
+    // +3, and a league on it must get +3. Before this, a Balanced league was
+    // quietly scored at Classic values.
     const args = {
       teams,
       cycles,
@@ -143,11 +146,60 @@ describe('aggregateTeamScores', () => {
       ruleset,
     };
 
-    expect(aggregateTeamScores(args).teams[0].totalPoints).toBe(5);
+    const result = aggregateTeamScores(args);
+    expect(result.teams[0].totalPoints).toBe(3);
+    expect(result.teams[0].cycles[0].lines[0].wasRestated).toBe(true);
+    expect(aggregateTeamScores({ ...args, options: { pointsSource: 'ruleset' } }).teams[0].totalPoints).toBe(
+      3,
+    );
+  });
+
+  it('honors the recorded snapshot of a catalogue value by default and restates on demand', () => {
+    // Recorded at +8 when the catalogue said so; the catalogue now says +10.
+    const args = {
+      teams,
+      cycles,
+      roster: roster([['t1', 'c1', 'w1']] as Array<[string, string, string]>),
+      events: [event({ id: 'e1', eventDefinitionId: 'hoh', pointsAwarded: 8 })],
+      ruleset,
+    };
+
+    expect(aggregateTeamScores(args).teams[0].totalPoints).toBe(8);
 
     const restated = aggregateTeamScores({ ...args, options: { pointsSource: 'ruleset' } });
-    expect(restated.teams[0].totalPoints).toBe(3);
+    expect(restated.teams[0].totalPoints).toBe(10);
     expect(restated.teams[0].cycles[0].lines[0].wasRestated).toBe(true);
+  });
+
+  it('keeps a variable event at its recorded value, even when restating', () => {
+    const withOrder = resolveRuleset({
+      id: 'rs2',
+      slug: 'laurens-way',
+      name: 'Lauren’s Way',
+      entries: [
+        {
+          eventDefinitionId: 'order',
+          code: 'EVICTION_ORDER',
+          label: 'Evicted — order of eviction',
+          category: 'ELIMINATION_ENDGAME',
+          basePoints: -1,
+          pointsOverride: null,
+          isVariable: true,
+        },
+      ],
+    });
+    const args = {
+      teams,
+      cycles,
+      roster: roster([['t1', 'c1', 'w1']] as Array<[string, string, string]>),
+      events: [event({ id: 'e1', eventDefinitionId: 'order', pointsAwarded: -16 })],
+      ruleset: withOrder,
+    };
+
+    const t1 = (result: ReturnType<typeof aggregateTeamScores>) =>
+      result.teams.find((team) => team.teamId === 't1')?.totalPoints;
+    expect(t1(aggregateTeamScores(args))).toBe(-16);
+    expect(t1(aggregateTeamScores({ ...args, options: { pointsSource: 'ruleset' } }))).toBe(-16);
   });
 
   it('supports standings as of a given cycle', () => {

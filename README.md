@@ -113,9 +113,14 @@ could drift from the ledger.
 Corrections soft-void rather than delete (`ScoredEvent.isVoided`), and every change writes
 a `ScoreAudit` row, so a player can always be shown *why* their score moved.
 
-`pointsSource` controls what happens when the ledger snapshot disagrees with the live
-ruleset: `snapshot` (default) honors what was recorded, so settled weeks never move under
-players' feet when a commissioner edits a rule; `ruleset` restates history on purpose.
+A ledger row snapshots the *catalogue's* value when it is recorded. A league's ruleset
+may set its own value for the event (Balanced's +5 HOH, Lauren's Way's −3 nomination),
+and that override always wins — it is what the league chose. Before this, the snapshot
+won, and a Balanced league was quietly scored at Classic values. `pointsSource` decides
+what happens when the snapshot and the *catalogue* disagree: `snapshot` (default) honors
+what was recorded, so settled weeks never move when a catalogue value is edited;
+`ruleset` restates history on purpose. A variable event (below) keeps its recorded value
+either way.
 
 ### The Survivor model
 
@@ -150,6 +155,35 @@ its season's show — the server refuses a mismatch):
 
 Several rules in the spec were written as "+10 or +5". Rather than picking one, both values
 live in the catalogue and each ruleset selects via `pointsOverride`.
+
+Those three are *category* rulesets: each takes every event in its categories. A ruleset
+can instead be *explicit* — a list of event codes and what each is worth — which is the
+shape for a league's own house rules (`RulesetSpec` in `src/lib/shows/spec.ts`). An event
+marked `optIn` is scored only by a ruleset that names it, so adding one never changes
+Classic, Balanced or Drama & Social.
+
+#### Lauren's Way
+
+Big Brother has a fourth ruleset, named for Lauren, who ran the fan league Comp Beast grew
+out of on a spreadsheet: +5 HOH, +3 veto (won, or pulled off the block by it), +4
+Blockbuster, +2 week-one safety comp, +4 picked for a twist (BB28's time capsule), +2 a
+twist power, −3 nominated (a replacement nomination counts), −2 Have-Not, +1 survive the
+vote, +10 winner, +7 runner-up, +8 America's Favorite — and **order of eviction**: every
+houseguest who leaves costs one point for each houseguest who finishes ahead of them, so
+the first of seventeen out loses 16 and the runner-up loses 1.
+
+The order of eviction is a *variable* event (`EventDefinition.isVariable`): the mapper
+works out each evictee's value from the placement table and the ledger row carries it
+(`IngestedEventCandidate.points` → `ScoredEvent.pointsAwarded`). `src/lib/shows/lauren.test.ts`
+replays every mark on her BB28 scoresheet through the engine and matches her totals — to
+the point for 11 houseguests, and one point kinder for the six who left after the week-7
+double eviction, because her sheet counted the eviction by week number and that count ran
+one ahead of the actual order from then on.
+
+The results source states HOH, veto, nominations, evictions and placements, so those score
+on their own. Have-Nots, the Blockbuster, twists, the safety comp and America's Favorite
+are not on any results page: a platform admin records them under **Record events** on
+`/admin/ingestion` — one event, one week, any number of houseguests, with an undo.
 
 ## API
 
