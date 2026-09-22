@@ -123,28 +123,30 @@ export default async function HomePage() {
 
   return (
     <div className="pt-2">
-      <div className="mb-3 flex items-center justify-between gap-3">
-        <h1 className="headline text-4xl">Leagues</h1>
-        <div className="flex shrink-0 gap-2">
-          <Link href="/leagues/join" prefetch={false} className="btn-ghost btn-sm">
-            Join
-          </Link>
-          <Link href="/leagues/new" prefetch={false} className="btn-primary btn-sm">
-            Create
-          </Link>
+      {/* Screen 1: your leagues and the two ways to get another. */}
+      <div className="screen">
+        <div className="mb-3 flex items-center justify-between gap-3">
+          <h1 className="headline text-4xl">Leagues</h1>
+          <div className="flex shrink-0 gap-2">
+            <Link href="/leagues/join" prefetch={false} className="btn-ghost btn-sm">
+              Join
+            </Link>
+            <Link href="/leagues/new" prefetch={false} className="btn-primary btn-sm">
+              Create
+            </Link>
+          </div>
         </div>
+
+        <Collapsible title="Your leagues" className="mt-6">
+          <Suspense fallback={<RailSkeleton />}>
+            <HomeRail userId={user.id} />
+          </Suspense>
+        </Collapsible>
       </div>
 
-      <Collapsible title="Your leagues" className="mt-6" snap={false}>
-        <Suspense fallback={<RailSkeleton />}>
-          <HomeRail userId={user.id} />
-        </Suspense>
-      </Collapsible>
-
-      {/* Below the fold on a phone, so it rises in as it is reached; on a
-          tall screen it is simply there. The block carries its own section
-          headings, so it snaps as one screen rather than folding. */}
-      <Reveal className="snap-section mt-10">{live}</Reveal>
+      {/* Screen 2: what is happening in the houses right now. It carries its
+          own headings, so it is one screen rather than a folding section. */}
+      <Reveal className="screen pt-2">{live}</Reveal>
     </div>
   );
 }

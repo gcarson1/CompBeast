@@ -96,47 +96,53 @@ export function SignedOutLanding({
       <JsonLd data={applicationNode(facts)} />
       <JsonLd data={faqNode(faq)} />
 
-      <header className="snap-section relative">
-        {/* Still a CSS entrance and still visible in the HTML — nothing in
+      {/* Screen 1: the pitch and the way in. */}
+      <div className="screen">
+        <header className="relative">
+          {/* Still a CSS entrance and still visible in the HTML — nothing in
             the hero may start at opacity 0 (see the `rise` keyframe). The
             eyebrow is now a sticker; the camera beside it is decoration. */}
-        <p className="animate-rise">
-          <Sticker tone="gold" size="lg" tilt="l">
-            Free fantasy leagues for reality competition TV
-          </Sticker>
-        </p>
-        <Doodle
-          kind="camera"
-          tone="sky"
-          className="absolute right-0 -top-3 h-10 w-10 -rotate-12 animate-rise [animation-delay:90ms]"
-        />
+          <p className="animate-rise">
+            {/* Capped on a phone so the camera in the corner has room: at
+                full width the eyebrow wraps to two lines and runs under it. */}
+            <Sticker tone="gold" size="lg" tilt="l" className="max-w-[15.5rem] sm:max-w-none">
+              Free fantasy leagues for reality competition TV
+            </Sticker>
+          </p>
+          <Doodle
+            kind="camera"
+            tone="sky"
+            className="absolute right-0 -top-3 h-10 w-10 -rotate-12 animate-rise [animation-delay:90ms]"
+          />
 
-        <h1 className="mt-3 animate-rise font-display text-5xl leading-[0.92] tracking-wide [animation-delay:60ms] sm:text-[64px] lg:text-[76px]">
-          DRAFT THE CAST.
-          <br />
-          <span className="text-brand-gold">OWN THE LEADERBOARD.</span>
-        </h1>
+          <h1 className="mt-3 animate-rise font-display text-5xl leading-[0.92] tracking-wide [animation-delay:60ms] sm:text-[64px] lg:text-[76px]">
+            DRAFT THE CAST.
+            <br />
+            <span className="text-brand-gold">OWN THE LEADERBOARD.</span>
+          </h1>
 
-        {/* The lede sits on a measure, not on the container's width: the display
+          {/* The lede sits on a measure, not on the container's width: the display
             face wants the full column, body copy does not. The two different
             widths are what give the block its asymmetry. */}
-        <p className="mt-5 max-w-measure animate-rise text-md leading-relaxed text-muted [animation-delay:120ms]">
-          {facts.lede}
-        </p>
+          <p className="mt-5 max-w-measure animate-rise text-md leading-relaxed text-muted [animation-delay:120ms]">
+            {facts.lede}
+          </p>
 
-        <div className="mt-7 flex animate-rise flex-wrap items-center gap-3 [animation-delay:180ms]">
-          <SignInButton mode="modal">
-            <button type="button" className="btn-primary px-10 py-3.5 text-md">
-              Sign in
-            </button>
-          </SignInButton>
-          <Link href="/rules" className="btn-ghost">
-            See scoring rules
-          </Link>
-        </div>
-      </header>
+          <div className="mt-7 flex animate-rise flex-wrap items-center gap-3 [animation-delay:180ms]">
+            <SignInButton mode="modal">
+              <button type="button" className="btn-primary px-10 py-3.5 text-md">
+                Sign in
+              </button>
+            </SignInButton>
+            <Link href="/rules" className="btn-ghost">
+              See scoring rules
+            </Link>
+          </div>
+        </header>
+      </div>
 
-      <div className="mt-14">{live}</div>
+      {/* Screen 2: proof that it is live right now. */}
+      <div className="screen pt-6">{live}</div>
 
       <Section id="shows" title="Pick your show" lede={facts.showsLede}>
         {/* One tile per show, each in its own colour: the two brands get
@@ -412,7 +418,7 @@ function Section({
   children: ReactNode;
 }) {
   return (
-    <Collapsible id={id} title={title} className="mt-12" bodyClassName="pt-1">
+    <Collapsible id={id} title={title} className="screen mt-10 pt-2" bodyClassName="pt-1">
       {lede && <p className="mt-2 max-w-measure text-sm leading-relaxed text-muted">{lede}</p>}
       {children}
     </Collapsible>

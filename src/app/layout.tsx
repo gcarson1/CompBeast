@@ -128,22 +128,23 @@ export default async function RootLayout({ children }: { children: React.ReactNo
           <div className="pointer-events-none fixed inset-x-0 top-0 -z-10 h-[420px] bg-[radial-gradient(60%_100%_at_50%_0%,rgba(245,158,11,0.10),transparent_70%)]" />
           {/* Faint stickers drifting in the desktop gutters (see AmbientStickers.tsx). */}
           <AmbientStickers />
-          <div className="flex min-h-dvh flex-col">
+          {/* `min-h-svh`, not `dvh`: a phone's URL bar collapsing changes
+              `dvh` mid-scroll, which resizes every screen under the reader's
+              thumb. `data-bottom-nav` tells `.screen` how much fixed chrome
+              to subtract (globals.css) — the nav only exists when signed in. */}
+          <div className="flex min-h-svh flex-col" data-bottom-nav={Boolean(user)}>
             <AppHeader
               isPlatformAdmin={user?.isPlatformAdmin ?? false}
               signedIn={Boolean(user)}
               unreadCount={unreadCount}
             />
             {/* Framer's feature bundle, loaded once for every `m.*` tile below;
-                the children stay server-rendered. `snap-section` on <main>
-                makes the top of the page a snap point: without one, the
-                browser's re-snap after any layout change — a section
-                folding, the page loading — pulled the page down to the first
-                section below the title. */}
-            <main
-              id="main"
-              className="snap-section mx-auto w-full max-w-md flex-1 px-5 pb-4 sm:max-w-lg lg:max-w-3xl"
-            >
+                the children stay server-rendered. The snap points are the
+                `.screen` blocks inside each page, and every page's first
+                screen carries its title — so the browser's re-snap after a
+                layout change lands on the top of the page rather than on the
+                first thing below the title. */}
+            <main id="main" className="mx-auto w-full max-w-md flex-1 px-5 pb-4 sm:max-w-lg lg:max-w-3xl">
               <MotionProvider>{children}</MotionProvider>
             </main>
             <SiteFooter />

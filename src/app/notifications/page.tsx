@@ -14,11 +14,14 @@ export default async function NotificationsPage() {
 
   return (
     <div className="pt-2">
-      <Link href="/leagues" className="text-xs text-muted">
-        ← Home
-      </Link>
-      <h1 className="headline mb-4 mt-3 text-4xl">Alerts</h1>
-      <NotificationList notifications={notifications} />
+      {/* One screen: the list is the page. */}
+      <div className="screen">
+        <Link href="/leagues" className="text-xs text-muted">
+          ← Home
+        </Link>
+        <h1 className="headline mb-4 mt-3 text-4xl">Alerts</h1>
+        <NotificationList notifications={notifications} />
+      </div>
     </div>
   );
 }

@@ -62,48 +62,54 @@ export default async function PlayerPage({ params }: { params: { contestantId: s
             { name: player.name, path: `/players/${player.id}` },
           ])}
         />
-        <Link href={`/seasons/${player.season.slug}`} className="text-xs text-muted">
-          ← {player.season.name}
-        </Link>
+        {/* Screen 1: who they are and what they have scored. */}
+        <div className="screen">
+          <Link href={`/seasons/${player.season.slug}`} className="text-xs text-muted">
+            ← {player.season.name}
+          </Link>
 
-        <header className="relative mt-4 flex items-center gap-4">
-          <Avatar name={player.name} photoUrl={player.photoUrl} size={72} dimmed={!player.isActive} />
-          <div className="min-w-0 flex-1">
-            <h1 className="headline truncate text-4xl">{player.name}</h1>
-            <p className="mt-2 flex flex-wrap items-center gap-2 text-xs text-muted">
-              <Sticker tone={player.isActive ? 'mint' : 'ink'} size="sm">
-                {player.isActive
-                  ? lexicon.activeLabel
-                  : `${eliminationLabel(lexicon, player.metadata)} · ${player.eliminatedCycle?.label ?? '—'}`}
-              </Sticker>
-              <span className="truncate">
-                {player.season.show.name} · {player.season.name}
-              </span>
+          <header className="relative mt-4 flex items-center gap-4">
+            <Avatar name={player.name} photoUrl={player.photoUrl} size={72} dimmed={!player.isActive} />
+            <div className="min-w-0 flex-1">
+              <h1 className="headline truncate text-4xl">{player.name}</h1>
+              <p className="mt-2 flex flex-wrap items-center gap-2 text-xs text-muted">
+                <Sticker tone={player.isActive ? 'mint' : 'ink'} size="sm">
+                  {player.isActive
+                    ? lexicon.activeLabel
+                    : `${eliminationLabel(lexicon, player.metadata)} · ${player.eliminatedCycle?.label ?? '—'}`}
+                </Sticker>
+                <span className="truncate">
+                  {player.season.show.name} · {player.season.name}
+                </span>
+              </p>
+            </div>
+          </header>
+
+          <div className="card-pop-gold relative mt-6 p-5">
+            <p className="text-2xs font-bold uppercase tracking-wide text-tile-muted">Season points</p>
+            <p className="mt-1 font-display text-6xl leading-none tracking-wide">
+              {formatPoints(player.totalPoints)}
             </p>
+            {facts.length > 0 && (
+              <dl className="mt-4 grid grid-cols-3 gap-3 border-t border-tile-line pt-4">
+                {facts.map((fact) => (
+                  <Fact key={fact.label} label={fact.label} value={fact.value} />
+                ))}
+              </dl>
+            )}
           </div>
-        </header>
-
-        <div className="card-pop-gold relative mt-6 p-5">
-          <p className="text-2xs font-bold uppercase tracking-wide text-tile-muted">Season points</p>
-          <p className="mt-1 font-display text-6xl leading-none tracking-wide">
-            {formatPoints(player.totalPoints)}
-          </p>
-          {facts.length > 0 && (
-            <dl className="mt-4 grid grid-cols-3 gap-3 border-t border-tile-line pt-4">
-              {facts.map((fact) => (
-                <Fact key={fact.label} label={fact.label} value={fact.value} />
-              ))}
-            </dl>
-          )}
         </div>
 
-        <PlayerTabs
-          events={player.events}
-          gameLog={player.gameLog}
-          leagues={leagues}
-          signedIn={Boolean(user)}
-          lexicon={lexicon}
-        />
+        {/* Screen 2: the detail, behind tabs. */}
+        <div className="screen pt-2">
+          <PlayerTabs
+            events={player.events}
+            gameLog={player.gameLog}
+            leagues={leagues}
+            signedIn={Boolean(user)}
+            lexicon={lexicon}
+          />
+        </div>
       </div>
     </ShowTheme>
   );

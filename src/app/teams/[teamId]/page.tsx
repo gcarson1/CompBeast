@@ -43,131 +43,140 @@ export default async function TeamPage({ params }: { params: { teamId: string } 
   return (
     <ShowTheme showSlug={showSlug}>
       <div className="pt-2">
-        <Link href={`/leagues/${team.leagueId}`} className="text-xs text-muted">
-          ← League
-        </Link>
+        {/* Screen 1: whose team, and how it is doing. Starts at the top of the
+            page so the back link is inside it — see the account page. */}
+        <div className="screen">
+          <Link href={`/leagues/${team.leagueId}`} className="text-xs text-muted">
+            ← League
+          </Link>
 
-        <header className="snap-section relative mt-4 flex items-center gap-4">
-          <span className="relative shrink-0">
-            <Avatar name={team.ownerName ?? team.name} size={56} />
-            {rank === 1 && <Doodle kind="crown" className="absolute -right-2.5 -top-2.5 h-7 w-7 rotate-12" />}
-          </span>
-          <div className="min-w-0">
-            <h1 className="headline truncate text-4xl">{team.name}</h1>
-            <p className="mt-1.5 flex min-w-0 items-center gap-2 text-xs text-muted">
-              <span className="truncate">{team.ownerName ?? 'Unclaimed'}</span>
-              {rank > 0 && (
-                <Sticker tone={rank === 1 ? 'gold' : 'ink'} size="sm" className="shrink-0">
-                  #{rank}
-                </Sticker>
+          <header className="relative mt-4 flex items-center gap-4">
+            <span className="relative shrink-0">
+              <Avatar name={team.ownerName ?? team.name} size={56} />
+              {rank === 1 && (
+                <Doodle kind="crown" className="absolute -right-2.5 -top-2.5 h-7 w-7 rotate-12" />
               )}
-            </p>
-          </div>
-        </header>
-
-        <StatStrip
-          className="mt-6"
-          items={[
-            { label: 'Total', value: `${score?.totalPoints ?? 0}` },
-            { label: 'Rank', value: rank ? `#${rank}` : '—' },
-            {
-              label: `Last ${lower(lexicon.cycleSingular)}`,
-              value: formatPoints(score?.lastCyclePoints ?? 0),
-              tone: pointsTone(score?.lastCyclePoints ?? 0),
-            },
-          ]}
-        />
-
-        <Collapsible
-          title="Roster"
-          className="mt-8"
-          aside={roster.length > 0 ? `${stillIn}/${roster.length} still in` : undefined}
-        >
-          {roster.length === 0 ? (
-            // Before the draft a team is a name and a seat. An empty card here
-            // read as a rendering fault; the draft room is the way to fill it.
-            <div className="rounded-card border border-dashed border-hairline p-5">
-              <p className="max-w-measure text-xs leading-relaxed text-muted">
-                No {lower(lexicon.contestantPlural)} yet — this team fills in as the draft is made.
+            </span>
+            <div className="min-w-0">
+              <h1 className="headline truncate text-4xl">{team.name}</h1>
+              <p className="mt-1.5 flex min-w-0 items-center gap-2 text-xs text-muted">
+                <span className="truncate">{team.ownerName ?? 'Unclaimed'}</span>
+                {rank > 0 && (
+                  <Sticker tone={rank === 1 ? 'gold' : 'ink'} size="sm" className="shrink-0">
+                    #{rank}
+                  </Sticker>
+                )}
               </p>
-              <Link
-                href={`/leagues/${team.leagueId}/draft`}
-                prefetch={false}
-                className="btn-ghost btn-sm mt-3"
-              >
-                Open the draft room
-              </Link>
             </div>
-          ) : (
-            <ul className="card divide-y divide-hairline">
-              {roster.map((player) => (
-                <li key={player.contestantId}>
-                  <Link
-                    href={`/players/${player.contestantId}`}
-                    className="flex items-center gap-3 p-4 transition duration-200 ease-soft hover:bg-surface-raised"
-                  >
-                    <Avatar
-                      name={player.name}
-                      photoUrl={player.photoUrl}
-                      size={42}
-                      dimmed={!player.isActive}
-                    />
-                    <span className="min-w-0 flex-1">
-                      <span className="block truncate text-base font-semibold">{player.name}</span>
-                      <span className="mt-0.5 block text-2xs text-muted">
-                        {player.isActive
-                          ? lexicon.activeLabel
-                          : `${eliminationLabel(lexicon, player.metadata)} · ${player.eliminatedLabel ?? '—'}`}
-                      </span>
-                    </span>
-                    <span className={`text-md font-semibold tabular-nums ${pointsTone(player.points)}`}>
-                      {formatPoints(player.points)}
-                    </span>
-                  </Link>
-                </li>
-              ))}
-            </ul>
-          )}
-        </Collapsible>
+          </header>
 
-        {score && score.cycles.length > 0 && (
-          <Collapsible title="Week by week" titleClassName="eyebrow" className="mt-8">
-            <div className="card divide-y divide-hairline">
-              {/*
+          <StatStrip
+            className="mt-6"
+            items={[
+              { label: 'Total', value: `${score?.totalPoints ?? 0}` },
+              { label: 'Rank', value: rank ? `#${rank}` : '—' },
+              {
+                label: `Last ${lower(lexicon.cycleSingular)}`,
+                value: formatPoints(score?.lastCyclePoints ?? 0),
+                tone: pointsTone(score?.lastCyclePoints ?? 0),
+              },
+            ]}
+          />
+        </div>
+
+        {/* Screen 2: the roster, and the week-by-week under it. */}
+        <div className="screen pt-2">
+          <Collapsible
+            title="Roster"
+            className="mt-6"
+            aside={roster.length > 0 ? `${stillIn}/${roster.length} still in` : undefined}
+          >
+            {roster.length === 0 ? (
+              // Before the draft a team is a name and a seat. An empty card here
+              // read as a rendering fault; the draft room is the way to fill it.
+              <div className="rounded-card border border-dashed border-hairline p-5">
+                <p className="max-w-measure text-xs leading-relaxed text-muted">
+                  No {lower(lexicon.contestantPlural)} yet — this team fills in as the draft is made.
+                </p>
+                <Link
+                  href={`/leagues/${team.leagueId}/draft`}
+                  prefetch={false}
+                  className="btn-ghost btn-sm mt-3"
+                >
+                  Open the draft room
+                </Link>
+              </div>
+            ) : (
+              <ul className="card divide-y divide-hairline">
+                {roster.map((player) => (
+                  <li key={player.contestantId}>
+                    <Link
+                      href={`/players/${player.contestantId}`}
+                      className="flex items-center gap-3 p-4 transition duration-200 ease-soft hover:bg-surface-raised"
+                    >
+                      <Avatar
+                        name={player.name}
+                        photoUrl={player.photoUrl}
+                        size={42}
+                        dimmed={!player.isActive}
+                      />
+                      <span className="min-w-0 flex-1">
+                        <span className="block truncate text-base font-semibold">{player.name}</span>
+                        <span className="mt-0.5 block text-2xs text-muted">
+                          {player.isActive
+                            ? lexicon.activeLabel
+                            : `${eliminationLabel(lexicon, player.metadata)} · ${player.eliminatedLabel ?? '—'}`}
+                        </span>
+                      </span>
+                      <span className={`text-md font-semibold tabular-nums ${pointsTone(player.points)}`}>
+                        {formatPoints(player.points)}
+                      </span>
+                    </Link>
+                  </li>
+                ))}
+              </ul>
+            )}
+          </Collapsible>
+
+          {score && score.cycles.length > 0 && (
+            <Collapsible title="Week by week" titleClassName="eyebrow" className="mt-8">
+              <div className="card divide-y divide-hairline">
+                {/*
               Newest week first. Copied before reversing because `reverse()`
               mutates, and this same array is read elsewhere with `.at(-1)` to
               mean "the latest cycle" — reversing it in place would quietly
               turn the at-risk banner into an at-risk-three-weeks-ago banner.
               That is also why this is not done in the query.
             */}
-              {[...score.cycles].reverse().map((cycle) => (
-                <details key={cycle.cycleId} className="group">
-                  <summary className="flex cursor-pointer list-none items-center justify-between p-4 text-muted transition hover:text-ink">
-                    <span className="text-base font-medium text-ink">{cycle.label}</span>
-                    <span className="flex items-center gap-2">
-                      <span className={`text-base font-semibold tabular-nums ${pointsTone(cycle.points)}`}>
-                        {formatPoints(cycle.points)}
-                      </span>
-                      <ChevronIcon />
-                    </span>
-                  </summary>
-                  <ul className="space-y-1.5 border-t border-hairline bg-canvas/60 px-4 py-3">
-                    {/* Lines arrive oldest-first by occurredAt; the last thing
-                      that happened belongs at the top of the week too. */}
-                    {[...cycle.lines].reverse().map((line) => (
-                      <li key={line.scoredEventId} className="flex items-center justify-between gap-3">
-                        <span className="min-w-0 flex-1 truncate text-xs text-muted">{line.label}</span>
-                        <span className={`text-xs font-medium tabular-nums ${pointsTone(line.points)}`}>
-                          {formatPoints(line.points)}
+                {[...score.cycles].reverse().map((cycle) => (
+                  <details key={cycle.cycleId} className="group">
+                    <summary className="flex cursor-pointer list-none items-center justify-between p-4 text-muted transition hover:text-ink">
+                      <span className="text-base font-medium text-ink">{cycle.label}</span>
+                      <span className="flex items-center gap-2">
+                        <span className={`text-base font-semibold tabular-nums ${pointsTone(cycle.points)}`}>
+                          {formatPoints(cycle.points)}
                         </span>
-                      </li>
-                    ))}
-                  </ul>
-                </details>
-              ))}
-            </div>
-          </Collapsible>
-        )}
+                        <ChevronIcon />
+                      </span>
+                    </summary>
+                    <ul className="space-y-1.5 border-t border-hairline bg-canvas/60 px-4 py-3">
+                      {/* Lines arrive oldest-first by occurredAt; the last thing
+                      that happened belongs at the top of the week too. */}
+                      {[...cycle.lines].reverse().map((line) => (
+                        <li key={line.scoredEventId} className="flex items-center justify-between gap-3">
+                          <span className="min-w-0 flex-1 truncate text-xs text-muted">{line.label}</span>
+                          <span className={`text-xs font-medium tabular-nums ${pointsTone(line.points)}`}>
+                            {formatPoints(line.points)}
+                          </span>
+                        </li>
+                      ))}
+                    </ul>
+                  </details>
+                ))}
+              </div>
+            </Collapsible>
+          )}
+        </div>
       </div>
     </ShowTheme>
   );

@@ -675,15 +675,34 @@ rubber-band past the end of the document (on a phone that bounce dragged the who
 sticky bottom nav included, off the bottom edge), and there is no pull-to-refresh to lose
 — the leaderboard implements its own.
 
-Every page reads as a stack of screens. The root has `scroll-snap-type: y proximity` with
-`scroll-padding-top` equal to the sticky header, and each page-level section is a
-`.snap-section`, so a scroll gesture that ends near a section settles on it, flush under
-the header. Proximity rather than mandatory on purpose: mandatory makes a section taller
-than the viewport a trap and a trackpad flick a jump, and fights find-in-page. `<main>` is
-itself a snap point — without one the browser's re-snap after any layout change (a section
-folding, the page loading) pulled the page down to the first section and hid the title.
-The one section that sits directly under a page title passes `snap={false}` for the same
-reason.
+**A page is a stack of screens.** Each `.screen` is at least one viewport minus the app's
+fixed chrome (`calc(100svh - var(--chrome-top) - var(--chrome-bottom))`), and the root
+carries `scroll-snap-type: y mandatory`, so every rest position is a screen boundary and a
+scroll gesture lands on the next screenful rather than anywhere at all.
+
+Three things make mandatory snapping safe here, each of which broke something first:
+
+- **Screens, not sections.** A first pass snapped to sections of arbitrary height with
+  `proximity`, and it fought the reader rather than guiding them: with snap points at
+  unpredictable distances the browser re-decides where to land on every layout change, so
+  a scroll would slide and then yank back. Screens one viewport apart make the decision
+  obvious. Group them deliberately — four folded headings belong on one screen, not on
+  four near-empty ones — and a screen whose sections have been expanded is simply an
+  *oversized* snap area, which the spec lets the scroller rest anywhere within, so opening
+  something never traps.
+- **`svh`, never `dvh`.** `dvh` changes as a phone's URL bar collapses, which resizes every
+  screen mid-scroll and re-snaps under the reader's thumb. That is the single biggest
+  source of snap jank on a phone.
+- **Every page's first screen starts at the top of the page.** Anything above the first
+  snap point cannot be rested on, so a back link left outside one was unreachable.
+
+Pages that are a form or a long reference — the draft room, league settings, the rule
+book — have no screens, and a document with no snap targets scrolls normally. That is
+deliberate: snapping while someone types is hostile. The footer is the one shared snap
+target and is scoped to `main:has(.screen) ~ .screen-end` for exactly this reason; as the
+*only* target on a screen-less page it parked the document on its own bottom and would not
+let go. It aligns its end, with `scroll-margin-bottom` reserving the sticky bottom nav —
+without that the footer's last lines rested underneath the nav.
 
 Sections fold. `<Collapsible>` (`src/components/Collapsible.tsx`) is a real heading with a
 button inside it (`aria-expanded`), a body animated through `grid-template-rows` and made

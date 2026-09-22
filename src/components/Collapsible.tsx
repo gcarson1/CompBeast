@@ -9,10 +9,10 @@ import { cn } from '@/lib/ui';
  *
  * Every section on the app's own screens is one of these, so a page is a
  * short stack of headings that open into their content rather than a long
- * strip to wander down — the header of each block is always one screen away,
- * and a scroll gesture settles on it (`.snap-section`). The heading itself is
- * the control: a real `<button>` inside the `<h2>`, so the outline a screen
- * reader navigates by is unchanged and `aria-expanded` says which way it is.
+ * strip to wander down. Several of these usually share one `.screen`, which
+ * is what the scroll snaps to. The heading itself is the control: a real
+ * `<button>` inside the `<h2>`, so the outline a screen reader navigates by
+ * is unchanged and `aria-expanded` says which way it is.
  *
  * The body stays in the DOM either way (the grid-rows transition in
  * globals.css is what animates it) and is `inert` while closed, so nothing a
@@ -33,7 +33,6 @@ export function Collapsible({
   title,
   titleClassName = 'section-title',
   headingLevel = 2,
-  snap = true,
   aside,
   defaultOpen = true,
   className,
@@ -46,12 +45,6 @@ export function Collapsible({
   titleClassName?: string;
   /** `3` for an item inside a section — a FAQ question under its section heading. */
   headingLevel?: 2 | 3;
-  /**
-   * `false` for the section that sits directly under a page's title. Its
-   * snap point is within a few pixels of the top, and the browser re-snaps
-   * on load, which scrolled the title under the sticky header.
-   */
-  snap?: boolean;
   aside?: ReactNode;
   defaultOpen?: boolean;
   className?: string;
@@ -113,15 +106,14 @@ export function Collapsible({
   }, [settled, open, id]);
 
   const Heading = headingLevel === 3 ? 'h3' : 'h2';
-  // A nested item is not a screen of its own, so it neither snaps nor
-  // rises in on scroll — only a page-level section does.
+  // A nested item does not rise in on scroll; only a page-level section does.
   const Wrapper = headingLevel === 3 ? 'section' : Reveal;
 
   return (
     <Wrapper
       as={headingLevel === 3 ? undefined : 'section'}
       id={id}
-      className={cn(headingLevel === 2 && snap && 'snap-section', className)}
+      className={cn(className)}
       aria-labelledby={headingId}
     >
       <div className="flex items-end justify-between gap-3">

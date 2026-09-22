@@ -51,168 +51,181 @@ export default async function AccountPage() {
 
   return (
     <div className="pt-2">
-      <Link href="/leagues" className="text-xs text-muted">
-        ← Home
-      </Link>
+      {/* Screen 1: who you are and what you have scored. It starts at the very
+          top of the page: anything above the first screen cannot be rested on
+          under mandatory snapping, so the back link belongs inside it. */}
+      <div className="screen">
+        <Link href="/leagues" className="text-xs text-muted">
+          ← Home
+        </Link>
 
-      <div className="mt-3 flex items-center gap-4">
-        <span className="relative shrink-0">
-          <Avatar name={displayName} photoUrl={user.avatarUrl} size={56} />
-          {/* The highest badge, stuck to the avatar's corner; named again
+        <div className="mt-3 flex items-center gap-4">
+          <span className="relative shrink-0">
+            <Avatar name={displayName} photoUrl={user.avatarUrl} size={56} />
+            {/* The highest badge, stuck to the avatar's corner; named again
               in text right after, so the sticker is never the only copy. */}
-          {badge && <Doodle kind="star" className="absolute -right-2.5 -top-2.5 h-7 w-7 rotate-[18deg]" />}
-        </span>
-        <div className="min-w-0">
-          <h1 className="headline truncate text-3xl">{displayName}</h1>
-          <p className="mt-1.5 flex min-w-0 items-center gap-2 text-xs text-muted">
-            <span className="truncate">{user.handle ? `@${user.handle}` : user.email}</span>
-            {badge && (
-              <Sticker tone="gold" size="sm" className="shrink-0">
-                {badge.name}
-              </Sticker>
-            )}
-          </p>
+            {badge && <Doodle kind="star" className="absolute -right-2.5 -top-2.5 h-7 w-7 rotate-[18deg]" />}
+          </span>
+          <div className="min-w-0">
+            <h1 className="headline truncate text-3xl">{displayName}</h1>
+            <p className="mt-1.5 flex min-w-0 items-center gap-2 text-xs text-muted">
+              <span className="truncate">{user.handle ? `@${user.handle}` : user.email}</span>
+              {badge && (
+                <Sticker tone="gold" size="sm" className="shrink-0">
+                  {badge.name}
+                </Sticker>
+              )}
+            </p>
+          </div>
         </div>
+
+        {/* Career totals as a bento: the headline number on a gold block two
+          tiles wide, the three supporting counts beside it. */}
+        <section className="mt-6" aria-labelledby="career">
+          <h2 id="career" className="sr-only">
+            Career totals
+          </h2>
+          <dl className="grid grid-cols-2 gap-3 sm:grid-cols-5">
+            <Stat
+              label="Total points"
+              value={String(account.totalPoints)}
+              tone="gold"
+              glyph="tally"
+              className="col-span-2"
+            />
+            <Stat label="Leagues" value={String(account.leaguesPlayed)} />
+            <Stat
+              label="Best finish"
+              value={account.bestRank ? `#${account.bestRank}` : '—'}
+              tone={account.bestRank === 1 ? 'mint' : undefined}
+              glyph={account.bestRank === 1 ? 'crown' : undefined}
+            />
+            {/* Full width on a phone so the row below the gold block is not a
+              lone tile; one column once the five fit on a line. */}
+            <Stat
+              label="Titles"
+              value={String(account.titles)}
+              hint="Seasons won outright"
+              tone={account.titles > 0 ? 'lavender' : undefined}
+              glyph={account.titles > 0 ? 'star' : undefined}
+              className="col-span-2 sm:col-span-1"
+            />
+          </dl>
+        </section>
       </div>
 
-      {/* Career totals as a bento: the headline number on a gold block two
-          tiles wide, the three supporting counts beside it. */}
-      <section className="mt-6" aria-labelledby="career">
-        <h2 id="career" className="sr-only">
-          Career totals
-        </h2>
-        <dl className="grid grid-cols-2 gap-3 sm:grid-cols-5">
-          <Stat
-            label="Total points"
-            value={String(account.totalPoints)}
-            tone="gold"
-            glyph="tally"
-            className="col-span-2"
-          />
-          <Stat label="Leagues" value={String(account.leaguesPlayed)} />
-          <Stat
-            label="Best finish"
-            value={account.bestRank ? `#${account.bestRank}` : '—'}
-            tone={account.bestRank === 1 ? 'mint' : undefined}
-            glyph={account.bestRank === 1 ? 'crown' : undefined}
-          />
-          {/* Full width on a phone so the row below the gold block is not a
-              lone tile; one column once the five fit on a line. */}
-          <Stat
-            label="Titles"
-            value={String(account.titles)}
-            hint="Seasons won outright"
-            tone={account.titles > 0 ? 'lavender' : undefined}
-            glyph={account.titles > 0 ? 'star' : undefined}
-            className="col-span-2 sm:col-span-1"
-          />
-        </dl>
-      </section>
-
       <RevealGroup step={80}>
-        <Collapsible
-          title="Badges"
-          className="mt-8"
-          aside={`${earnedBadges(account.totalPoints).length} of ${BADGES.length}`}
-        >
-          <BadgeShelf points={account.totalPoints} />
-        </Collapsible>
-
-        {current && (
+        {/* Screen 2: the ladder and this season's line. */}
+        <div className="screen pt-2">
           <Collapsible
-            title="This season"
-            className="mt-8"
-            aside={
-              <Link href={`/leagues/${current.leagueId}`} className="text-brand-gold-deep">
-                {current.leagueName} →
-              </Link>
-            }
+            title="Badges"
+            className="mt-6"
+            aside={`${earnedBadges(account.totalPoints).length} of ${BADGES.length}`}
           >
-            <div className="card p-4">
-              <div className="mb-4 flex items-end justify-between gap-3">
-                <span className="min-w-0">
-                  <span className="block truncate text-2xs text-muted">{current.teamName}</span>
-                  <span className="font-display text-5xl leading-none tracking-wide">
-                    {current.totalPoints}
+            <BadgeShelf points={account.totalPoints} />
+          </Collapsible>
+
+          {current && (
+            <Collapsible
+              title="This season"
+              className="mt-8"
+              aside={
+                <Link href={`/leagues/${current.leagueId}`} className="text-brand-gold-deep">
+                  {current.leagueName} →
+                </Link>
+              }
+            >
+              <div className="card p-4">
+                <div className="mb-4 flex items-end justify-between gap-3">
+                  <span className="min-w-0">
+                    <span className="block truncate text-2xs text-muted">{current.teamName}</span>
+                    <span className="font-display text-5xl leading-none tracking-wide">
+                      {current.totalPoints}
+                    </span>
                   </span>
-                </span>
-                {current.rank > 0 && (
-                  <Sticker tone={current.rank === 1 ? 'gold' : 'ink'} size="sm" className="shrink-0">
-                    {current.rank === 1 && <Doodle kind="crown" className="-ml-0.5 h-4 w-4" />}#{current.rank}{' '}
-                    of {current.teamCount}
-                  </Sticker>
-                )}
+                  {current.rank > 0 && (
+                    <Sticker tone={current.rank === 1 ? 'gold' : 'ink'} size="sm" className="shrink-0">
+                      {current.rank === 1 && <Doodle kind="crown" className="-ml-0.5 h-4 w-4" />}#
+                      {current.rank} of {current.teamCount}
+                    </Sticker>
+                  )}
+                </div>
+                <PointHistoryChart history={current.history} caption={current.teamName} />
               </div>
-              <PointHistoryChart history={current.history} caption={current.teamName} />
-            </div>
-          </Collapsible>
-        )}
+            </Collapsible>
+          )}
+        </div>
 
-        <Collapsible title="Season history" titleClassName="eyebrow" className="mt-8">
-          {account.rows.length === 0 ? (
-            <div className="rounded-card border border-dashed border-hairline p-5">
-              <p className="max-w-measure text-xs leading-relaxed text-muted">
-                You have not played a season yet. Join or create a league and your results will build up here.
+        {/* Screen 3: the record, and the settings you rarely touch. */}
+        <div className="screen pt-2">
+          <Collapsible title="Season history" titleClassName="eyebrow" className="mt-6">
+            {account.rows.length === 0 ? (
+              <div className="rounded-card border border-dashed border-hairline p-5">
+                <p className="max-w-measure text-xs leading-relaxed text-muted">
+                  You have not played a season yet. Join or create a league and your results will build up
+                  here.
+                </p>
+                <Link href="/leagues/new" prefetch={false} className="btn-primary btn-sm mt-3">
+                  Create a league
+                </Link>
+              </div>
+            ) : (
+              <ul className="divide-y divide-hairline border-y border-hairline">
+                {ordered.map((row) => (
+                  <SeasonRow key={row.id} row={row} />
+                ))}
+              </ul>
+            )}
+            {past.length === 0 && account.rows.length > 0 && (
+              <p className="mt-3 text-2xs text-muted">
+                Finished seasons stay here permanently, with the score you ended on — even if the league is
+                deleted later.
               </p>
-              <Link href="/leagues/new" prefetch={false} className="btn-primary btn-sm mt-3">
-                Create a league
-              </Link>
-            </div>
-          ) : (
-            <ul className="divide-y divide-hairline border-y border-hairline">
-              {ordered.map((row) => (
-                <SeasonRow key={row.id} row={row} />
-              ))}
-            </ul>
-          )}
-          {past.length === 0 && account.rows.length > 0 && (
-            <p className="mt-3 text-2xs text-muted">
-              Finished seasons stay here permanently, with the score you ended on — even if the league is
-              deleted later.
-            </p>
-          )}
-        </Collapsible>
-
-        <Collapsible
-          title="Friends"
-          titleClassName="eyebrow"
-          defaultOpen={false}
-          className="mt-8"
-          aside={`${friends.friends.length}${friends.incoming.length > 0 ? ` · ${friends.incoming.length} waiting` : ''}`}
-        >
-          <p className="mb-4 max-w-measure text-2xs leading-relaxed text-muted">
-            Friends can be invited into a league in one tap, and get an alert with the code already filled in.
-          </p>
-          <FriendsPanel overview={friends} />
-        </Collapsible>
-
-        {/* Hidden entirely when the deployment has no VAPID keys — like the
-            email switches, a control that governs nothing is worse than none. */}
-        {vapidKey && (
-          <Collapsible title="Push alerts" titleClassName="eyebrow" defaultOpen={false} className="mt-8">
-            <p className="mb-4 max-w-measure text-2xs leading-relaxed text-muted">
-              The same alerts as the bell, delivered to this device even when Comp Beast is closed. Turn it on
-              separately on each phone or computer you use.
-            </p>
-            <PushToggle publicKey={vapidKey} />
+            )}
           </Collapsible>
-        )}
 
-        {/* id="email" is the anchor every email footer links back to; the
+          <Collapsible
+            title="Friends"
+            titleClassName="eyebrow"
+            defaultOpen={false}
+            className="mt-8"
+            aside={`${friends.friends.length}${friends.incoming.length > 0 ? ` · ${friends.incoming.length} waiting` : ''}`}
+          >
+            <p className="mb-4 max-w-measure text-2xs leading-relaxed text-muted">
+              Friends can be invited into a league in one tap, and get an alert with the code already filled
+              in.
+            </p>
+            <FriendsPanel overview={friends} />
+          </Collapsible>
+
+          {/* Hidden entirely when the deployment has no VAPID keys — like the
+            email switches, a control that governs nothing is worse than none. */}
+          {vapidKey && (
+            <Collapsible title="Push alerts" titleClassName="eyebrow" defaultOpen={false} className="mt-8">
+              <p className="mb-4 max-w-measure text-2xs leading-relaxed text-muted">
+                The same alerts as the bell, delivered to this device even when Comp Beast is closed. Turn it
+                on separately on each phone or computer you use.
+              </p>
+              <PushToggle publicKey={vapidKey} />
+            </Collapsible>
+          )}
+
+          {/* id="email" is the anchor every email footer links back to; the
             section opens itself when the page lands on that hash. */}
-        <Collapsible
-          id="email"
-          title="Email alerts"
-          titleClassName="eyebrow"
-          defaultOpen={false}
-          className="mt-8"
-        >
-          <p className="mb-4 max-w-measure text-2xs leading-relaxed text-muted">
-            Alerts always appear in the app. These decide which of them also reach{' '}
-            <span className="text-ink">{user.email}</span>.
-          </p>
-          <EmailPreferences preferences={emailPreferences} />
-        </Collapsible>
+          <Collapsible
+            id="email"
+            title="Email alerts"
+            titleClassName="eyebrow"
+            defaultOpen={false}
+            className="mt-8"
+          >
+            <p className="mb-4 max-w-measure text-2xs leading-relaxed text-muted">
+              Alerts always appear in the app. These decide which of them also reach{' '}
+              <span className="text-ink">{user.email}</span>.
+            </p>
+            <EmailPreferences preferences={emailPreferences} />
+          </Collapsible>
+        </div>
       </RevealGroup>
 
       <DeleteAccountPanel leaguesCommissioned={leaguesCommissioned} />

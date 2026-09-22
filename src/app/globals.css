@@ -4,44 +4,50 @@
 
 @layer base {
   /*
-   * The page is the content, no more. Two rules make it feel bolted down:
+   * The page is the content, no more, and it moves a screen at a time.
    *
-   * `overscroll-behavior-y: none` removes the rubber-band past the end of
-   * the document — on a phone that bounce drags the whole page, sticky
-   * bottom nav included, up off the bottom edge and lets it float back, which
-   * is exactly what read as flimsy. There is no pull-to-refresh to preserve
-   * (the leaderboard implements its own), so nothing is lost.
+   * `overscroll-behavior-y: none` removes the rubber-band past the end of the
+   * document — on a phone that bounce drags the whole page, sticky bottom nav
+   * included, up off the bottom edge. There is no pull-to-refresh to lose (the
+   * leaderboard implements its own).
    *
-   * `scroll-snap-type: y proximity` turns a scroll gesture that ends near the
-   * top of a section into one that settles on it, so each page reads as a
-   * stack of screens rather than a strip you can leave anywhere. Proximity,
-   * not mandatory: a mandatory snap on the document makes a section taller
-   * than the viewport a trap and a trackpad flick a jump, and it fights
-   * find-in-page and restored scroll positions. `scroll-padding-top` is the
-   * sticky header's height, so a snapped section lands just under it — and
-   * it doubles as the offset for anchor links (`/account#email`).
+   * `scroll-snap-type: y mandatory` with `.screen` blocks that are exactly one
+   * viewport tall: every rest position is a screen boundary, so a scroll
+   * gesture lands on the next screenful instead of anywhere at all.
    *
-   * Sections opt in with `.snap-section` (below) rather than every
-   * `<section>` snapping: the nested groups inside a settings panel are not
-   * screens.
+   * Mandatory is only safe because of how the screens are built. A first pass
+   * used `proximity` against sections of arbitrary height, and it fought the
+   * reader rather than guiding them: with snap points at unpredictable
+   * distances the browser re-decides where to land on every layout change, so
+   * a scroll would slide and then yank. Screens one viewport apart make the
+   * decision obvious. A screen whose section has been expanded past the
+   * viewport is an *oversized* snap area, which the spec says may rest at any
+   * position that covers the viewport — so opening something never traps.
+   *
+   * `svh`, never `dvh`: `dvh` changes as a phone's URL bar collapses, which
+   * resizes every screen mid-scroll and re-snaps under the reader's thumb.
+   * That is the single biggest source of snap jank on a phone. `svh` is the
+   * viewport with the browser chrome showing, and it does not move.
    */
   html {
     -webkit-tap-highlight-color: transparent;
     overscroll-behavior-y: none;
-    scroll-snap-type: y proximity;
-    scroll-padding-top: 4.25rem;
+    scroll-snap-type: y mandatory;
+    scroll-padding-top: var(--chrome-top);
   }
 
   /*
-   * The show accent at rest is the brand gold, so `bg-show-accent` and
-   * `text-show-deep` are safe anywhere. A `<ShowTheme>` wrapper overrides
-   * these for the pages that belong to one show.
+   * The app's fixed furniture, measured once here so a screen can subtract it.
+   * The bottom nav only renders for a signed-in reader, so the layout marks
+   * the tree it is in rather than every screen guessing.
    */
   :root {
-    --show-accent: #f59e0b;
-    --show-accent-deep: #fbbf24;
-    --show-accent-soft: rgba(245, 158, 11, 0.16);
-    --show-glow: rgba(245, 158, 11, 0.45);
+    --chrome-top: 3.75rem;
+    --chrome-bottom: 0px;
+  }
+
+  [data-bottom-nav='true'] {
+    --chrome-bottom: 4.0625rem;
   }
 
   body {
@@ -189,12 +195,48 @@
   }
 
   /*
-   * A top-level block of a page: a scroll gesture that ends near its top
-   * settles on it (see the snap rules on `html`). The top-level sections and
-   * the page header get this; nested sections do not.
+   * One screenful. A page is a short stack of these, and each is at least the
+   * viewport minus the app's fixed chrome — so by default you see exactly one
+   * screen of content, and a scroll takes you to the next (see `html` above).
+   *
+   * `min-height`, not `height`: a screen whose sections have been expanded
+   * grows, and the snap rules handle that. The content sits at the top rather
+   * than centred, because the snap aligns the screen's start to just under the
+   * header and a heading that drifts from that line reads as misaligned.
+   *
+   * Group deliberately. Four folded headings belong on one screen, not on four
+   * near-empty ones.
    */
-  .snap-section {
+  .screen {
+    min-height: calc(100svh - var(--chrome-top) - var(--chrome-bottom));
     scroll-snap-align: start;
+  }
+
+  /*
+   * The footer closes the document, so it aligns its *end* to the bottom of
+   * the viewport. Under mandatory snapping a trailing element with no snap
+   * position of its own can be unreachable — the last screen's start is the
+   * final place the scroller may rest, and anything below it is then content
+   * you cannot scroll to.
+   *
+   * Only on a page built from screens, though. Mandatory snapping with a
+   * *single* snap target parks the document on it and will not let go: on a
+   * page with no screens the footer was the only target, so every such page
+   * (the rule book, the draft room, every form) loaded pinned to its own
+   * bottom and could not be scrolled back up. A page with no screens has no
+   * snap targets at all, which is ordinary scrolling.
+   */
+  main:has(.screen) ~ .screen-end {
+    scroll-snap-align: end;
+    /*
+     * The bottom nav is sticky, so it is pinned over the foot of the page
+     * until the document's true bottom. Aligning the footer's end to the
+     * viewport's end therefore parked it *underneath* the nav, with its last
+     * lines covered. Reserving the nav's height moves that rest position down
+     * to the real end of the document, where the nav has come to rest in the
+     * flow and nothing overlaps.
+     */
+    scroll-margin-bottom: var(--chrome-bottom);
   }
 
   /*
