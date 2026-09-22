@@ -668,6 +668,32 @@ rather than retrying a settled answer forever.
 Counts rather than timestamps: a soft-deleted message and an un-hyped post both move a
 count, and neither moves a `max(createdAt)`.
 
+## Page structure
+
+The page is the content, no more: `overscroll-behavior-y: none` on the root removes the
+rubber-band past the end of the document (on a phone that bounce dragged the whole page,
+sticky bottom nav included, off the bottom edge), and there is no pull-to-refresh to lose
+— the leaderboard implements its own.
+
+Every page reads as a stack of screens. The root has `scroll-snap-type: y proximity` with
+`scroll-padding-top` equal to the sticky header, and each page-level section is a
+`.snap-section`, so a scroll gesture that ends near a section settles on it, flush under
+the header. Proximity rather than mandatory on purpose: mandatory makes a section taller
+than the viewport a trap and a trackpad flick a jump, and fights find-in-page. `<main>` is
+itself a snap point — without one the browser's re-snap after any layout change (a section
+folding, the page loading) pulled the page down to the first section and hid the title.
+The one section that sits directly under a page title passes `snap={false}` for the same
+reason.
+
+Sections fold. `<Collapsible>` (`src/components/Collapsible.tsx`) is a real heading with a
+button inside it (`aria-expanded`), a body animated through `grid-template-rows` and made
+`inert` while closed, and an overflow clip that lifts once the transition settles so the
+stickers overhanging the tiles inside are not shaved off. Reference lists start folded;
+the things you came for start open. A section that is a link target (`/account#email`,
+from every email footer) opens itself on its hash and scrolls into place once its body
+has grown — with an explicit `scrollTo`, because `scrollIntoView` under root snapping
+lands on a neighbouring snap point when a folded section sits just above.
+
 ## Motion
 
 Framer Motion is loaded once, late, from the root `MotionProvider`: every animated element

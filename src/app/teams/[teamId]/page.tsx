@@ -78,30 +78,56 @@ export default async function TeamPage({ params }: { params: { teamId: string } 
           ]}
         />
 
-        <Collapsible title="Roster" className="mt-8" aside={`${stillIn}/${roster.length} still in`}>
-          <ul className="card divide-y divide-hairline">
-            {roster.map((player) => (
-              <li key={player.contestantId}>
-                <Link
-                  href={`/players/${player.contestantId}`}
-                  className="flex items-center gap-3 p-4 transition duration-200 ease-soft hover:bg-surface-raised"
-                >
-                  <Avatar name={player.name} photoUrl={player.photoUrl} size={42} dimmed={!player.isActive} />
-                  <span className="min-w-0 flex-1">
-                    <span className="block truncate text-base font-semibold">{player.name}</span>
-                    <span className="mt-0.5 block text-2xs text-muted">
-                      {player.isActive
-                        ? lexicon.activeLabel
-                        : `${eliminationLabel(lexicon, player.metadata)} · ${player.eliminatedLabel ?? '—'}`}
+        <Collapsible
+          title="Roster"
+          className="mt-8"
+          aside={roster.length > 0 ? `${stillIn}/${roster.length} still in` : undefined}
+        >
+          {roster.length === 0 ? (
+            // Before the draft a team is a name and a seat. An empty card here
+            // read as a rendering fault; the draft room is the way to fill it.
+            <div className="rounded-card border border-dashed border-hairline p-5">
+              <p className="max-w-measure text-xs leading-relaxed text-muted">
+                No {lower(lexicon.contestantPlural)} yet — this team fills in as the draft is made.
+              </p>
+              <Link
+                href={`/leagues/${team.leagueId}/draft`}
+                prefetch={false}
+                className="btn-ghost btn-sm mt-3"
+              >
+                Open the draft room
+              </Link>
+            </div>
+          ) : (
+            <ul className="card divide-y divide-hairline">
+              {roster.map((player) => (
+                <li key={player.contestantId}>
+                  <Link
+                    href={`/players/${player.contestantId}`}
+                    className="flex items-center gap-3 p-4 transition duration-200 ease-soft hover:bg-surface-raised"
+                  >
+                    <Avatar
+                      name={player.name}
+                      photoUrl={player.photoUrl}
+                      size={42}
+                      dimmed={!player.isActive}
+                    />
+                    <span className="min-w-0 flex-1">
+                      <span className="block truncate text-base font-semibold">{player.name}</span>
+                      <span className="mt-0.5 block text-2xs text-muted">
+                        {player.isActive
+                          ? lexicon.activeLabel
+                          : `${eliminationLabel(lexicon, player.metadata)} · ${player.eliminatedLabel ?? '—'}`}
+                      </span>
                     </span>
-                  </span>
-                  <span className={`text-md font-semibold tabular-nums ${pointsTone(player.points)}`}>
-                    {formatPoints(player.points)}
-                  </span>
-                </Link>
-              </li>
-            ))}
-          </ul>
+                    <span className={`text-md font-semibold tabular-nums ${pointsTone(player.points)}`}>
+                      {formatPoints(player.points)}
+                    </span>
+                  </Link>
+                </li>
+              ))}
+            </ul>
+          )}
         </Collapsible>
 
         {score && score.cycles.length > 0 && (
