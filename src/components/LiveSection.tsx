@@ -2,7 +2,7 @@ import Link from 'next/link';
 import { LiveTicker, type TickerCastMember } from '@/components/LiveTicker';
 import { ShowTheme } from '@/components/ShowTheme';
 import { SocialFeed } from '@/components/SocialFeed';
-import { Sticker } from '@/components/Sticker';
+import { Tag } from '@/components/Tag';
 import type { SocialBuzz } from '@/lib/social-feed';
 import type { SeasonHeadline } from '@/server/queries';
 
@@ -45,26 +45,37 @@ export function LiveSection({ blocks }: { blocks: LiveBlockData[] }) {
     // One panel for the whole block, not one per show: with each show's buzz
     // folded a show is a couple of hundred pixels tall, and two snap targets
     // that close make the page catch instead of guiding it.
-    <div className="panel space-y-10">
-      {blocks.map(({ featured, headlines, buzz, hashtag }) => (
+    <div className="panel">
+      {blocks.map(({ featured, headlines, buzz, hashtag }, index) => (
         <ShowTheme key={featured.seasonId} showSlug={featured.showSlug}>
-          <section aria-labelledby={`live-${featured.seasonSlug}`} className="space-y-5">
+          {/* The gap between shows is on the section, not a `space-y` on the
+              panel: <ShowTheme> is `display: contents`, and a margin on a box
+              that is not rendered does nothing — the second show used to sit
+              flush against the first one's feed. */}
+          <section
+            aria-labelledby={`live-${featured.seasonSlug}`}
+            className={index > 0 ? 'mt-12 space-y-5' : 'space-y-5'}
+          >
             <div>
-              <div className="mb-3 flex flex-wrap items-end justify-between gap-x-3 gap-y-2">
-                <h2 id={`live-${featured.seasonSlug}`} className="section-title">
-                  <Sticker tone="show" size="sm">
+              {/* The show's name in its colour, and a broadcast bug saying
+                  whether it is on air: red and breathing while it airs, an
+                  outlined date before it premieres. */}
+              <div className="mb-4 flex flex-wrap items-center justify-between gap-x-3 gap-y-2">
+                <div className="flex min-w-0 items-center gap-3">
+                  <h2 id={`live-${featured.seasonSlug}`} className="section-title">
                     {featured.showName}
-                  </Sticker>
+                  </h2>
                   {featured.status === 'ACTIVE' ? (
-                    <>
+                    <Tag tone="red" live size="sm">
                       Airing now
-                      <span aria-hidden className="h-2 w-2 animate-pulse rounded-full bg-danger" />
-                    </>
+                    </Tag>
                   ) : (
-                    <>{featured.startsAt ? `Premieres ${premiereLabel(featured.startsAt)}` : 'Coming soon'}</>
+                    <Tag tone="outline" size="sm">
+                      {featured.startsAt ? `Premieres ${premiereLabel(featured.startsAt)}` : 'Coming soon'}
+                    </Tag>
                   )}
-                </h2>
-                <Link href={`/seasons/${featured.seasonSlug}`} className="text-xs text-show-deep">
+                </div>
+                <Link href={`/seasons/${featured.seasonSlug}`} className="text-xs font-medium text-show-deep">
                   {featured.seasonName} →
                 </Link>
               </div>

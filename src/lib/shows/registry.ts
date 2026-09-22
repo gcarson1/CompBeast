@@ -17,7 +17,7 @@
 export const FLAGSHIP_SHOW_SLUG = 'big-brother';
 
 export interface ShowTheme {
-  /** Fill for stickers and small accents. Dark ink (`on-gold`) goes on it. */
+  /** Fill for tags, plates and small accents. Dark ink (`on-gold`) goes on it. */
   accent: string;
   /** The same hue as text on the dark surfaces — must clear 4.5:1 on canvas. */
   accentDeep: string;
@@ -59,6 +59,26 @@ const SHOW_THEMES: Record<string, ShowTheme> = {
 
 export function themeFor(showSlug: string | null | undefined): ShowTheme {
   return (showSlug && SHOW_THEMES[showSlug]) || DEFAULT_THEME;
+}
+
+/**
+ * A show's initials, as a network would put them in a corner of the screen:
+ * the top line of a season's number plate (`<SeasonPlate>`). A show with no
+ * entry is abbreviated from its slug.
+ */
+const SHOW_MONOGRAMS: Record<string, string> = {
+  'big-brother': 'BB',
+  survivor: 'S',
+};
+
+export function monogramFor(showSlug: string): string {
+  return (
+    SHOW_MONOGRAMS[showSlug] ??
+    showSlug
+      .split('-')
+      .map((part) => part.charAt(0).toUpperCase())
+      .join('')
+  );
 }
 
 /**

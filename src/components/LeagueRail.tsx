@@ -3,23 +3,18 @@
 import Link from 'next/link';
 import { useCallback, useEffect, useRef, useState } from 'react';
 import { AvatarStack } from '@/components/Avatar';
-import { BeastDoodle } from '@/components/doodles/BeastDoodle';
-import { Doodle } from '@/components/doodles/Doodle';
+import { CrownIcon, PlusIcon, TallyMark } from '@/components/icons';
 import { MotionCard } from '@/components/motion/MotionCard';
-import { Sticker } from '@/components/Sticker';
-import { cn, formatPoints, pointsTone, relativeTime } from '@/lib/ui';
+import { ShowTheme } from '@/components/ShowTheme';
+import { Tag, rankTone, type TagTone } from '@/components/Tag';
+import { formatPoints, pointsTone, relativeTime } from '@/lib/ui';
 import type { HomeLeagueCard } from '@/server/queries';
 
-const DRAFT_LABEL: Record<string, string> = {
-  NOT_STARTED: 'Pre-draft',
-  IN_PROGRESS: 'Drafting',
-  COMPLETED: 'In season',
+const DRAFT_STATUS: Record<string, { label: string; tone: TagTone; live?: boolean }> = {
+  NOT_STARTED: { label: 'Pre-draft', tone: 'outline' },
+  IN_PROGRESS: { label: 'Drafting', tone: 'show', live: true },
+  COMPLETED: { label: 'In season', tone: 'ink' },
 };
-
-// The monogram chip cycles through the tile tones by position, so a row of
-// leagues reads as a set of distinct objects rather than four of the same
-// card. Spelled out so Tailwind's scan keeps every class.
-const CHIP_TONES = ['clay-gold', 'clay-lavender', 'clay-mint', 'clay-sky'] as const;
 
 /**
  * The league picker on the home page: one card per league, scrolling
@@ -91,15 +86,15 @@ export function LeagueRail({ leagues, caption }: { leagues: HomeLeagueCard[]; ca
         // lining up with the heading above it) and `scrollLeft <= 1` is then
         // never true, which left the Previous arrow permanently enabled.
         //
-        // -mt-8 pt-8: the status sticker and the mascot sit proud of the card's
-        // top edge, and a scroll container clips on both axes, so the scroll
-        // box has to start above the cards for the overhang to show.
-        className="no-scrollbar -mx-5 -mt-8 flex snap-x snap-mandatory scroll-px-5 gap-4 overflow-x-auto px-5 pb-3 pt-8"
+        // -mt-2 pt-2 pb-4: a scroll container clips on both axes, so the
+        // box starts a little above and ends a little below the cards to
+        // leave room for their hover lift and its glow.
+        className="no-scrollbar -mx-5 -mt-2 flex snap-x snap-mandatory scroll-px-5 gap-4 overflow-x-auto px-5 pb-4 pt-2"
         {...(overflowing ? { tabIndex: 0, role: 'region', 'aria-label': 'Your leagues, scrollable' } : {})}
       >
-        {leagues.map((league, index) => (
+        {leagues.map((league) => (
           <li key={league.leagueId} className="w-[16.5rem] shrink-0 snap-start">
-            <LeagueCard league={league} chipTone={CHIP_TONES[index % CHIP_TONES.length]} />
+            <LeagueCard league={league} />
           </li>
         ))}
         <li className="w-[16.5rem] shrink-0 snap-start">
@@ -110,110 +105,107 @@ export function LeagueRail({ leagues, caption }: { leagues: HomeLeagueCard[]; ca
   );
 }
 
-function LeagueCard({ league, chipTone }: { league: HomeLeagueCard; chipTone: (typeof CHIP_TONES)[number] }) {
+function LeagueCard({ league }: { league: HomeLeagueCard }) {
   const alert = league.atRisk ?? league.nearMiss;
   const alertTone = league.atRisk ? 'text-danger-deep' : 'text-brand-gold-deep';
   const leading = league.rank === 1;
+  const status = DRAFT_STATUS[league.draftStatus] ?? { label: league.draftStatus, tone: 'ink' as const };
 
   return (
-    // The motion frame carries the tile chrome; the link inside it is the
-    // control, so the focus ring lands on what the keyboard actually operates.
-    <MotionCard tilt className="relative h-full">
-      {/* The status sticker overhangs the top-right corner — a tag stuck on
-          the card rather than printed in it. */}
-      <Sticker tilt="r" seed={league.leagueId} className="absolute -right-2 -top-3 z-10">
-        {DRAFT_LABEL[league.draftStatus] ?? league.draftStatus}
-      </Sticker>
+    // Each card wears its show's colour: the monogram plate and the rule
+    // along the top edge say Big Brother or Survivor before the words do.
+    <ShowTheme showSlug={league.showSlug}>
+      {/* The motion frame carries the tile chrome; the link inside it is the
+          control, so the focus ring lands on what the keyboard operates. */}
+      <MotionCard tilt className="relative h-full">
+        <span aria-hidden className="absolute inset-x-6 top-0 h-[2px] rounded-b-pill bg-show-accent" />
 
-      <Link href={`/leagues/${league.leagueId}`} className="flex h-full flex-col rounded-card p-4">
-        <span aria-hidden className={cn('clay h-11 w-11 font-display text-lg leading-none', chipTone)}>
-          {league.leagueName.slice(0, 1).toUpperCase()}
-        </span>
-
-        <h3 className="mt-3 truncate text-base font-semibold">{league.leagueName}</h3>
-        <p className="mt-0.5 truncate text-2xs text-muted">
-          {league.showName} · {league.seasonName}
-        </p>
-
-        {league.teamId ? (
-          <div className="mt-3 flex items-end justify-between gap-2">
-            <span className="min-w-0">
-              <span className="block truncate text-2xs text-muted">{league.teamName}</span>
-              <span className="font-display text-4xl leading-none tracking-wide">{league.totalPoints}</span>
+        <Link href={`/leagues/${league.leagueId}`} className="flex h-full flex-col rounded-card p-4">
+          <span className="flex items-start justify-between gap-3">
+            <span aria-hidden className="plate h-11 w-11 font-display text-xl leading-none">
+              {league.leagueName.slice(0, 1).toUpperCase()}
             </span>
-            <span className="flex shrink-0 flex-col items-end">
-              {league.rank > 0 && (
-                <Sticker tone={leading ? 'gold' : 'ink'} size="sm">
-                  {/* The crown is decoration; "#1" is the fact. */}
-                  {leading && <Doodle kind="crown" className="-ml-0.5 h-4 w-4" />}#{league.rank}
-                </Sticker>
-              )}
-              <span
-                className={`mt-1.5 block text-2xs font-semibold tabular-nums ${pointsTone(
-                  league.lastCyclePoints,
-                )}`}
-              >
-                {formatPoints(league.lastCyclePoints)} last
+            <Tag tone={status.tone} live={status.live} size="sm">
+              {status.label}
+            </Tag>
+          </span>
+
+          <h3 className="mt-3 truncate text-base font-semibold">{league.leagueName}</h3>
+          <p className="mt-0.5 truncate text-2xs text-muted">
+            {league.showName} · {league.seasonName}
+          </p>
+
+          {league.teamId ? (
+            <div className="mt-4 flex items-end justify-between gap-2">
+              <span className="min-w-0">
+                <span className="block truncate text-2xs text-muted">{league.teamName}</span>
+                <span className="mt-1 block font-display text-4xl leading-none tracking-wide">
+                  {league.totalPoints}
+                </span>
               </span>
-            </span>
-          </div>
-        ) : (
-          <p className="mt-3 text-xs text-muted">You have no team in this league yet.</p>
-        )}
-
-        {/* mt-auto pins the footer to the bottom so cards of different heights
-            still line their footers up across the rail. */}
-        <div className="mt-auto pt-3">
-          {alert && <p className={`mb-2 line-clamp-2 text-2xs font-medium ${alertTone}`}>{alert}</p>}
-
-          {league.currentCycleLabel && league.locksAt && (
-            <p className="mb-2 truncate text-2xs text-muted">
-              {league.cycleLocked
-                ? `${league.currentCycleLabel} · locked`
-                : `Rosters lock ${relativeTime(league.locksAt)}`}
-            </p>
+              <span className="flex shrink-0 flex-col items-end">
+                {league.rank > 0 && (
+                  <Tag tone={rankTone(league.rank)} size="sm">
+                    {/* The crown is decoration; "#1" is the fact. */}
+                    {leading && <CrownIcon size={13} className="-ml-0.5" />}#{league.rank}
+                  </Tag>
+                )}
+                <span
+                  className={`mt-1.5 block text-2xs font-semibold tabular-nums ${pointsTone(
+                    league.lastCyclePoints,
+                  )}`}
+                >
+                  {formatPoints(league.lastCyclePoints)} last
+                </span>
+              </span>
+            </div>
+          ) : (
+            <p className="mt-4 text-xs text-muted">You have no team in this league yet.</p>
           )}
 
-          <div className="flex items-center justify-between border-t border-hairline pt-3">
-            <AvatarStack names={league.memberNames} total={league.memberCount} />
-            <span className="text-2xs text-muted">
-              {league.teamCount}/{league.maxTeams} teams
-            </span>
+          {/* mt-auto pins the footer to the bottom so cards of different heights
+              still line their footers up across the rail. */}
+          <div className="mt-auto pt-4">
+            {alert && <p className={`mb-2 line-clamp-2 text-2xs font-medium ${alertTone}`}>{alert}</p>}
+
+            {league.currentCycleLabel && league.locksAt && (
+              <p className="mb-2 truncate text-2xs text-muted">
+                {league.cycleLocked
+                  ? `${league.currentCycleLabel} · locked`
+                  : `Rosters lock ${relativeTime(league.locksAt)}`}
+              </p>
+            )}
+
+            <div className="flex items-center justify-between border-t border-hairline pt-3">
+              <AvatarStack names={league.memberNames} total={league.memberCount} />
+              <span className="text-2xs text-muted">
+                {league.teamCount}/{league.maxTeams} teams
+              </span>
+            </div>
           </div>
-        </div>
-      </Link>
-    </MotionCard>
+        </Link>
+      </MotionCard>
+    </ShowTheme>
   );
 }
 
 /** Always the last card, so the rail never dead-ends without an action. */
 function AddLeagueCard() {
   return (
-    <div className="card-pop-gold card-lift relative flex h-full flex-col p-4">
-      {/* Peeks over the top-right corner, half outside the tile. Purely
-          decorative, and the tile's copy says everything it says. */}
-      <BeastDoodle mood="wink" className="absolute -right-3 -top-7 h-16 w-16 rotate-6" />
-      <Doodle kind="tally" tone="paper" className="absolute left-3 top-3 h-7 w-7 -rotate-6" />
-      <span className="clay clay-lavender mt-6 h-11 w-11">
-        <BoltIcon className="text-pop-lavender-ink" />
+    <div className="card-feature card-lift flex h-full flex-col p-4">
+      <TallyMark className="absolute -bottom-4 -right-3 h-28 w-28 text-brand-gold opacity-[0.1]" />
+      <span className="icon-well">
+        <PlusIcon size={22} />
       </span>
-      <h3 className="headline mt-3">Start or join</h3>
-      <p className="mt-1 text-2xs leading-relaxed text-tile-muted">
-        Run a league for any season, or jump into a friend&apos;s with their code.
+      <h3 className="headline mt-3 text-xl">Start or join</h3>
+      <p className="mt-1 text-2xs leading-relaxed text-muted">
+        Run a league for any open season, or jump into a friend&apos;s with their code.
       </p>
-      <div className="mt-auto flex gap-2 pt-3">
-        <Link
-          href="/leagues/join"
-          prefetch={false}
-          className="btn btn-sm flex-1 border-2 border-pop-gold-ink/20 bg-white/40 text-pop-gold-ink hover:bg-white/60"
-        >
+      <div className="relative mt-auto flex gap-2 pt-4">
+        <Link href="/leagues/join" prefetch={false} className="btn-ghost btn-sm flex-1">
           Join
         </Link>
-        <Link
-          href="/leagues/new"
-          prefetch={false}
-          className="btn btn-sm flex-1 bg-pop-gold-ink text-brand-gold-deep hover:bg-black"
-        >
+        <Link href="/leagues/new" prefetch={false} className="btn-primary btn-sm flex-1">
           Create
         </Link>
       </div>
@@ -254,22 +246,5 @@ function RailButton({
         />
       </svg>
     </button>
-  );
-}
-
-function BoltIcon({ className }: { className?: string }) {
-  return (
-    <svg
-      width="20"
-      height="20"
-      viewBox="0 0 24 24"
-      fill="none"
-      stroke="currentColor"
-      strokeWidth="1.8"
-      className={className}
-      aria-hidden
-    >
-      <path d="M13 3 5 13.5h6L10 21l8-10.5h-6L13 3Z" strokeLinejoin="round" />
-    </svg>
   );
 }

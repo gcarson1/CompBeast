@@ -721,6 +721,7 @@ export interface HomeLeagueCard {
   leagueId: string;
   leagueName: string;
   showName: string;
+  showSlug: string;
   seasonName: string;
   rulesetName: string;
   draftStatus: string;
@@ -778,6 +779,7 @@ export async function getHomeLeagues(userId: string): Promise<HomeLeagueCard[]> 
         leagueId: league.id,
         leagueName: league.name,
         showName: league.season.show.name,
+        showSlug: league.season.show.slug,
         seasonName: league.season.name,
         rulesetName: league.scoringRuleset.name,
         draftStatus: league.draftStatus,

@@ -2,6 +2,8 @@
 
 import { useEffect } from 'react';
 import { reportError } from '@/components/ErrorReporting';
+import { AlertIcon } from '@/components/icons';
+import { Tag } from '@/components/Tag';
 
 /**
  * Route-level error boundary.
@@ -22,32 +24,29 @@ export default function Error({ error, reset }: { error: Error & { digest?: stri
   }, [error]);
 
   return (
-    <div className="pt-10">
-      <div className="card p-6 text-center">
-        <span
-          aria-hidden
-          className="mx-auto grid h-12 w-12 place-items-center rounded-full bg-danger-soft text-danger-deep"
-        >
-          <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8">
-            <path d="M12 8v5" strokeLinecap="round" />
-            <circle cx="12" cy="16.5" r="1" fill="currentColor" stroke="none" />
-            <path d="M12 3 2.5 20h19L12 3Z" strokeLinejoin="round" />
-          </svg>
+    <div className="stage pt-10">
+      {/* The broadcast's own word for it: off air, back shortly. */}
+      <div className="card-feature p-6">
+        <span className="flex items-center justify-between gap-3">
+          <span className="icon-well">
+            <AlertIcon size={22} />
+          </span>
+          <Tag tone="red">Off air</Tag>
         </span>
 
-        <h1 className="headline mt-4 text-2xl">That didn&apos;t load</h1>
-        <p className="mx-auto mt-2 max-w-xs text-sm leading-relaxed text-muted">
+        <h1 className="headline mt-5 text-3xl">We&apos;ll be right back</h1>
+        <p className="mt-2 max-w-sm text-sm leading-relaxed text-muted">
           Something went wrong on our side. Your leagues and scores are safe — this was just the page failing
           to build.
         </p>
 
         {error.digest && <p className="mt-3 font-mono text-2xs text-muted">Reference: {error.digest}</p>}
 
-        <div className="mt-5 flex flex-col gap-2 sm:flex-row sm:justify-center">
-          <button type="button" onClick={reset} className="btn-primary w-full sm:w-auto">
+        <div className="mt-6 flex flex-wrap gap-2">
+          <button type="button" onClick={reset} className="btn-primary">
             Try again
           </button>
-          <a href="/leagues" className="btn-ghost w-full sm:w-auto">
+          <a href="/leagues" className="btn-ghost">
             Back to leagues
           </a>
         </div>

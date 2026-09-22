@@ -4,10 +4,10 @@ import { notFound, redirect } from 'next/navigation';
 import { cache } from 'react';
 import { Avatar } from '@/components/Avatar';
 import { Collapsible } from '@/components/Collapsible';
-import { Doodle } from '@/components/doodles/Doodle';
+import { CrownIcon } from '@/components/icons';
 import { StatStrip } from '@/components/StatStrip';
 import { ShowTheme } from '@/components/ShowTheme';
-import { Sticker } from '@/components/Sticker';
+import { Tag, rankTone } from '@/components/Tag';
 import { getCurrentUser } from '@/lib/auth';
 import { eliminationLabel, lower } from '@/lib/shows/lexicon';
 import { formatPoints, pointsTone } from '@/lib/ui';
@@ -45,27 +45,34 @@ export default async function TeamPage({ params }: { params: { teamId: string } 
       <div className="pt-2">
         {/* Screen 1: whose team, and how it is doing. Starts at the top of the
             page so the back link is inside it — see the account page. */}
-        <div>
+        <div className="stage">
           <Link href={`/leagues/${team.leagueId}`} className="text-xs text-muted">
             ← League
           </Link>
 
-          <header className="relative mt-4 flex items-center gap-4">
+          <header className="mt-4 flex items-center gap-4">
             <span className="relative shrink-0">
-              <Avatar name={team.ownerName ?? team.name} size={56} />
+              <Avatar name={team.ownerName ?? team.name} size={64} />
+              {/* The leader's crown, on a gold coin at the avatar's shoulder.
+                  Decoration: "#1" is written right beside it. */}
               {rank === 1 && (
-                <Doodle kind="crown" className="absolute -right-2.5 -top-2.5 h-7 w-7 rotate-12" />
+                <span
+                  aria-hidden
+                  className="absolute -right-1.5 -top-1.5 grid h-7 w-7 place-items-center rounded-full bg-gradient-to-b from-brand-gold-deep to-brand-gold text-on-gold shadow-[0_0_0_3px_theme(colors.canvas),0_6px_14px_-4px_rgba(245,158,11,0.7)]"
+                >
+                  <CrownIcon size={15} />
+                </span>
               )}
             </span>
             <div className="min-w-0">
               <h1 className="headline truncate text-4xl">{team.name}</h1>
-              <p className="mt-1.5 flex min-w-0 items-center gap-2 text-xs text-muted">
-                <span className="truncate">{team.ownerName ?? 'Unclaimed'}</span>
+              <p className="mt-2 flex min-w-0 items-center gap-2 text-xs text-muted">
                 {rank > 0 && (
-                  <Sticker tone={rank === 1 ? 'gold' : 'ink'} size="sm" className="shrink-0">
+                  <Tag tone={rankTone(rank)} size="sm">
                     #{rank}
-                  </Sticker>
+                  </Tag>
                 )}
+                <span className="truncate">{team.ownerName ?? 'Unclaimed'}</span>
               </p>
             </div>
           </header>

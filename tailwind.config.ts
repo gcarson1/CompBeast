@@ -45,10 +45,11 @@ const config: Config = {
           deep: '#C4B5FD', // text-on-dark only
         },
         /**
-         * Pop tiles — the bento "colour block" surfaces, layered on top of the
-         * dark arena palette rather than replacing it. Gold is the brand fill
+         * Pop tones — the light fills layered on top of the dark arena
+         * palette: the gold block (`.card-pop-gold`) and the lighter tags
+         * (`.tag-mint`, `.tag-lavender`, `.tag-sky`). Gold is the brand fill
          * itself; lavender is `brand-velvet-deep` promoted from a text colour
-         * to a surface; mint and sky are the two new accents. Every fill is a
+         * to a surface; mint and sky are the two accents. Every fill is a
          * *light* surface, so text on it is dark: `ink` is the primary text
          * (8.6–11.5:1 measured against its fill) and `muted` the secondary
          * (5.6–6.7:1). `deep` is the tone as text on the dark surfaces
@@ -96,8 +97,6 @@ const config: Config = {
           muted: 'var(--tile-muted)',
           line: 'var(--tile-line)',
         },
-        /** Sticker paper: the off-white a die-cut badge is printed on. */
-        paper: '#FFF8EC',
         /**
          * The show accent. `<ShowTheme>` sets these custom properties on a
          * league, season, team or player page from the show's entry in
@@ -184,43 +183,16 @@ const config: Config = {
           from: { transform: 'translateY(12px)' },
           to: { transform: 'translateY(0)' },
         },
-        // Ambient shapes. Transform only, so the compositor owns it and a busy
-        // main thread cannot stutter it (the same lesson as the marquee).
-        float: {
-          '0%, 100%': { transform: 'translate3d(0, 0, 0) rotate(0deg)' },
-          '50%': { transform: 'translate3d(14px, -22px, 0) rotate(8deg)' },
-        },
-        'float-alt': {
-          '0%, 100%': { transform: 'translate3d(0, 0, 0) rotate(0deg)' },
-          '50%': { transform: 'translate3d(-18px, 16px, 0) rotate(-10deg)' },
-        },
-        // A sticker settling: overshoots, then lands.
-        'pop-in': {
-          '0%': { transform: 'scale(0.6) rotate(-8deg)' },
-          '70%': { transform: 'scale(1.08) rotate(2deg)' },
-          '100%': { transform: 'scale(1) rotate(var(--sticker-tilt, 0deg))' },
-        },
-        // Elastic nudge for a badge that just changed (a rank moving).
-        wobble: {
-          '0%, 100%': { transform: 'rotate(0deg)' },
-          '25%': { transform: 'rotate(-4deg) scale(1.04)' },
-          '75%': { transform: 'rotate(3deg) scale(1.02)' },
-        },
       },
       animation: {
         // 280ms, inside the 150–300ms band. Longer reads as the page
         // assembling itself in front of you rather than as a settle.
         rise: 'rise 280ms ease-out both',
-        float: 'float 18s ease-in-out infinite',
-        'float-alt': 'float-alt 22s ease-in-out infinite',
-        'pop-in': 'pop-in 420ms cubic-bezier(0.34, 1.56, 0.64, 1) both',
-        wobble: 'wobble 500ms ease-in-out',
       },
       transitionTimingFunction: {
         // Spring-ish overshoot for anything that should feel elastic — a
-        // button press, a sticker straightening, a toggle knob. The second
-        // curve is the soft settle for lifts and glows, where an overshoot
-        // would read as jitter.
+        // button press, a toggle knob. The second curve is the soft settle
+        // for lifts and glows, where an overshoot would read as jitter.
         spring: 'cubic-bezier(0.34, 1.56, 0.64, 1)',
         soft: 'cubic-bezier(0.2, 0.8, 0.2, 1)',
       },
@@ -242,13 +214,6 @@ const config: Config = {
          * lifts every tile in its own colour.
          */
         lift: '0 14px 32px -14px var(--lift-glow, rgba(245,158,11,0.35)), 0 2px 0 rgba(255,255,255,0.05) inset',
-        // The hard 2px offset that makes a badge read as a die-cut sticker
-        // laid on the page rather than a pill drawn in it.
-        sticker: '0 2px 0 rgba(0,0,0,0.35)',
-        // Claymation chip: a lit top edge, a shaded bottom edge, and a soft
-        // ground shadow, which together are what make a flat disc read as a
-        // moulded object.
-        clay: 'inset 0 2px 0 rgba(255,255,255,0.45), inset 0 -4px 0 rgba(0,0,0,0.18), 0 10px 18px -8px rgba(0,0,0,0.6)',
       },
     },
   },

@@ -2,11 +2,12 @@ import type { Metadata } from 'next';
 import Link from 'next/link';
 import { cache } from 'react';
 import { Collapsible } from '@/components/Collapsible';
-import { Doodle } from '@/components/doodles/Doodle';
+import { LockIcon } from '@/components/icons';
 import { JsonLd } from '@/components/JsonLd';
 import { Reveal, RevealGroup } from '@/components/motion/Reveal';
+import { SeasonPlate } from '@/components/SeasonPlate';
 import { ShowTheme } from '@/components/ShowTheme';
-import { Sticker } from '@/components/Sticker';
+import { Tag, type TagTone } from '@/components/Tag';
 import { absoluteUrl, breadcrumbList } from '@/lib/seo';
 import { lexiconFor, lower } from '@/lib/shows/lexicon';
 import { getSeasonsByStatus } from '@/server/queries';
@@ -30,10 +31,10 @@ export async function generateMetadata(): Promise<Metadata> {
   };
 }
 
-// Spelled out for Tailwind's content scan; the tone is the sticker's.
-const STATUS: Record<string, { label: string; tone: 'gold' | 'lavender' | 'ink' }> = {
-  ACTIVE: { label: 'Airing now', tone: 'gold' },
-  UPCOMING: { label: 'Upcoming', tone: 'lavender' },
+// A season on air wears the broadcast's red "live" bug; the rest are quiet.
+const STATUS: Record<string, { label: string; tone: TagTone; live?: boolean }> = {
+  ACTIVE: { label: 'Airing now', tone: 'red', live: true },
+  UPCOMING: { label: 'Upcoming', tone: 'outline' },
   COMPLETED: { label: 'Finished', tone: 'ink' },
 };
 
@@ -45,7 +46,7 @@ export default async function SeasonsPage() {
       <JsonLd data={breadcrumbList([{ name: 'Seasons', path: '/seasons' }])} />
       {/* The seasons you can actually play. Not a panel: the top of the page
           is already where a scroll comes to rest. */}
-      <div>
+      <div className="stage">
         <h1 className="headline text-4xl">Seasons</h1>
         <p className="mt-2 max-w-measure text-xs text-muted">
           Play along with a season that is still running, or look back at one that has wrapped.
@@ -59,36 +60,30 @@ export default async function SeasonsPage() {
           ) : (
             // Two-up from `sm`, so a pair of open seasons sits side by side
             // rather than as two full-width bars with nothing to their right.
-            <RevealGroup as="ul" className="grid grid-cols-1 gap-4 pt-3 sm:grid-cols-2" step={60}>
+            <RevealGroup as="ul" className="grid grid-cols-1 gap-3 sm:grid-cols-2" step={60}>
               {open.map((season) => {
                 const status = STATUS[season.status] ?? STATUS.UPCOMING;
                 const lexicon = lexiconFor(season.show.slug, season.show.lexicon);
                 return (
                   <ShowTheme key={season.id} showSlug={season.show.slug}>
                     <Reveal as="li" className="card card-lift relative">
-                      <Sticker
-                        tone={status.tone}
-                        tilt="r"
-                        seed={season.id}
-                        className="absolute -right-2 -top-3 z-10"
-                      >
-                        {status.label}
-                      </Sticker>
+                      <span
+                        aria-hidden
+                        className="absolute inset-x-6 top-0 h-[2px] rounded-b-pill bg-show-accent"
+                      />
                       <Link
                         href={`/seasons/${season.slug}`}
                         className="flex h-full flex-col rounded-card p-4"
                       >
-                        <span className="flex items-center gap-2">
-                          <span className="clay clay-sky h-11 w-11 font-display text-lg leading-none">
-                            {String(season.year).slice(-2)}
-                          </span>
-                          <Sticker tone="show" size="sm">
-                            {season.show.name}
-                          </Sticker>
+                        <span className="flex items-start justify-between gap-3">
+                          <SeasonPlate showSlug={season.show.slug} seasonSlug={season.slug} />
+                          <Tag tone={status.tone} live={status.live} size="sm">
+                            {status.label}
+                          </Tag>
                         </span>
-                        <span className="mt-3 block truncate text-base font-semibold">{season.name}</span>
-                        <span className="mt-0.5 block truncate text-2xs text-muted">
-                          {season._count.contestants} {lower(lexicon.contestantPlural)}
+                        <span className="mt-3 block truncate text-lg font-semibold">{season.name}</span>
+                        <span className="mb-4 mt-0.5 block truncate text-2xs text-muted">
+                          {season.show.name} · {season._count.contestants} {lower(lexicon.contestantPlural)}
                         </span>
                         <span className="mt-auto flex items-center justify-between border-t border-hairline pt-3">
                           <span className="text-2xs text-muted">
@@ -119,22 +114,22 @@ export default async function SeasonsPage() {
             <ul className="card divide-y divide-hairline">
               {archived.map((season) => (
                 <li key={season.id}>
-                  <Link
-                    href={`/seasons/${season.slug}`}
-                    className="flex items-center gap-3 p-4 transition duration-200 ease-soft hover:bg-surface-raised"
-                  >
-                    <span className="clay clay-slate h-10 w-10 font-display text-md leading-none">
-                      {String(season.year).slice(-2)}
-                    </span>
-                    <span className="min-w-0 flex-1">
-                      <span className="block truncate text-base font-semibold">{season.name}</span>
-                      <span className="mt-0.5 block truncate text-2xs text-muted">
-                        {season.show.name} · {season._count.contestants}{' '}
-                        {lower(lexiconFor(season.show.slug, season.show.lexicon).contestantPlural)}
+                  <ShowTheme showSlug={season.show.slug}>
+                    <Link
+                      href={`/seasons/${season.slug}`}
+                      className="flex items-center gap-3 p-4 transition duration-200 ease-soft hover:bg-surface-raised"
+                    >
+                      <SeasonPlate showSlug={season.show.slug} seasonSlug={season.slug} archived size="sm" />
+                      <span className="min-w-0 flex-1">
+                        <span className="block truncate text-base font-semibold">{season.name}</span>
+                        <span className="mt-0.5 block truncate text-2xs text-muted">
+                          {season.show.name} · {season._count.contestants}{' '}
+                          {lower(lexiconFor(season.show.slug, season.show.lexicon).contestantPlural)}
+                        </span>
                       </span>
-                    </span>
-                    <Doodle kind="lock" tone="paper" className="h-6 w-6 shrink-0 -rotate-6 opacity-70" />
-                  </Link>
+                      <LockIcon size={18} className="text-muted" />
+                    </Link>
+                  </ShowTheme>
                 </li>
               ))}
             </ul>

@@ -32,7 +32,7 @@ export default async function DraftPage({ params }: { params: { leagueId: string
 
   return (
     <ShowTheme showSlug={show.slug}>
-      <div className="pt-2">
+      <div className="stage pt-2">
         <Link href={`/leagues/${params.leagueId}`} className="text-xs text-muted">
           ← {overview.name}
         </Link>

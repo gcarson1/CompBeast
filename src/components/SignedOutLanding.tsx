@@ -1,13 +1,13 @@
 import Link from 'next/link';
 import { SignInButton } from '@clerk/nextjs';
 import type { ReactNode } from 'react';
-import { BeastDoodle } from '@/components/doodles/BeastDoodle';
-import { Doodle } from '@/components/doodles/Doodle';
+import { ArrowRightIcon, TallyMark } from '@/components/icons';
 import { JsonLd } from '@/components/JsonLd';
 import { premiereLabel } from '@/components/LiveSection';
 import { Collapsible } from '@/components/Collapsible';
+import { SeasonPlate } from '@/components/SeasonPlate';
 import { ShowTheme } from '@/components/ShowTheme';
-import { Sticker } from '@/components/Sticker';
+import { Tag } from '@/components/Tag';
 import { DEFAULT_LOCK_OFFSET_MINUTES, MAX_LOCK_OFFSET_MINUTES } from '@/lib/cycles';
 import {
   HOME_PATH,
@@ -96,28 +96,24 @@ export function SignedOutLanding({
       <JsonLd data={applicationNode(facts)} />
       <JsonLd data={faqNode(faq)} />
 
-      {/* Screen 1: the pitch and the way in. */}
-      {/* The pitch. Not a panel: the top of the page is already where a
-          scroll comes to rest. */}
-      <div>
+      {/* The pitch and the way in. Not a panel: the top of the page is
+          already where a scroll comes to rest. */}
+      <div className="stage">
+        {/* The wordmark's tally, enormous and faint, behind the headline: the
+            one piece of set dressing on the page, and it is the logo. */}
+        <TallyMark className="absolute -right-5 -top-4 h-56 w-56 text-brand-gold opacity-[0.07] sm:-right-10 sm:h-80 sm:w-80" />
+
         <header className="relative">
           {/* Still a CSS entrance and still visible in the HTML — nothing in
-            the hero may start at opacity 0 (see the `rise` keyframe). The
-            eyebrow is now a sticker; the camera beside it is decoration. */}
-          <p className="animate-rise">
-            {/* Capped on a phone so the camera in the corner has room: at
-                full width the eyebrow wraps to two lines and runs under it. */}
-            <Sticker tone="gold" size="lg" tilt="l" className="max-w-[15.5rem] sm:max-w-none">
-              Free fantasy leagues for reality competition TV
-            </Sticker>
+              the hero may start at opacity 0 (see the `rise` keyframe). */}
+          <p className="flex animate-rise flex-wrap items-center gap-x-3 gap-y-2">
+            <Tag tone="gold">Free to play</Tag>
+            <span className="text-2xs font-bold uppercase tracking-[0.16em] text-muted">
+              Big Brother · Survivor
+            </span>
           </p>
-          <Doodle
-            kind="camera"
-            tone="sky"
-            className="absolute right-0 -top-3 h-10 w-10 -rotate-12 animate-rise [animation-delay:90ms]"
-          />
 
-          <h1 className="mt-3 animate-rise font-display text-5xl leading-[0.92] tracking-wide [animation-delay:60ms] sm:text-[64px] lg:text-[76px]">
+          <h1 className="mt-5 animate-rise font-display text-5xl leading-[0.92] tracking-wide [animation-delay:60ms] sm:text-[64px] lg:text-[76px]">
             DRAFT THE CAST.
             <br />
             <span className="text-brand-gold">OWN THE LEADERBOARD.</span>
@@ -127,40 +123,72 @@ export function SignedOutLanding({
             face wants the full column, body copy does not. The two different
             widths are what give the block its asymmetry. */}
           <p className="mt-5 max-w-measure animate-rise text-md leading-relaxed text-muted [animation-delay:120ms]">
-            {facts.lede}
+            {SITE_DESCRIPTION}
           </p>
 
           <div className="mt-7 flex animate-rise flex-wrap items-center gap-3 [animation-delay:180ms]">
             <SignInButton mode="modal">
-              <button type="button" className="btn-primary px-10 py-3.5 text-md">
-                Sign in
+              <button type="button" className="btn-primary px-6 py-3.5 text-md">
+                Start playing
+                <ArrowRightIcon size={18} />
               </button>
             </SignInButton>
-            <Link href="/rules" className="btn-ghost">
-              See scoring rules
+            <Link href="/rules" className="btn-ghost py-3.5">
+              Scoring rules
             </Link>
           </div>
+
+          {/* What is on right now, as a line of broadcast bugs: a breathing
+              red dot for a season on air, an outlined one for the next. */}
+          {facts.onAir.length > 0 && (
+            <ul className="mt-8 flex animate-rise flex-wrap gap-x-5 gap-y-2 text-xs text-muted [animation-delay:240ms]">
+              {facts.onAir.map((item) => (
+                <li key={item.text} className="flex items-center gap-2">
+                  <span
+                    aria-hidden
+                    className={
+                      item.live ? 'tag-dot text-danger-deep' : 'h-1.5 w-1.5 rounded-full border border-muted'
+                    }
+                  />
+                  <span>{item.text}</span>
+                </li>
+              ))}
+            </ul>
+          )}
         </header>
       </div>
 
-      {/* Screen 2: proof that it is live right now. */}
-      {/* Proof that it is live: one panel per show (see LiveSection). */}
+      {/* Proof that it is live: one panel for every show (see LiveSection). */}
       <div className="mt-14">{live}</div>
 
       <Section id="shows" title="Pick your show" lede={facts.showsLede}>
         {/* One tile per show, each in its own colour: the two brands get
             equal billing, and the platform's gold stays for the platform. */}
-        <ul className="mt-5 grid gap-4 pt-3 sm:grid-cols-2">
+        <ul className="mt-5 grid gap-3 sm:grid-cols-2">
           {facts.shows.map((show) => (
             <li key={show.showSlug}>
               <ShowTheme showSlug={show.showSlug}>
-                <div className="card card-lift relative flex h-full flex-col p-5">
-                  <Sticker tone="show" tilt="r" className="absolute -right-2 -top-3">
-                    {show.season?.status === 'ACTIVE' ? 'Airing now' : show.season ? 'Up next' : 'Off season'}
-                  </Sticker>
-                  <h3 className="headline text-2xl">{show.showName}</h3>
+                <div className="card-feature card-lift flex h-full flex-col p-5">
+                  <TallyMark className="absolute -right-3 -top-4 h-28 w-28 text-show-accent opacity-[0.1]" />
+                  <div className="relative flex items-start justify-between gap-3">
+                    {show.season ? (
+                      <SeasonPlate showSlug={show.showSlug} seasonSlug={show.season.slug} />
+                    ) : (
+                      <span />
+                    )}
+                    {show.season?.status === 'ACTIVE' ? (
+                      <Tag tone="red" live size="sm">
+                        Airing now
+                      </Tag>
+                    ) : (
+                      <Tag tone="outline" size="sm">
+                        {show.season ? 'Up next' : 'Off season'}
+                      </Tag>
+                    )}
+                  </div>
+                  <h3 className="headline mt-4 text-3xl text-show-deep">{show.showName}</h3>
                   <p className="mt-2 max-w-measure text-xs leading-relaxed text-muted">{show.pitch}</p>
-                  <dl className="mt-4 grid grid-cols-2 gap-3 border-t border-hairline pt-4 text-2xs">
+                  <dl className="relative mt-4 grid grid-cols-2 gap-3 border-t border-hairline pt-4 text-2xs">
                     <div>
                       <dt className="font-semibold uppercase tracking-wide text-muted">Season</dt>
                       <dd className="mt-0.5 text-sm font-semibold text-ink">{show.season?.name ?? '—'}</dd>
@@ -174,7 +202,7 @@ export function SignedOutLanding({
                       </dd>
                     </div>
                   </dl>
-                  <div className="mt-auto flex flex-wrap gap-2 pt-4">
+                  <div className="relative mt-auto flex flex-wrap gap-2 pt-4">
                     {show.season && (
                       <Link href={`/seasons/${show.season.slug}`} className="btn-ghost btn-sm">
                         Meet the cast
@@ -222,16 +250,18 @@ export function SignedOutLanding({
 
       {facts.shows.some((s) => s.scoring) && (
         <Section id="scoring" title="How scoring works" lede={facts.scoringLede}>
-          <div className="mt-5 space-y-8">
+          {/* A flex gap, not `space-y`: each figure sits inside a <ShowTheme>,
+              which is `display: contents`, and a margin on it does nothing. */}
+          <div className="mt-5 flex flex-col gap-8">
             {facts.shows
               .filter((show) => show.scoring)
               .map((show) => (
                 <ShowTheme key={show.showSlug} showSlug={show.showSlug}>
                   <figure>
                     <figcaption className="mb-3">
-                      <Sticker tone="show" size="sm">
+                      <Tag tone="show" size="sm">
                         {show.showName}
-                      </Sticker>
+                      </Tag>
                       <p className="mt-2 max-w-measure text-sm leading-relaxed text-muted">
                         {show.scoring!.lede}
                       </p>
@@ -310,20 +340,16 @@ export function SignedOutLanding({
       )}
 
       <Section id="league-setup" title="League sizes, drafts and roster locks" lede={facts.leagueSetup}>
-        {/* One colour block per number, and the Beast on the last one: the
-            landing page's one bento row. `pt-6` is the room the mascot's
-            overhang needs above the tiles. */}
-        <dl className="mt-5 grid grid-cols-2 gap-3 pt-6 sm:grid-cols-4">
-          {facts.stats.map((stat, i) => (
-            <div
-              key={stat.label}
-              className={`${STAT_TONES[i % STAT_TONES.length]} relative flex flex-col p-4`}
-            >
-              {i === facts.stats.length - 1 && (
-                <BeastDoodle mood="wink" className="absolute -right-3 -top-8 h-16 w-16 rotate-6" />
-              )}
-              <dd className="order-1 font-display text-3xl leading-none tracking-wide">{stat.value}</dd>
-              <dt className="order-2 mt-2 text-2xs font-semibold leading-snug text-tile-muted">
+        {/* The numbers as one scoreboard: a single tile ruled into cells by
+            hairlines (the gap shows the tile's lighter backing through), so
+            four figures read as one set of facts rather than four toys. */}
+        <dl className="mt-5 grid grid-cols-2 gap-px overflow-hidden rounded-card border border-hairline bg-white/[0.12] shadow-card sm:grid-cols-4">
+          {facts.stats.map((stat) => (
+            <div key={stat.label} className="flex flex-col bg-surface p-4 sm:p-5">
+              <dd className="order-1 font-display text-4xl leading-none tracking-wide text-brand-gold-deep">
+                {stat.value}
+              </dd>
+              <dt className="order-2 mt-2 text-2xs font-bold uppercase leading-snug tracking-[0.12em] text-muted">
                 {stat.label}
               </dt>
             </div>
@@ -437,9 +463,6 @@ function Section({
   );
 }
 
-// Spelled out for Tailwind's content scan.
-const STAT_TONES = ['card-pop-gold', 'card-pop-lavender', 'card-pop-mint', 'card-pop-sky'] as const;
-
 const CLAIMS = [
   {
     step: '01',
@@ -486,7 +509,8 @@ interface ShowFacts {
 
 interface Facts {
   shows: ShowFacts[];
-  lede: string;
+  /** One short line per open season, for the hero's "on air" strip. */
+  onAir: Array<{ text: string; live: boolean }>;
   showsLede: string;
   howItWorks: string;
   scoringLede: string;
@@ -496,18 +520,14 @@ interface Facts {
   comparisonRows: Array<{ feature: string; compBeast: string; spreadsheet: string }>;
 }
 
-function seasonSentence(show: LandingShow): string | null {
+function onAirLine(show: LandingShow): { text: string; live: boolean } | null {
   const { season, lexicon } = show;
   if (!season) return null;
-  if (season.status === 'ACTIVE') {
-    return season.contestantCount > 0
-      ? `${season.name} is airing now with ${season.contestantCount} ${lower(lexicon.contestantPlural)}.`
-      : `${season.name} is airing now.`;
-  }
-  const when = season.startsAt ? ` on ${premiereLabel(season.startsAt)}` : '';
-  return season.contestantCount > 0
-    ? `${season.name} premieres${when} with a ${season.contestantCount}-${lower(lexicon.contestantSingular)} cast, and leagues are open.`
-    : `${season.name} premieres${when}, and leagues are open.`;
+  const cast =
+    season.contestantCount > 0 ? ` · ${season.contestantCount} ${lower(lexicon.contestantPlural)}` : '';
+  if (season.status === 'ACTIVE') return { text: `${season.name} airing now${cast}`, live: true };
+  const when = season.startsAt ? ` ${premiereLabel(season.startsAt)}` : ' soon';
+  return { text: `${season.name} premieres${when}${cast}`, live: false };
 }
 
 function deriveShowFacts(show: LandingShow): ShowFacts {
@@ -585,7 +605,7 @@ function deriveFacts(input: LandingShow[]): Facts {
   const names = shows.map((s) => s.showName);
   const showList =
     names.length > 1 ? `${names.slice(0, -1).join(', ')} and ${names.at(-1)}` : (names[0] ?? '');
-  const seasonSentences = input.map(seasonSentence).filter((s): s is string => s !== null);
+  const onAir = input.map(onAirLine).filter((line): line is { text: string; live: boolean } => line !== null);
   const totalEvents = shows.reduce((sum, s) => sum + s.eventCount, 0);
   const rulesetsPerShow = shows[0]?.rulesetNames.length ?? 0;
 
@@ -605,7 +625,7 @@ function deriveFacts(input: LandingShow[]): Facts {
 
   return {
     shows,
-    lede: [SITE_DESCRIPTION, ...seasonSentences].join(' '),
+    onAir,
     showsLede: `${SITE_NAME} runs leagues for ${showList}. Each show keeps its own rule book, its own words and its own colours; a league belongs to one season of one show, and everything else — the draft, the standings, the chat — works the same way for both.`,
     howItWorks: `A league lasts one season. A commissioner creates it, picks a scoring ruleset and opens between ${minTeams} and ${maxTeams} team seats, shared by invite code or QR code. Every team snake-drafts contestants onto a roster of up to ${maxRoster}, each episode's results are scored as they air, and the leaderboard ranks every team live until the finale.`,
     scoringLede: `Every event has a fixed point value, and every league picks one of ${rulesetsPerShow} rulesets for its show before the draft: Classic scores only what the broadcast shows, Balanced turns the variance down, and Drama & Social adds the alliances, blowups and tears. Every point on a leaderboard traces to the aired result that produced it.`,

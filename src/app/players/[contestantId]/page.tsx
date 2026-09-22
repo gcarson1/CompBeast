@@ -6,7 +6,8 @@ import { Avatar } from '@/components/Avatar';
 import { JsonLd } from '@/components/JsonLd';
 import { PlayerTabs } from '@/components/PlayerTabs';
 import { ShowTheme } from '@/components/ShowTheme';
-import { Sticker } from '@/components/Sticker';
+import { Tag } from '@/components/Tag';
+import { TallyMark } from '@/components/icons';
 import { getCurrentUser } from '@/lib/auth';
 import { absoluteUrl, breadcrumbList } from '@/lib/seo';
 import { eliminationLabel, lower } from '@/lib/shows/lexicon';
@@ -63,7 +64,7 @@ export default async function PlayerPage({ params }: { params: { contestantId: s
           ])}
         />
         {/* Who they are and what they have scored. */}
-        <div>
+        <div className="stage">
           <Link href={`/seasons/${player.season.slug}`} className="text-xs text-muted">
             ← {player.season.name}
           </Link>
@@ -73,11 +74,11 @@ export default async function PlayerPage({ params }: { params: { contestantId: s
             <div className="min-w-0 flex-1">
               <h1 className="headline truncate text-4xl">{player.name}</h1>
               <p className="mt-2 flex flex-wrap items-center gap-2 text-xs text-muted">
-                <Sticker tone={player.isActive ? 'mint' : 'ink'} size="sm">
+                <Tag tone={player.isActive ? 'mint' : 'outline'} size="sm">
                   {player.isActive
                     ? lexicon.activeLabel
                     : `${eliminationLabel(lexicon, player.metadata)} · ${player.eliminatedCycle?.label ?? '—'}`}
-                </Sticker>
+                </Tag>
                 <span className="truncate">
                   {player.season.show.name} · {player.season.name}
                 </span>
@@ -85,9 +86,10 @@ export default async function PlayerPage({ params }: { params: { contestantId: s
             </div>
           </header>
 
-          <div className="card-pop-gold relative mt-6 p-5">
-            <p className="text-2xs font-bold uppercase tracking-wide text-tile-muted">Season points</p>
-            <p className="mt-1 font-display text-6xl leading-none tracking-wide">
+          <div className="card-feature mt-6 p-5">
+            <TallyMark className="absolute -right-3 -top-4 h-28 w-28 text-show-accent opacity-[0.12]" />
+            <p className="eyebrow">Season points</p>
+            <p className="mt-1.5 font-display text-6xl leading-none tracking-wide text-show-deep">
               {formatPoints(player.totalPoints)}
             </p>
             {facts.length > 0 && (

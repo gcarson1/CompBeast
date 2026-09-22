@@ -68,8 +68,8 @@ export function Collapsible({
 }) {
   const [open, setOpen] = useState(defaultOpen);
   // The body clips its content only while it is moving. Open and at rest it
-  // must not: the tiles inside carry stickers and the Beast overhanging their
-  // corners, and a permanent `overflow: hidden` would shave them off.
+  // must not: the tiles inside lift and glow past their edges on hover, and
+  // a permanent `overflow: hidden` would shave that off.
   const [settled, setSettled] = useState(true);
   // What to do once the body has finished growing: bring the section into
   // view for a reader who opened it, or put its heading at the top for a
@@ -173,7 +173,9 @@ export function Collapsible({
           // negative vertical margin absorbs the padding.
           className="-my-2 flex min-h-[44px] max-w-full items-center gap-2 rounded-btn py-2 pr-1 text-left [text-transform:inherit] transition hover:text-ink"
         >
-          <span className={cn('min-w-0', headingLevel === 2 && 'truncate')}>{title}</span>
+          {/* Wraps rather than truncates: a heading cut off with an ellipsis
+              reads as a layout that ran out of room. */}
+          <span className="min-w-0 [text-wrap:balance]">{title}</span>
           <Chevron />
         </button>
       </Heading>

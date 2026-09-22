@@ -9,7 +9,7 @@ export const contentType = 'image/png';
 /** The site-wide card: every page without a more specific one shares it. */
 export default async function Image() {
   return renderOgCard({
-    eyebrow: 'Free fantasy leagues for reality competition TV',
+    eyebrow: 'Free fantasy leagues for reality TV',
     title: 'Draft the cast. Own the leaderboard.',
     subtitle:
       'Snake-draft the real cast of Big Brother or Survivor with friends, score every comp win, blindside and elimination as episodes air, and chase a live leaderboard all season.',

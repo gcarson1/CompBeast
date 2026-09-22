@@ -4,7 +4,7 @@ import { useEffect, useState } from 'react';
 import { useFormState, useFormStatus } from 'react-dom';
 import { toast } from 'sonner';
 import { Avatar } from '@/components/Avatar';
-import { Sticker } from '@/components/Sticker';
+import { Tag } from '@/components/Tag';
 import {
   removeFriendAction,
   respondToFriendRequestAction,
@@ -195,23 +195,23 @@ function SearchRowAction({ result }: { result: FriendSearchResult }) {
 
   if (result.relation === 'FRIENDS') {
     return (
-      <Sticker tone="mint" size="sm" className="shrink-0">
+      <Tag tone="mint" size="sm">
         Friends
-      </Sticker>
+      </Tag>
     );
   }
   if (result.relation === 'REQUEST_SENT' || sent) {
     return (
-      <Sticker tone="ink" size="sm" className="shrink-0">
+      <Tag tone="outline" size="sm">
         Requested
-      </Sticker>
+      </Tag>
     );
   }
   if (result.relation === 'REQUEST_RECEIVED') {
     return (
-      <Sticker tone="lavender" size="sm" className="shrink-0">
+      <Tag tone="lavender" size="sm">
         Asked you
-      </Sticker>
+      </Tag>
     );
   }
 

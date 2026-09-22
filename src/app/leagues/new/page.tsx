@@ -38,7 +38,7 @@ export default async function NewLeaguePage() {
   }
 
   return (
-    <div className="pt-2">
+    <div className="stage pt-2">
       <Link href="/leagues" className="text-xs text-muted">
         ← Leagues
       </Link>

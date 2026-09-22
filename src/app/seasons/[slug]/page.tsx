@@ -3,13 +3,13 @@ import Link from 'next/link';
 import { notFound } from 'next/navigation';
 import { cache } from 'react';
 import { Avatar } from '@/components/Avatar';
-import { BeastDoodle } from '@/components/doodles/BeastDoodle';
-import { Doodle } from '@/components/doodles/Doodle';
+import { ArrowRightIcon, PlusIcon, TallyMark } from '@/components/icons';
 import { JsonLd } from '@/components/JsonLd';
 import { MotionCard } from '@/components/motion/MotionCard';
 import { Collapsible } from '@/components/Collapsible';
+import { SeasonPlate } from '@/components/SeasonPlate';
 import { ShowTheme } from '@/components/ShowTheme';
-import { Sticker } from '@/components/Sticker';
+import { RankPlate, Tag } from '@/components/Tag';
 import { absoluteUrl, breadcrumbList, tvSeriesNode } from '@/lib/seo';
 import { eliminationLabel, lower, type ShowLexicon } from '@/lib/shows/lexicon';
 import { formatPoints, pointsTone } from '@/lib/ui';
@@ -78,23 +78,34 @@ export default async function SeasonPage({ params }: { params: { slug: string } 
         />
         {/* Screen 1: which season this is, and whether you can play it. Starts
             at the top of the page so the back link is inside it. */}
-        <div>
+        <div className="stage">
           <Link href="/seasons" className="text-xs text-muted">
             ← Seasons
           </Link>
 
-          <header className="relative mt-4 pr-20 sm:pr-28">
-            <BeastDoodle
-              mood={isArchived ? 'grin' : 'shock'}
-              className="absolute -right-2 -top-3 h-20 w-20 rotate-6 sm:-right-3 sm:-top-5 sm:h-24 sm:w-24"
+          <header className="mt-5 flex items-start gap-4">
+            <SeasonPlate
+              showSlug={season.showSlug}
+              seasonSlug={season.slug}
+              archived={isArchived}
+              size="lg"
+              className="mt-1"
             />
-            <Sticker tone={isArchived ? 'ink' : 'show'} size="lg" tilt="l">
-              {isArchived ? 'Finished' : season.status === 'ACTIVE' ? 'Airing now' : 'Upcoming'}
-            </Sticker>
-            <h1 className="headline mt-4 text-5xl sm:text-6xl">{season.name}</h1>
-            <p className="mt-3 text-xs text-muted">
-              {season.showName} · {season.year} · scored with {rulesetName} rules
-            </p>
+            <div className="min-w-0">
+              <p className="flex flex-wrap items-center gap-x-3 gap-y-2">
+                <Tag
+                  tone={isArchived ? 'ink' : season.status === 'ACTIVE' ? 'red' : 'show'}
+                  live={season.status === 'ACTIVE'}
+                >
+                  {isArchived ? 'Finished' : season.status === 'ACTIVE' ? 'Airing now' : 'Upcoming'}
+                </Tag>
+                <span className="text-xs font-medium text-muted">{season.showName}</span>
+              </p>
+              <h1 className="headline mt-2.5 text-5xl sm:text-6xl">{season.name}</h1>
+              <p className="mt-2 text-xs text-muted">
+                {season.year} · scored with {rulesetName} rules
+              </p>
+            </div>
           </header>
 
           {isArchived ? (
@@ -103,18 +114,24 @@ export default async function SeasonPage({ params }: { params: { slug: string } 
               still airing or yet to start.
             </p>
           ) : (
-            <MotionCard tilt className="card-pop-gold relative mt-8">
-              <Doodle kind="door" tone="paper" className="absolute -right-2 -top-3 h-9 w-9 rotate-6" />
+            <MotionCard tilt className="card-feature mt-8">
+              <TallyMark className="absolute -bottom-5 -right-3 h-28 w-28 text-show-accent opacity-[0.12]" />
               <Link
                 href="/leagues/new"
                 prefetch={false}
-                className="flex items-center justify-between gap-4 rounded-card p-5"
+                className="relative flex items-center gap-4 rounded-card p-5"
               >
-                <span className="min-w-0">
-                  <span className="headline block text-2xl">Start a league</span>
-                  <span className="mt-1 block text-xs text-tile-muted">This season is still in play</span>
+                <span className="icon-well">
+                  <PlusIcon size={22} />
                 </span>
-                <span className="btn btn-sm shrink-0 bg-pop-gold-ink text-brand-gold-deep">Create →</span>
+                <span className="min-w-0 flex-1">
+                  <span className="headline block text-2xl">Start a league</span>
+                  <span className="mt-1 block text-xs text-muted">This season is still in play</span>
+                </span>
+                <span className="btn btn-sm shrink-0 bg-show-accent text-on-gold shadow-[inset_0_1px_0_rgba(255,255,255,0.35)] hover:brightness-110">
+                  Create
+                  <ArrowRightIcon size={16} />
+                </span>
               </Link>
             </MotionCard>
           )}
@@ -136,9 +153,7 @@ export default async function SeasonPage({ params }: { params: { slug: string } 
                       href={`/players/${player.contestantId}`}
                       className="flex items-center gap-3 p-4 transition duration-200 ease-soft hover:bg-surface-raised"
                     >
-                      <span className="w-6 shrink-0 text-center font-display text-md tabular-nums text-muted">
-                        {index + 1}
-                      </span>
+                      <RankPlate rank={index + 1} />
                       <Avatar
                         name={player.name}
                         photoUrl={player.photoUrl}

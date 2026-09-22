@@ -5,7 +5,7 @@ import { useEffect, useMemo, useRef, useState } from 'react';
 import { AnimatePresence, m } from 'framer-motion';
 import { toast } from 'sonner';
 import { Avatar } from '@/components/Avatar';
-import { Sticker } from '@/components/Sticker';
+import { Tag } from '@/components/Tag';
 import { useLeaguePulse, type PulseStatus } from '@/lib/live';
 import { lower, type ShowLexicon } from '@/lib/shows/lexicon';
 import { cn } from '@/lib/ui';
@@ -101,7 +101,9 @@ export function DraftRoom(props: DraftRoomProps) {
 
   return (
     <div>
-      <div className={cn('card mt-4 p-4', myTurn && 'ring-1 ring-brand-gold')}>
+      {/* Your turn lights the clock in the show's colour; anyone else's
+          turn is a plain tile, so the page itself says whose move it is. */}
+      <div className={cn('mt-5 p-4', myTurn ? 'card-feature' : 'card')}>
         {props.draftStatus === 'NOT_STARTED' ? (
           <StartDraftPanel leagueId={props.leagueId} isCommissioner={props.isCommissioner} />
         ) : props.draftStatus === 'COMPLETED' ? (
@@ -113,7 +115,14 @@ export function DraftRoom(props: DraftRoomProps) {
           <>
             <div className="flex items-center justify-between gap-3">
               <span className="min-w-0">
-                <span className="block text-2xs uppercase tracking-wide text-muted">On the clock</span>
+                <span className="flex items-center gap-2">
+                  <span className="eyebrow">On the clock</span>
+                  {myTurn && (
+                    <Tag tone="show" live size="sm">
+                      Your pick
+                    </Tag>
+                  )}
+                </span>
                 <span className="mt-0.5 block truncate text-md font-semibold">
                   {myTurn ? 'You' : (onTheClock?.name ?? '—')}
                 </span>
@@ -207,9 +216,9 @@ export function DraftRoom(props: DraftRoomProps) {
                           {contestant.name}
                         </span>
                         {!contestant.isActive && (
-                          <Sticker tone="red" size="sm" className="shrink-0">
+                          <Tag tone="red" size="sm">
                             {lower(props.lexicon.eliminationVerb)}
-                          </Sticker>
+                          </Tag>
                         )}
                       </span>
                       <span className="mt-0.5 block truncate text-2xs text-muted">
@@ -233,9 +242,11 @@ export function DraftRoom(props: DraftRoomProps) {
                           // and only one of them can possibly succeed.
                           disabled={picking !== null}
                           aria-busy={picking === contestant.id}
-                          className="btn-primary text-xs disabled:opacity-50"
+                          // A quiet button on every row, lit on hover: sixteen
+                          // gold buttons in a column shout over the names.
+                          className="btn-ghost btn-sm text-show-deep hover:border-show-accent disabled:opacity-50"
                         >
-                          {picking === contestant.id ? 'Locking…' : 'Lock In'}
+                          {picking === contestant.id ? 'Locking…' : 'Lock in'}
                         </button>
                       </form>
                     )}

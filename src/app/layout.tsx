@@ -10,7 +10,6 @@ import { BottomNav } from '@/components/BottomNav';
 import { ErrorReporting } from '@/components/ErrorReporting';
 import { JsonLd } from '@/components/JsonLd';
 import { AppScroller } from '@/components/AppScroller';
-import { AmbientStickers } from '@/components/motion/AmbientStickers';
 import { MotionProvider } from '@/components/motion/MotionProvider';
 import { ServiceWorkerRegistrar } from '@/components/ServiceWorkerRegistrar';
 import { SiteFooter } from '@/components/SiteFooter';
@@ -127,13 +126,6 @@ export default async function RootLayout({ children }: { children: React.ReactNo
           >
             Skip to content
           </a>
-          {/* The column stays narrow by design, so on a wide screen the space
-              around it needs to read as deliberate framing rather than as an
-              unfinished layout. A single soft gold bloom behind the header
-              does that without pretending to be a desktop redesign. */}
-          <div className="pointer-events-none fixed inset-x-0 top-0 -z-10 h-[420px] bg-[radial-gradient(60%_100%_at_50%_0%,rgba(245,158,11,0.10),transparent_70%)]" />
-          {/* Faint stickers drifting in the desktop gutters (see AmbientStickers.tsx). */}
-          <AmbientStickers />
           {/* The app shell: exactly one viewport tall, and only the middle
               scrolls (see AppScroller.tsx). The header and the bottom nav are
               outside the scroller, so no scroll, bounce or URL-bar resize can

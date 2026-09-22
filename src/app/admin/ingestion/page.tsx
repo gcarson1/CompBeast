@@ -1,7 +1,7 @@
 import Link from 'next/link';
 import { CandidateCard, SeasonSourceCard, type PendingCandidate } from '@/components/IngestionReview';
 import { StatStrip } from '@/components/StatStrip';
-import { Sticker } from '@/components/Sticker';
+import { Tag } from '@/components/Tag';
 import { getCurrentUser } from '@/lib/auth';
 import { prisma } from '@/lib/db';
 import { adaptersForShow } from '@/lib/ingestion/pipeline';
@@ -14,7 +14,7 @@ export const dynamic = 'force-dynamic';
 // start, and the failure mode is a half-written season, so buy the headroom.
 export const maxDuration = 60;
 
-// Sticker tones per run status. EMPTY is the "a parser silently broke"
+// Tag tones per run status. EMPTY is the "a parser silently broke"
 // signal (see README), so it gets the same red as a failure.
 const RUN_TONE: Record<string, 'gold' | 'ink' | 'red'> = {
   SUCCESS: 'gold',
@@ -189,9 +189,9 @@ export default async function IngestionPage() {
                     {run.error && ` · ${run.error}`}
                   </span>
                 </span>
-                <Sticker tone={RUN_TONE[run.status] ?? 'ink'} size="sm" className="shrink-0">
+                <Tag tone={RUN_TONE[run.status] ?? 'ink'} size="sm">
                   {run.status.toLowerCase()}
-                </Sticker>
+                </Tag>
               </li>
             ))}
           </ul>

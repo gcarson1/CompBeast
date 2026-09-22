@@ -45,7 +45,7 @@ export default async function LeagueSettingsPage({ params }: { params: { leagueI
   });
 
   return (
-    <div className="pt-2">
+    <div className="stage pt-2">
       <Link href={`/leagues/${league.id}`} className="text-xs text-muted">
         ← {league.name}
       </Link>

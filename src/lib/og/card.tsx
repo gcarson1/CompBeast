@@ -7,8 +7,9 @@ import { appBaseUrl } from '../site';
  * The Open Graph card — what a link to Comp Beast looks like when it is
  * pasted into iMessage, WhatsApp, Discord or X.
  *
- * One layout for every page: the wordmark, an eyebrow, one big line in the
- * display face, a sentence under it, and up to four stat chips. The
+ * One layout for every page: the wordmark, the eyebrow as a slanted gold
+ * tag, one big line in the display face, a sentence under it, and up to
+ * four stat chips, over the wordmark's tally set large and faint. The
  * per-page routes only decide the words. Rendered by satori (`next/og`),
  * which lays out a subset of CSS — flex only, no grid — with the two brand
  * faces read from disk (see fonts/LICENSE.md), because it cannot use the
@@ -30,6 +31,7 @@ const INK = '#F8FAFC';
 const MUTED = '#94A3B8';
 const GOLD = '#F59E0B';
 const GOLD_DEEP = '#FBBF24';
+const ON_GOLD = '#1A1206';
 const HAIRLINE = 'rgba(248,250,252,0.10)';
 
 const MARK =
@@ -78,90 +80,135 @@ function loadFonts() {
   return fontsPromise;
 }
 
+/** The wordmark's three bars, gold and faint: the card's backdrop. */
+const TALLY =
+  'data:image/svg+xml;base64,' +
+  Buffer.from(
+    '<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 46 44" fill="#F59E0B">' +
+      '<polygon points="7,24 14,24 7,44 0,44" fill="#64748B"/>' +
+      '<polygon points="22,12 29,12 21,44 14,44"/>' +
+      '<polygon points="37,0 45,0 35,44 27,44"/></svg>',
+  ).toString('base64');
+
 function Card({ eyebrow, title, subtitle, stats = [] }: OgCardProps) {
   const host = appBaseUrl().replace(/^https?:\/\//, '');
+  // "Draft the cast. Own the leaderboard." sets its second sentence in gold,
+  // as the landing page does; a name is one colour.
+  const split = /^(.+?\.)\s+(.+)$/.exec(title);
+  const [lead, follow] = split ? [split[1], split[2]] : [title, null];
   // Long league or player names shrink rather than wrap into a fourth line.
-  const titleSize = title.length > 26 ? 84 : title.length > 18 ? 104 : 124;
+  const longest = Math.max(lead.length, follow?.length ?? 0);
+  const titleSize = longest > 26 ? 70 : longest > 18 ? 88 : 108;
 
   return (
     <div
       style={{
+        position: 'relative',
         width: OG_SIZE.width,
         height: OG_SIZE.height,
         display: 'flex',
         flexDirection: 'column',
-        justifyContent: 'space-between',
-        padding: '56px 64px',
+        padding: '44px 64px 48px',
         backgroundColor: CANVAS,
-        backgroundImage: 'radial-gradient(60% 90% at 30% 0%, rgba(245,158,11,0.16), rgba(15,23,42,0) 70%)',
+        backgroundImage: 'radial-gradient(55% 80% at 25% 20%, rgba(245,158,11,0.14), rgba(15,23,42,0) 70%)',
         color: INK,
         fontFamily: 'Archivo',
       }}
     >
-      <div style={{ display: 'flex', alignItems: 'center', gap: 18 }}>
-        {/* eslint-disable-next-line @next/next/no-img-element */}
-        <img src={MARK} width={56} height={56} alt="" />
-        <div style={{ display: 'flex', fontFamily: 'Anton', fontSize: 40, letterSpacing: 2 }}>
-          <span style={{ color: INK }}>COMP</span>
-          <span style={{ color: GOLD, marginLeft: 12 }}>BEAST</span>
+      {/* eslint-disable-next-line @next/next/no-img-element */}
+      <img
+        src={TALLY}
+        width={600}
+        height={574}
+        alt=""
+        style={{ position: 'absolute', right: -70, top: 40, opacity: 0.08 }}
+      />
+
+      <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+        <div style={{ display: 'flex', alignItems: 'center', gap: 16 }}>
+          {/* eslint-disable-next-line @next/next/no-img-element */}
+          <img src={MARK} width={52} height={52} alt="" />
+          <div style={{ display: 'flex', fontFamily: 'Anton', fontSize: 38, letterSpacing: 2 }}>
+            <span style={{ color: INK }}>COMP</span>
+            <span style={{ color: GOLD, marginLeft: 12 }}>BEAST</span>
+          </div>
         </div>
+        <div style={{ fontSize: 24, color: MUTED }}>{host}</div>
       </div>
 
-      <div style={{ display: 'flex', flexDirection: 'column' }}>
-        <div
-          style={{
-            fontSize: 24,
-            fontWeight: 600,
-            letterSpacing: 5,
-            textTransform: 'uppercase',
-            color: GOLD_DEEP,
-          }}
-        >
-          {eyebrow}
+      <div style={{ display: 'flex', flexDirection: 'column', marginTop: 'auto' }}>
+        {/* The eyebrow as the app's tag: a gold label on the wordmark's slant. */}
+        <div style={{ display: 'flex', position: 'relative', alignSelf: 'flex-start', padding: '9px 20px' }}>
+          <div
+            style={{
+              position: 'absolute',
+              left: 0,
+              top: 0,
+              right: 0,
+              bottom: 0,
+              borderRadius: 6,
+              backgroundColor: GOLD,
+              transform: 'skewX(-12deg)',
+            }}
+          />
+          <span
+            style={{
+              position: 'relative',
+              fontSize: 21,
+              fontWeight: 600,
+              letterSpacing: 3,
+              textTransform: 'uppercase',
+              color: ON_GOLD,
+            }}
+          >
+            {eyebrow}
+          </span>
         </div>
         <div
           style={{
-            marginTop: 16,
+            display: 'flex',
+            flexDirection: 'column',
+            marginTop: 22,
             fontFamily: 'Anton',
             fontSize: titleSize,
-            lineHeight: 1,
+            lineHeight: 0.96,
             letterSpacing: 1,
             textTransform: 'uppercase',
-            color: INK,
           }}
         >
-          {title}
+          <span style={{ color: INK }}>{lead}</span>
+          {follow && <span style={{ color: GOLD }}>{follow}</span>}
         </div>
         {subtitle && (
-          <div style={{ marginTop: 20, fontSize: 30, lineHeight: 1.35, color: MUTED, maxWidth: 1000 }}>
+          <div style={{ marginTop: 20, fontSize: 25, lineHeight: 1.4, color: MUTED, maxWidth: 960 }}>
             {subtitle}
           </div>
         )}
       </div>
 
-      <div style={{ display: 'flex', alignItems: 'flex-end', justifyContent: 'space-between' }}>
-        <div style={{ display: 'flex', gap: 16 }}>
+      {stats.length > 0 && (
+        <div style={{ display: 'flex', gap: 14, marginTop: 28 }}>
           {stats.slice(0, 4).map((stat) => (
             <div
               key={stat.label}
               style={{
                 display: 'flex',
-                flexDirection: 'column',
-                padding: '16px 22px',
+                alignItems: 'baseline',
+                gap: 12,
+                padding: '12px 20px',
                 borderRadius: 14,
                 backgroundColor: SURFACE,
                 border: `1px solid ${HAIRLINE}`,
               }}
             >
-              <div style={{ fontFamily: 'Anton', fontSize: 40, lineHeight: 1, color: GOLD }}>
+              <div style={{ fontFamily: 'Anton', fontSize: 34, lineHeight: 1, color: GOLD_DEEP }}>
                 {stat.value}
               </div>
-              <div style={{ marginTop: 8, fontSize: 20, color: MUTED }}>{stat.label}</div>
+              <div style={{ fontSize: 20, color: MUTED }}>{stat.label}</div>
             </div>
           ))}
         </div>
-        <div style={{ fontSize: 24, color: MUTED }}>{host}</div>
-      </div>
+      )}
     </div>
   );
 }

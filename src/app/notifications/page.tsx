@@ -13,7 +13,7 @@ export default async function NotificationsPage() {
   const notifications = await getNotifications(user.id);
 
   return (
-    <div className="pt-2">
+    <div className="stage pt-2">
       {/* One list is the page, so it has no panels: a single snap target
           would only pull every small scroll back to the top. */}
       <div>

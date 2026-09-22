@@ -17,6 +17,18 @@
     }
   }
 
+  /*
+   * The show accent, as the site's own gold. <ShowTheme> overrides these on a
+   * show's pages; everywhere else `bg-show-accent` and friends must still
+   * mean something, and before this they resolved to nothing at all.
+   */
+  :root {
+    --show-accent: theme(colors.brand-gold.DEFAULT);
+    --show-accent-deep: theme(colors.brand-gold.deep);
+    --show-accent-soft: theme(colors.brand-gold.soft);
+    --show-glow: rgba(245, 158, 11, 0.45);
+  }
+
   html,
   body {
     height: 100%;
@@ -59,7 +71,7 @@
 
 @layer components {
   /*
-   * The bento tile. Every tile — the dark default and the pop tones below —
+   * The tile. Every tile — the dark default and the gold block below —
    * sets the same three custom properties so that whatever is drawn inside
    * can say `text-tile-ink` / `text-tile-muted` / `border-tile-line` and be
    * right on any of them (the `tile` colours in tailwind.config.ts read
@@ -74,52 +86,24 @@
   }
 
   /*
-   * Pop tiles. A light colour block with dark ink — the `on-gold` rule,
-   * generalised: every one of these fills is light, so `ink` here is the
-   * tone's dark ink, not the app's near-white. The subtle top-edge highlight
-   * and bottom shade are what stop a flat block from reading as a flat block;
-   * they are the same trick as `.clay`, at a tenth of the strength.
+   * The gold block: the one number a page is about (lifetime points, a week
+   * that is still open), as a solid tile of the brand colour. Gold is a light
+   * fill, so `ink` here is the tone's dark ink, not the app's near-white. The
+   * subtle top-edge highlight and bottom shade are what stop a flat block
+   * from reading as a flat block — a bevel at a tenth of a button's.
    *
    * `border-transparent`, not the hairline: a light block does not need an
    * edge to separate it from the canvas, and a white hairline on gold reads
    * as a rendering artefact.
    */
-  .card-pop-gold,
-  .card-pop-lavender,
-  .card-pop-mint,
-  .card-pop-sky {
-    @apply rounded-card border border-transparent
-      shadow-[inset_0_1px_0_rgba(255,255,255,0.35),inset_0_-2px_0_rgba(0,0,0,0.08)];
-    --tile-line: rgba(0, 0, 0, 0.12);
-    color: var(--tile-ink);
-  }
-
   .card-pop-gold {
-    @apply bg-pop-gold;
+    @apply rounded-card border border-transparent bg-pop-gold
+      shadow-[inset_0_1px_0_rgba(255,255,255,0.35),inset_0_-2px_0_rgba(0,0,0,0.08)];
+    color: var(--tile-ink);
     --tile-ink: theme(colors.pop-gold.ink);
     --tile-muted: theme(colors.pop-gold.muted);
+    --tile-line: rgba(0, 0, 0, 0.12);
     --lift-glow: theme(colors.pop-gold.glow);
-  }
-
-  .card-pop-lavender {
-    @apply bg-pop-lavender;
-    --tile-ink: theme(colors.pop-lavender.ink);
-    --tile-muted: theme(colors.pop-lavender.muted);
-    --lift-glow: theme(colors.pop-lavender.glow);
-  }
-
-  .card-pop-mint {
-    @apply bg-pop-mint;
-    --tile-ink: theme(colors.pop-mint.ink);
-    --tile-muted: theme(colors.pop-mint.muted);
-    --lift-glow: theme(colors.pop-mint.glow);
-  }
-
-  .card-pop-sky {
-    @apply bg-pop-sky;
-    --tile-ink: theme(colors.pop-sky.ink);
-    --tile-muted: theme(colors.pop-sky.muted);
-    --lift-glow: theme(colors.pop-sky.glow);
   }
 
   /*
@@ -139,34 +123,49 @@
       motion-safe:focus-within:-translate-y-1 focus-within:shadow-lift;
   }
 
-  /* A sticker sitting on a lifting tile straightens as the tile rises. */
-  .card-lift:hover .sticker,
-  .card-lift:focus-within .sticker {
-    --sticker-tilt: 0deg;
+  /*
+   * The feature tile: the one thing to do on a page — open the draft room,
+   * start a league — lit from its top corner in the show's colour. A dark
+   * tile with a coloured edge and a spot of light, rather than a solid
+   * block of colour, so it leads the page without shouting over the numbers
+   * around it; the wordmark's tally rides in the corner (<TallyMark>).
+   */
+  .card-feature {
+    @apply relative overflow-hidden rounded-card border text-ink shadow-card;
+    border-color: color-mix(in srgb, var(--show-accent) 38%, transparent);
+    background:
+      radial-gradient(
+        120% 110% at 100% 0%,
+        color-mix(in srgb, var(--show-accent) 24%, transparent),
+        transparent 62%
+      ),
+      linear-gradient(180deg, theme(colors.surface-raised), theme(colors.surface));
+    --tile-ink: theme(colors.ink);
+    --tile-muted: theme(colors.muted);
+    --tile-line: theme(colors.hairline);
+    --lift-glow: var(--show-glow);
   }
 
   /*
-   * Bento grid. One column on a phone, two from `sm`, three from `lg`,
-   * gutters at the 16px end of the band so tiles read as a set. `dense`
-   * lets a one-column tile backfill a hole a two-column tile left, which is
-   * what keeps the grid from having a ragged edge without hand-placing
-   * every tile — the DOM stays in reading order for a screen reader.
+   * Stage light: the glow a page's title stands in, in the show's colour on
+   * a show's page and the site's gold everywhere else. It belongs to the
+   * page's first block and scrolls away with it, so it is atmosphere for the
+   * title and nothing below.
    */
-  .bento {
-    @apply grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-3;
-    grid-auto-flow: dense;
+  .stage {
+    @apply relative isolate;
   }
 
-  .bento-2 {
-    @apply sm:col-span-2;
-  }
-
-  .bento-3 {
-    @apply sm:col-span-2 lg:col-span-3;
-  }
-
-  .bento-tall {
-    @apply lg:row-span-2;
+  .stage::before {
+    content: '';
+    @apply pointer-events-none absolute -inset-x-5 -top-4 -z-10 h-80;
+    /* `closest-side` so the light is spent before it reaches any edge of the
+       box — on a wide screen the box is narrower than the window, and a
+       gradient still glowing at its side drew a hard vertical line. */
+    background: radial-gradient(closest-side at 40% 45%, var(--show-accent-soft), transparent);
+    /* Faded in from the top, so the light has no edge where the scroller
+       meets the header above it. */
+    mask-image: linear-gradient(to bottom, transparent, #000 35%);
   }
 
   /*
@@ -263,6 +262,11 @@
   .collapse-body {
     @apply grid transition-[grid-template-rows,opacity] duration-300 ease-soft;
     grid-template-rows: 1fr;
+    /* A grid track is as wide as its widest unbreakable content unless told
+       otherwise, so a long league name in a row (no wrap, meant to truncate)
+       pushed the whole section 40px past the edge of a phone. `minmax(0,…)`
+       holds the track to the column and lets the row truncate as designed. */
+    grid-template-columns: minmax(0, 1fr);
   }
 
   .collapse-body[data-open='false'] {
@@ -274,9 +278,9 @@
     @apply min-h-0 overflow-hidden;
   }
 
-  /* At rest and open, nothing is clipped: stickers and the Beast overhang
-     the tiles inside on purpose. <Collapsible> flips this once the
-     transition has ended. */
+  /* At rest and open, nothing is clipped: a tile's hover lift, its glow and a
+     focus ring all spill a few pixels past the section's edge. <Collapsible>
+     flips this once the transition has ended. */
   .collapse-body[data-open='true'][data-settled='true'] > * {
     overflow: visible;
   }
@@ -318,8 +322,10 @@
    *   `.headline`       the display face (Anton), uppercase — the page title
    *                     at 4xl–5xl, and the loud text inside a colour tile.
    *   `.section-title`  a primary section: the display face at 2xl with a
-   *                     short gold bar in front. The bar is the one mark
-   *                     that says "a new part of the page starts here".
+   *                     short slanted bar in front — one of the wordmark's
+   *                     tally bars, in the show's colour (gold off a show
+   *                     page). The bar is the one mark that says "a new part
+   *                     of the page starts here".
    *   `.eyebrow`        a secondary section or a group label: small, bold,
    *                     tracked, muted. Reference lists and settings.
    *
@@ -333,7 +339,8 @@
 
   .section-title {
     @apply headline flex items-center gap-3 text-2xl text-ink
-      before:h-6 before:w-1.5 before:shrink-0 before:rounded-pill before:bg-brand-gold before:content-[''];
+      before:h-6 before:w-[7px] before:shrink-0 before:-skew-x-[16deg] before:rounded-[2px]
+      before:bg-show-accent before:content-[''];
   }
 
   .eyebrow {
@@ -436,7 +443,7 @@
    * not because `.pill`'s own rounding changed.
    */
   .tab-active {
-    @apply pill rounded-btn bg-brand-gold text-on-gold;
+    @apply pill rounded-btn bg-show-accent text-on-gold;
   }
 
   .tab-idle {
@@ -453,113 +460,318 @@
   }
 
   /*
-   * Die-cut sticker. A status badge printed on paper and stuck to the tile:
-   * a 2px white edge, a hard 2px drop, and a small tilt. The angle arrives
-   * as `--sticker-angle` (inline, chosen per sticker by <Sticker> so no two
-   * tags on a page sit at the same slant) and is read through
-   * `--sticker-tilt`, which `.card-lift` sets to level when the tile lifts
-   * — two variables because an inline one cannot be overridden by a hover
-   * rule. Uppercase and bold because it is read at 12px on a busy surface.
+   * The slant.
    *
-   * It is a `.pill` in spirit — non-interactive, never a button — and keeps
-   * the fully round shape for the same reason `.pill` does. Fills: paper is
-   * the default; gold and the dark `ink` fill cover the two extremes; the
-   * red one uses `danger-strong` so its white label clears 4.5:1.
+   * The wordmark is three bars leaning into the climb, and that lean is the
+   * one shape this app owns. Everything that *labels* something — a status,
+   * a rank, a points value, a show — is cut on the same angle, like the
+   * graphics package of a broadcast: a tag reads as part of the show's
+   * on-screen furniture rather than as a sticker slapped on a tile. Controls
+   * never lean; a button stays a rounded, level thing you can press.
+   *
+   * The lean is a `skewX` on a pseudo-element behind the text, so the label
+   * itself stays upright and crisp, and `isolate` keeps that backing layer
+   * inside the tag rather than behind whatever the tag sits on.
    */
-  .sticker {
-    @apply inline-flex items-center gap-1 rounded-pill border-2 border-white bg-paper px-2.5 py-1
-      text-2xs font-bold uppercase leading-none tracking-wide text-on-gold shadow-sticker;
-    --sticker-tilt: var(--sticker-angle, 0deg);
-    transform: rotate(var(--sticker-tilt));
-    transition: transform 300ms theme(transitionTimingFunction.spring);
+  .tag {
+    @apply relative isolate inline-flex h-6 shrink-0 items-center gap-1.5 whitespace-nowrap px-2.5
+      text-2xs font-bold uppercase leading-none tracking-[0.08em];
+    color: var(--tag-ink, theme(colors.ink));
+  }
+
+  .tag::before {
+    content: '';
+    @apply absolute inset-0 -z-10 rounded-[4px];
+    background: var(--tag-fill, theme(colors.surface-raised));
+    box-shadow: var(--tag-edge, inset 0 0 0 1px rgba(248, 250, 252, 0.1));
+    transform: skewX(-12deg);
   }
 
   /*
-   * Three weights of sticker, because a page where every tag is the same
-   * size reads as one tag repeated. `lg` is a page-level label (the
-   * landing eyebrow, the show tag on a league header): bigger type, a
-   * deeper drop. `sm` is an inline chip (a rank, a "+5", "you"): a thin
-   * edge, no drop, and — by convention at the call sites — no tilt, so
-   * only the one tag that names a tile is ever at an angle.
+   * Three sizes, because a page where every label is the same size reads as
+   * one label repeated: `lg` names a page (the show on a league header),
+   * `md` names a tile, `sm` sits inline in a row (a rank, "you", a +5).
    */
-  .sticker-lg {
-    @apply gap-1.5 px-3.5 py-1.5 text-xs shadow-[0_3px_0_rgba(0,0,0,0.35)];
+  .tag-sm {
+    @apply h-5 gap-1 px-2 tracking-[0.06em];
   }
 
-  .sticker-sm {
-    @apply gap-0.5 border-[1.5px] px-2 py-0.5 shadow-none;
+  .tag-lg {
+    @apply h-7 gap-2 px-3 text-xs;
   }
 
-  .sticker-gold {
-    @apply bg-pop-gold text-pop-gold-ink;
+  /* Fills. Every light fill takes dark ink; the dark ones take `ink`. The
+     metals are the podium, and match `.rank-plate` and `.medal`. */
+  .tag-gold {
+    --tag-fill: linear-gradient(180deg, #fbbf24, #f59e0b);
+    --tag-ink: theme(colors.on-gold);
+    --tag-edge: inset 0 1px 0 rgba(255, 255, 255, 0.4);
   }
 
-  .sticker-lavender {
-    @apply bg-pop-lavender text-pop-lavender-ink;
+  .tag-silver {
+    --tag-fill: linear-gradient(180deg, #f1f5f9, #a5b4c8);
+    --tag-ink: #0f172a;
+    --tag-edge: inset 0 1px 0 rgba(255, 255, 255, 0.6);
   }
 
-  .sticker-mint {
-    @apply bg-pop-mint text-pop-mint-ink;
+  .tag-bronze {
+    --tag-fill: linear-gradient(180deg, #f8c39a, #d9824a);
+    --tag-ink: #1c0a02;
+    --tag-edge: inset 0 1px 0 rgba(255, 255, 255, 0.45);
   }
 
-  .sticker-sky {
-    @apply bg-pop-sky text-pop-sky-ink;
+  /* The accent of whichever show the page belongs to (see `ShowTheme`). */
+  .tag-show {
+    --tag-fill: var(--show-accent);
+    --tag-ink: theme(colors.on-gold);
+    --tag-edge: inset 0 1px 0 rgba(255, 255, 255, 0.35);
   }
 
-  .sticker-ink {
-    @apply bg-canvas text-ink;
+  /* `danger-strong`, so the white label clears 4.5:1. */
+  .tag-red {
+    --tag-fill: theme(colors.danger.strong);
+    --tag-ink: #fff;
+    --tag-edge: inset 0 1px 0 rgba(255, 255, 255, 0.2);
   }
 
-  .sticker-red {
-    @apply bg-danger-strong text-white;
+  .tag-outline {
+    --tag-fill: transparent;
+    --tag-ink: theme(colors.muted);
+    --tag-edge: inset 0 0 0 1px rgba(248, 250, 252, 0.2);
   }
 
-  /* The show's own colour. Every show accent is a light fill, so dark ink. */
-  .sticker-show {
-    @apply bg-show-accent text-on-gold;
+  .tag-mint {
+    --tag-fill: theme(colors.pop-mint.DEFAULT);
+    --tag-ink: theme(colors.pop-mint.ink);
+    --tag-edge: inset 0 1px 0 rgba(255, 255, 255, 0.5);
+  }
+
+  .tag-lavender {
+    --tag-fill: theme(colors.pop-lavender.DEFAULT);
+    --tag-ink: theme(colors.pop-lavender.ink);
+    --tag-edge: inset 0 1px 0 rgba(255, 255, 255, 0.5);
+  }
+
+  .tag-sky {
+    --tag-fill: theme(colors.pop-sky.DEFAULT);
+    --tag-ink: theme(colors.pop-sky.ink);
+    --tag-edge: inset 0 1px 0 rgba(255, 255, 255, 0.5);
+  }
+
+  /* The on-air dot: a solid pip with a ring that swells and fades, the way a
+     broadcast "live" bug breathes. Under reduced motion the ring runs once
+     and is gone; the pip stays. */
+  .tag-dot {
+    @apply relative h-1.5 w-1.5 shrink-0 rounded-full bg-current;
+  }
+
+  .tag-dot::after {
+    content: '';
+    @apply absolute inset-0 rounded-full bg-current;
+    animation: tag-ping 1.8s cubic-bezier(0, 0, 0.2, 1) infinite;
   }
 
   /*
-   * Claymation chip: an icon or monogram moulded rather than drawn. A
-   * diagonal light-to-base gradient plus the `clay` shadow (lit top edge,
-   * shaded bottom edge, ground shadow) is all it takes. `--clay` is the base
-   * colour and `--clay-hi` the lit corner; the tone classes set both, and
-   * the ink colour for whatever is drawn on top.
+   * A rank on the leaderboard: the numeral on a slanted plate. The podium is
+   * struck in metal — gold, silver, bronze — and everyone else gets a quiet
+   * outlined plate, so the top three read as a podium before a single name
+   * does. The plate is the same lean as `.tag`.
    */
-  .clay {
-    @apply grid shrink-0 place-items-center rounded-nested shadow-clay;
-    background: linear-gradient(145deg, var(--clay-hi, #fcd34d) 0%, var(--clay, #f59e0b) 62%);
-    color: var(--clay-ink, theme(colors.on-gold));
+  .rank-plate {
+    @apply relative isolate grid h-8 w-9 shrink-0 place-items-center font-display text-lg leading-none;
+    color: var(--plate-ink, theme(colors.muted));
   }
 
-  .clay-gold {
-    --clay: theme(colors.pop-gold.DEFAULT);
-    --clay-hi: #fcd34d;
-    --clay-ink: theme(colors.pop-gold.ink);
+  .rank-plate::before {
+    content: '';
+    @apply absolute inset-0 -z-10 rounded-md;
+    background: var(--plate-fill, transparent);
+    box-shadow: var(--plate-edge, inset 0 0 0 1px rgba(248, 250, 252, 0.12));
+    transform: skewX(-12deg);
   }
 
-  .clay-lavender {
-    --clay: theme(colors.pop-lavender.DEFAULT);
-    --clay-hi: #e9e3ff;
-    --clay-ink: theme(colors.pop-lavender.ink);
+  .rank-gold {
+    --plate-fill: linear-gradient(160deg, #fde68a 0%, #f59e0b 55%, #d97706 100%);
+    --plate-ink: theme(colors.on-gold);
+    --plate-edge: inset 0 1px 0 rgba(255, 255, 255, 0.55), 0 6px 14px -6px rgba(245, 158, 11, 0.7);
   }
 
-  .clay-mint {
-    --clay: theme(colors.pop-mint.DEFAULT);
-    --clay-hi: #d9fbec;
-    --clay-ink: theme(colors.pop-mint.ink);
+  .rank-silver {
+    --plate-fill: linear-gradient(160deg, #f8fafc 0%, #cbd5e1 55%, #94a3b8 100%);
+    --plate-ink: #0f172a;
+    --plate-edge: inset 0 1px 0 rgba(255, 255, 255, 0.7), 0 6px 14px -8px rgba(203, 213, 225, 0.5);
   }
 
-  .clay-sky {
-    --clay: theme(colors.pop-sky.DEFAULT);
-    --clay-hi: #e4f5ff;
-    --clay-ink: theme(colors.pop-sky.ink);
+  .rank-bronze {
+    --plate-fill: linear-gradient(160deg, #fed7aa 0%, #f0a36b 55%, #c9773f 100%);
+    --plate-ink: #1c0a02;
+    --plate-edge: inset 0 1px 0 rgba(255, 255, 255, 0.55), 0 6px 14px -8px rgba(240, 163, 107, 0.55);
   }
 
-  .clay-slate {
-    --clay: theme(colors.surface-raised);
-    --clay-hi: #3b4a63;
-    --clay-ink: theme(colors.ink);
+  /*
+   * A badge you have earned is a medal: a hexagon struck in metal or enamel,
+   * the tier's glyph embossed on its face. The rim is a conic gradient —
+   * light swinging round a bevel is what makes flat colour read as metal —
+   * and the face sits 4px inside it. A locked tier is the same hexagon,
+   * empty and recessed, so the ladder reads as one set of slots filling up.
+   *
+   * An earned medal carries a band of light across its face that sweeps
+   * once when you point at it: the only thing on the page that glints.
+   */
+  .medal {
+    --medal-clip: polygon(50% 0, 93.3% 25%, 93.3% 75%, 50% 100%, 6.7% 75%, 6.7% 25%);
+    @apply relative isolate grid h-16 w-16 shrink-0 place-items-center;
+    color: var(--medal-ink, theme(colors.muted));
+    filter: drop-shadow(0 8px 12px var(--medal-glow, transparent));
+  }
+
+  .medal::before,
+  .medal::after {
+    content: '';
+    position: absolute;
+    clip-path: var(--medal-clip);
+  }
+
+  .medal::before {
+    inset: 0;
+    z-index: -2;
+    background: var(--medal-rim, rgba(248, 250, 252, 0.14));
+  }
+
+  .medal::after {
+    inset: 4px;
+    z-index: -1;
+    background:
+      linear-gradient(115deg, transparent 38%, var(--medal-shine, transparent) 50%, transparent 62%),
+      var(--medal-face, theme(colors.canvas));
+    background-size:
+      300% 100%,
+      100% 100%;
+    background-position:
+      110% 0,
+      0 0;
+    transition: background-position 1s theme(transitionTimingFunction.soft);
+  }
+
+  .medal-earned:hover .medal::after,
+  .medal-earned:focus-within .medal::after {
+    background-position:
+      -10% 0,
+      0 0;
+  }
+
+  .medal-sm {
+    @apply h-8 w-8;
+    filter: drop-shadow(0 3px 6px var(--medal-glow, transparent));
+  }
+
+  .medal-sm::after {
+    inset: 2.5px;
+  }
+
+  .medal > svg {
+    filter: drop-shadow(0 1px 0 var(--medal-emboss, transparent));
+  }
+
+  .medal-bronze {
+    --medal-rim: conic-gradient(from 210deg, #fed7aa, #9a3412, #fdba74, #7c2d12, #fed7aa);
+    --medal-face: linear-gradient(160deg, #f6b27a, #c2672a);
+    --medal-ink: #3b1604;
+    --medal-emboss: rgba(255, 255, 255, 0.4);
+    --medal-shine: rgba(255, 255, 255, 0.55);
+    --medal-glow: rgba(217, 130, 74, 0.35);
+  }
+
+  .medal-silver {
+    --medal-rim: conic-gradient(from 210deg, #f8fafc, #475569, #e2e8f0, #334155, #f8fafc);
+    --medal-face: linear-gradient(160deg, #e8edf3, #94a3b8);
+    --medal-ink: #1e293b;
+    --medal-emboss: rgba(255, 255, 255, 0.6);
+    --medal-shine: rgba(255, 255, 255, 0.7);
+    --medal-glow: rgba(203, 213, 225, 0.25);
+  }
+
+  .medal-gold {
+    --medal-rim: conic-gradient(from 210deg, #fef3c7, #92400e, #fde68a, #78350f, #fef3c7);
+    --medal-face: linear-gradient(160deg, #fcd34d, #e89410);
+    --medal-ink: #422006;
+    --medal-emboss: rgba(255, 255, 255, 0.45);
+    --medal-shine: rgba(255, 255, 255, 0.65);
+    --medal-glow: rgba(245, 158, 11, 0.4);
+  }
+
+  /* Enamel tiers: a gold rim around a coloured face. */
+  .medal-velvet {
+    --medal-rim: conic-gradient(from 210deg, #fef3c7, #92400e, #fde68a, #78350f, #fef3c7);
+    --medal-face: linear-gradient(160deg, #8b5cf6, #4c1d95);
+    --medal-ink: #f5f3ff;
+    --medal-emboss: rgba(0, 0, 0, 0.35);
+    --medal-shine: rgba(255, 255, 255, 0.35);
+    --medal-glow: rgba(139, 92, 246, 0.45);
+  }
+
+  .medal-ice {
+    --medal-rim: conic-gradient(from 210deg, #fef3c7, #92400e, #fde68a, #78350f, #fef3c7);
+    --medal-face: linear-gradient(160deg, #bae6fd, #0ea5e9);
+    --medal-ink: #082f49;
+    --medal-emboss: rgba(255, 255, 255, 0.5);
+    --medal-shine: rgba(255, 255, 255, 0.6);
+    --medal-glow: rgba(56, 189, 248, 0.45);
+  }
+
+  /* The top of the ladder: a holographic face in every tile tone at once. */
+  .medal-holo {
+    --medal-rim: conic-gradient(from 0deg, #fde68a, #f9a8d4, #c4b5fd, #a7f3d0, #bae6fd, #fde68a);
+    --medal-face: conic-gradient(
+      from 140deg at 30% 30%,
+      #fef3c7,
+      #fbcfe8,
+      #ddd6fe,
+      #bbf7d0,
+      #bae6fd,
+      #fef3c7
+    );
+    --medal-ink: #0f172a;
+    --medal-emboss: rgba(255, 255, 255, 0.6);
+    --medal-shine: rgba(255, 255, 255, 0.75);
+    --medal-glow: rgba(196, 181, 253, 0.5);
+  }
+
+  /*
+   * A season's number plate: the show's initials over the season number, on
+   * the show's colour — "BB / 28", "S / 51" — like the corner bug a network
+   * puts on screen. Used wherever a season is listed.
+   */
+  .plate {
+    @apply relative grid shrink-0 place-content-center gap-0.5 overflow-hidden rounded-nested text-center text-on-gold;
+    background: linear-gradient(
+      160deg,
+      color-mix(in srgb, var(--show-accent) 55%, white) 0%,
+      var(--show-accent) 70%
+    );
+    box-shadow:
+      inset 0 1px 0 rgba(255, 255, 255, 0.45),
+      inset 0 -2px 0 rgba(0, 0, 0, 0.14),
+      0 10px 18px -12px var(--show-glow);
+  }
+
+  /* A finished season: the same plate, dark, with the number in the show's hue. */
+  .plate-archived {
+    @apply text-show-deep;
+    background: linear-gradient(160deg, theme(colors.surface-raised), theme(colors.canvas));
+    box-shadow: inset 0 0 0 1px rgba(248, 250, 252, 0.1);
+  }
+
+  /*
+   * An icon set into a tile: a small rounded well in the tile's own accent.
+   * Replaces the moulded "clay" chips — the same job, without pretending to
+   * be a toy.
+   */
+  .icon-well {
+    @apply grid h-11 w-11 shrink-0 place-items-center rounded-nested;
+    background: color-mix(in srgb, var(--show-accent) 18%, transparent);
+    color: var(--show-accent-deep);
+    box-shadow: inset 0 0 0 1px color-mix(in srgb, var(--show-accent) 30%, transparent);
   }
 
   /*
@@ -613,6 +825,14 @@
 .no-scrollbar {
   -ms-overflow-style: none;
   scrollbar-width: none;
+}
+
+@keyframes tag-ping {
+  75%,
+  100% {
+    transform: scale(2.2);
+    opacity: 0;
+  }
 }
 
 @keyframes btn-spin {
@@ -678,12 +898,6 @@
    * track at its start rather than at -50% (mid-list).
    */
   .marquee-track {
-    animation-name: none;
-  }
-
-  /* The ambient shapes park where they are; they were decoration in motion
-     and are decoration at rest. */
-  .ambient-shape {
     animation-name: none;
   }
 

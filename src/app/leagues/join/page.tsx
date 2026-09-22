@@ -3,7 +3,7 @@ import Link from 'next/link';
 import { cache } from 'react';
 import { SignUp } from '@clerk/nextjs';
 import { JoinLeagueForm } from '@/components/LeagueForms';
-import { Sticker } from '@/components/Sticker';
+import { Tag } from '@/components/Tag';
 import { getCurrentUser } from '@/lib/auth';
 import { absoluteUrl } from '@/lib/seo';
 import { lower } from '@/lib/shows/lexicon';
@@ -69,7 +69,7 @@ export default async function JoinLeaguePage({ searchParams }: Params) {
   const here = code ? `/leagues/join?code=${encodeURIComponent(code)}` : '/leagues/join';
 
   return (
-    <div className="pt-2">
+    <div className="stage pt-2">
       <Link href="/leagues" className="text-xs text-muted">
         ← Leagues
       </Link>
@@ -136,21 +136,21 @@ function InviteCard({ invite }: { invite: LeagueInvite }) {
 
   return (
     <header className="mt-3">
-      <Sticker tone="gold" size="lg" tilt="l">
+      <Tag tone="gold" size="lg">
         {invite.commissionerName ? `${invite.commissionerName} invited you` : "You're invited"}
-      </Sticker>
+      </Tag>
       <h1 className="headline mt-4 text-5xl">{invite.name}</h1>
       <p className="mt-3 text-xs text-muted">
         {invite.showName} · {invite.seasonName} · {invite.rosterSize}{' '}
         {lower(invite.showLexicon.contestantPlural)} per team
       </p>
       <div className="mt-3 flex flex-wrap items-center gap-2">
-        <Sticker tone="ink" size="sm">
+        <Tag tone="ink" size="sm">
           {invite.teamCount} of {invite.maxTeams} seats filled
-        </Sticker>
-        <Sticker tone={open ? 'mint' : 'ink'} size="sm">
+        </Tag>
+        <Tag tone={open ? 'mint' : 'ink'} size="sm">
           {state}
-        </Sticker>
+        </Tag>
       </div>
     </header>
   );

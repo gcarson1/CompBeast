@@ -1,7 +1,7 @@
 import type { Metadata } from 'next';
 import { JsonLd } from '@/components/JsonLd';
 import { ShowTheme } from '@/components/ShowTheme';
-import { Sticker } from '@/components/Sticker';
+import { Tag } from '@/components/Tag';
 import { absoluteUrl, breadcrumbList } from '@/lib/seo';
 import { formatPoints, pointsTone } from '@/lib/ui';
 import { getRuleBooks } from '@/server/queries';
@@ -27,10 +27,12 @@ export default async function RulesPage() {
   return (
     <div className="pt-2">
       <JsonLd data={breadcrumbList([{ name: 'Scoring rules', path: '/rules' }])} />
-      <h1 className="headline text-4xl">Scoring</h1>
-      <p className="mt-2 max-w-measure text-xs text-muted">
-        Every league picks one ruleset for its show. Commissioners can swap rulesets before the draft.
-      </p>
+      <div className="stage">
+        <h1 className="headline text-4xl">Scoring</h1>
+        <p className="mt-2 max-w-measure text-xs text-muted">
+          Every league picks one ruleset for its show. Commissioners can swap rulesets before the draft.
+        </p>
+      </div>
 
       {/* One section per show, each in its own colours. The rules are the
           show's own rows, so a show with a thinner rule book simply has a
@@ -41,14 +43,17 @@ export default async function RulesPage() {
               the next show's rule book settles on it. The first sits under the
               page title, which the top of the page already covers. */}
           <section className={index === 0 ? 'mt-8' : 'panel mt-14'} aria-labelledby={`rules-${book.slug}`}>
-            <div className="flex items-center gap-3">
-              <Sticker tone="show" size="lg" tilt="l">
+            {/* The show's name is the heading, in the show's colour; the
+                words "scoring rules" are there for the outline, not the eye. */}
+            <div className="flex items-end justify-between gap-3">
+              <h2 id={`rules-${book.slug}`} className="section-title">
                 {book.name}
-              </Sticker>
+                <span className="sr-only"> scoring rules</span>
+              </h2>
+              <span className="shrink-0 pb-0.5 text-2xs text-muted">
+                {book.rulesets.length} {book.rulesets.length === 1 ? 'ruleset' : 'rulesets'}
+              </span>
             </div>
-            <h2 id={`rules-${book.slug}`} className="sr-only">
-              {book.name} scoring rules
-            </h2>
 
             <div className="mt-4 space-y-4">
               {book.rulesets.map((ruleset) => {
@@ -78,9 +83,9 @@ export default async function RulesPage() {
                           {/* Beside the heading, not inside it, so the outline
                               reads "Classic" rather than "Classic default". */}
                           {ruleset.isDefault && (
-                            <Sticker tone="gold" size="sm">
-                              default
-                            </Sticker>
+                            <Tag tone="show" size="sm">
+                              Default
+                            </Tag>
                           )}
                         </div>
                         <p className="mt-1 text-2xs leading-relaxed text-muted">{ruleset.description}</p>

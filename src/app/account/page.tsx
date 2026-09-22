@@ -1,16 +1,16 @@
 import Link from 'next/link';
 import { redirect } from 'next/navigation';
 import { Avatar } from '@/components/Avatar';
-import { BadgeShelf } from '@/components/BadgeShelf';
+import { BadgeShelf, Medal } from '@/components/BadgeShelf';
 import { Collapsible, RowGroup } from '@/components/Collapsible';
 import { DeleteAccountPanel } from '@/components/DeleteAccountPanel';
 import { EmailPreferences } from '@/components/EmailPreferences';
 import { FriendsPanel } from '@/components/FriendsPanel';
 import { PointHistoryChart } from '@/components/PointHistoryChart';
-import { Doodle, type DoodleKind } from '@/components/doodles/Doodle';
+import { CrownIcon, TallyMark } from '@/components/icons';
 import { RevealGroup } from '@/components/motion/Reveal';
 import { PushToggle } from '@/components/PushToggle';
-import { Sticker } from '@/components/Sticker';
+import { Tag, rankTone } from '@/components/Tag';
 import { getCurrentUser } from '@/lib/auth';
 import { prisma } from '@/lib/db';
 import { BADGES, earnedBadges, highestBadge } from '@/lib/badges';
@@ -53,26 +53,26 @@ export default async function AccountPage() {
     <div className="pt-2">
       {/* Who you are and what you have scored. Not a panel: the top of the
           page is already where a scroll comes to rest. */}
-      <div>
+      <div className="stage">
         <Link href="/leagues" className="text-xs text-muted">
           ← Home
         </Link>
 
-        <div className="mt-3 flex items-center gap-4">
+        <div className="mt-4 flex items-center gap-4">
           <span className="relative shrink-0">
-            <Avatar name={displayName} photoUrl={user.avatarUrl} size={56} />
-            {/* The highest badge, stuck to the avatar's corner; named again
-              in text right after, so the sticker is never the only copy. */}
-            {badge && <Doodle kind="star" className="absolute -right-2.5 -top-2.5 h-7 w-7 rotate-[18deg]" />}
+            <Avatar name={displayName} photoUrl={user.avatarUrl} size={64} />
+            {/* The highest badge, pinned to the avatar's corner as a small
+                medal; named again in text right after. */}
+            {badge && <Medal badge={badge} size="sm" className="absolute -bottom-1 -right-2" />}
           </span>
           <div className="min-w-0">
             <h1 className="headline truncate text-3xl">{displayName}</h1>
             <p className="mt-1.5 flex min-w-0 items-center gap-2 text-xs text-muted">
               <span className="truncate">{user.handle ? `@${user.handle}` : user.email}</span>
               {badge && (
-                <Sticker tone="gold" size="sm" className="shrink-0">
+                <Tag tone="gold" size="sm">
                   {badge.name}
-                </Sticker>
+                </Tag>
               )}
             </p>
           </div>
@@ -85,19 +85,12 @@ export default async function AccountPage() {
             Career totals
           </h2>
           <dl className="grid grid-cols-2 gap-3 sm:grid-cols-5">
-            <Stat
-              label="Total points"
-              value={String(account.totalPoints)}
-              tone="gold"
-              glyph="tally"
-              className="col-span-2"
-            />
+            <Stat label="Total points" value={String(account.totalPoints)} lead className="col-span-2" />
             <Stat label="Leagues" value={String(account.leaguesPlayed)} />
             <Stat
               label="Best finish"
               value={account.bestRank ? `#${account.bestRank}` : '—'}
-              tone={account.bestRank === 1 ? 'mint' : undefined}
-              glyph={account.bestRank === 1 ? 'crown' : undefined}
+              valueClassName={account.bestRank === 1 ? 'text-brand-gold-deep' : undefined}
             />
             {/* Full width on a phone so the row below the gold block is not a
               lone tile; one column once the five fit on a line. */}
@@ -105,8 +98,7 @@ export default async function AccountPage() {
               label="Titles"
               value={String(account.titles)}
               hint="Seasons won outright"
-              tone={account.titles > 0 ? 'lavender' : undefined}
-              glyph={account.titles > 0 ? 'star' : undefined}
+              valueClassName={account.titles > 0 ? 'text-brand-gold-deep' : undefined}
               className="col-span-2 sm:col-span-1"
             />
           </dl>
@@ -141,10 +133,10 @@ export default async function AccountPage() {
                   </span>
                 </span>
                 {current.rank > 0 && (
-                  <Sticker tone={current.rank === 1 ? 'gold' : 'ink'} size="sm" className="shrink-0">
-                    {current.rank === 1 && <Doodle kind="crown" className="-ml-0.5 h-4 w-4" />}#{current.rank}{' '}
-                    of {current.teamCount}
-                  </Sticker>
+                  <Tag tone={rankTone(current.rank)} size="sm">
+                    {current.rank === 1 && <CrownIcon size={13} className="-ml-0.5" />}#{current.rank} of{' '}
+                    {current.teamCount}
+                  </Tag>
                 )}
               </div>
               <PointHistoryChart history={current.history} caption={current.teamName} />
@@ -223,37 +215,39 @@ export default async function AccountPage() {
   );
 }
 
-// Spelled out for Tailwind's content scan.
-const STAT_TONE = {
-  gold: 'card-pop-gold',
-  mint: 'card-pop-mint',
-  lavender: 'card-pop-lavender',
-} as const;
-
+/**
+ * One career number. The `lead` one — lifetime points — is the page's one
+ * block of gold, two tiles wide, with the wordmark's tally in its corner;
+ * the rest are dark tiles, and a number worth celebrating (a title, a
+ * first-place finish) is picked out in gold type rather than a new colour.
+ */
 function Stat({
   label,
   value,
   hint,
-  tone,
-  glyph,
+  lead = false,
+  valueClassName,
   className,
 }: {
   label: string;
   value: string;
   hint?: string;
-  /** A colour block for the number worth celebrating; the rest stay dark. */
-  tone?: keyof typeof STAT_TONE;
-  /** The sticker in the corner of a colour block. */
-  glyph?: DoodleKind;
+  lead?: boolean;
+  valueClassName?: string;
   className?: string;
 }) {
-  const wide = className?.includes('col-span-2');
   return (
-    <div className={cn(tone ? STAT_TONE[tone] : 'card', 'relative p-4', className)}>
-      {glyph && <Doodle kind={glyph} tone="paper" className="absolute right-3 top-3 h-7 w-7 rotate-6" />}
-      <dt className="text-2xs font-bold uppercase tracking-wide text-tile-muted">{label}</dt>
+    <div className={cn(lead ? 'card-pop-gold overflow-hidden' : 'card', 'relative p-4', className)}>
+      {lead && (
+        <TallyMark className="absolute -bottom-5 -right-2 h-28 w-28 text-pop-gold-ink opacity-[0.09]" />
+      )}
+      <dt className="text-2xs font-bold uppercase tracking-[0.14em] text-tile-muted">{label}</dt>
       <dd
-        className={cn('mt-1 font-display leading-none tracking-wide', wide && tone ? 'text-6xl' : 'text-3xl')}
+        className={cn(
+          'relative mt-1.5 font-display leading-none tracking-wide',
+          lead ? 'text-6xl' : 'text-3xl',
+          valueClassName,
+        )}
       >
         {value}
       </dd>
@@ -294,15 +288,15 @@ function SeasonRow({ row }: { row: SeasonHistoryRow }) {
         )}
       </span>
 
-      <span className="w-20 shrink-0 text-right">
+      <span className="flex min-w-[4.5rem] shrink-0 flex-col items-end">
         {row.rank > 0 ? (
-          <Sticker tone={row.rank === 1 && row.settled ? 'gold' : 'ink'} size="sm">
+          <Tag tone={row.settled ? rankTone(row.rank) : 'ink'} size="sm">
             #{row.rank}
-          </Sticker>
+          </Tag>
         ) : (
-          <Sticker tone="ink" size="sm">
+          <Tag tone="outline" size="sm">
             {STATUS_LABEL[row.seasonStatus]}
-          </Sticker>
+          </Tag>
         )}
         {row.archived && <span className="mt-1 block text-2xs leading-tight text-muted">League closed</span>}
       </span>

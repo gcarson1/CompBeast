@@ -1,6 +1,6 @@
 import Link from 'next/link';
 import { Avatar } from '@/components/Avatar';
-import { Sticker } from '@/components/Sticker';
+import { Tag } from '@/components/Tag';
 import { formatPoints, relativeTime } from '@/lib/ui';
 import type { SeasonHeadline } from '@/server/queries';
 
@@ -17,7 +17,7 @@ const SECONDS_PER_FACE = 2.6;
 /**
  * The "airing now" marquee: one card per scored event, newest first, each
  * carrying the houseguest's face, what they did, the points it was worth as
- * a sticker, and when it happened. It replaces two things that used to sit
+ * a tag, and when it happened. It replaces two things that used to sit
  * one above the other — a marquee of faces with nothing to say, and a card
  * that cycled the same events one at a time — with the one rail that says
  * "here is what just happened, in order".
@@ -43,11 +43,8 @@ export function LiveTicker({
 }) {
   if (headlines.length > 0) {
     return (
-      // The points stickers sit proud of each card's top edge, and the
-      // viewport clips at its padding edge — so the padding *is* the room
-      // the overhang needs.
       <div
-        className="marquee-viewport no-scrollbar -mt-2 overflow-hidden pb-1 pt-4"
+        className="marquee-viewport no-scrollbar overflow-hidden pb-1"
         style={{ ['--marquee-duration' as string]: `${headlines.length * SECONDS_PER_CARD}s` }}
       >
         <div className="marquee-track">
@@ -91,28 +88,24 @@ function HeadlineCopy({
           <Link
             href={`/seasons/${seasonSlug}`}
             tabIndex={ariaHidden ? -1 : undefined}
-            className="card relative flex h-full items-start gap-3 p-3 pr-4 transition duration-200 ease-soft hover:bg-surface-raised"
+            className="card relative flex h-full items-start gap-3 p-3 transition duration-200 ease-soft hover:bg-surface-raised"
           >
-            {/* A level chip, not a tilted tag: twelve tags at twelve angles
-                is a wallpaper, and the points are a value, not a label. */}
-            <Sticker
-              tone={headline.points > 0 ? 'gold' : headline.points < 0 ? 'red' : 'ink'}
-              size="sm"
-              className="absolute -right-1.5 -top-2.5"
-            >
-              {formatPoints(headline.points)}
-            </Sticker>
             <Avatar name={headline.contestantName} photoUrl={headline.contestantPhotoUrl} size={44} />
             <span className="min-w-0 flex-1">
               <span className="block truncate text-sm font-semibold">{headline.contestantName}</span>
               <span className="block truncate text-2xs text-muted">{headline.eventLabel}</span>
               <time
                 dateTime={headline.occurredAt.toISOString()}
-                className="mt-1 block text-2xs font-medium text-brand-gold-deep"
+                className="mt-1 block text-2xs font-medium text-show-deep"
               >
                 {relativeTime(headline.occurredAt)}
               </time>
             </span>
+            {/* The points as a scoreboard value on the slant — gold for a
+                gain, red for a loss. */}
+            <Tag tone={headline.points > 0 ? 'gold' : headline.points < 0 ? 'red' : 'ink'} size="sm">
+              {formatPoints(headline.points)}
+            </Tag>
           </Link>
         </li>
       ))}

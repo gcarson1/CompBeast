@@ -1,16 +1,14 @@
 import { BADGES, type Badge, earnedBadges, nextBadge } from '@/lib/badges';
-import { Doodle } from '@/components/doodles/Doodle';
 import { cn } from '@/lib/ui';
 
 /**
- * The badge ladder on the account page: every tier, earned ones lit, the
- * rest dimmed with their threshold showing, and one line under the shelf
- * saying how far the next one is.
+ * The badge ladder on the account page: every tier as a medal, earned ones
+ * struck in their metal, the rest as empty slots with their threshold, and
+ * one line under the shelf saying how far the next one is.
  *
- * A server component with hand-drawn icons, like every other icon in the
- * app. Locked tiers are rendered rather than hidden on purpose — a ladder
- * you can see the top of is what makes the next rung worth climbing, and a
- * shelf that only ever shows what you already have is a receipt.
+ * Locked tiers are rendered rather than hidden on purpose — a ladder you can
+ * see the top of is what makes the next rung worth climbing, and a shelf
+ * that only ever shows what you already have is a receipt.
  */
 export function BadgeShelf({ points }: { points: number }) {
   const earned = new Set(earnedBadges(points).map((badge) => badge.slug));
@@ -18,30 +16,31 @@ export function BadgeShelf({ points }: { points: number }) {
 
   return (
     <div>
-      <ol className="grid grid-cols-3 gap-3 pt-2 sm:grid-cols-6">
+      <ol className="grid grid-cols-3 gap-3 sm:grid-cols-6">
         {BADGES.map((badge) => {
           const has = earned.has(badge.slug);
           return (
             <li
               key={badge.slug}
-              // An earned tier is a moulded gold chip with a star stuck on its
-              // corner; a locked one is the same shape in slate, threshold
-              // showing. Same layout either way so the ladder reads as one.
-              // The chip carries the locked/earned difference on its own — a
-              // dimmed tile put the threshold text under 3:1. The star is
-              // decoration: the word "Earned" is below.
+              // Same layout earned or not, so the ladder reads as one set of
+              // slots. The medal carries the difference on its own; the words
+              // under it say it again for anyone who cannot see the metal.
               className={cn(
-                'card relative flex flex-col items-center p-3 text-center',
-                has && 'border-brand-gold/40',
+                'card flex flex-col items-center px-2 pb-3 pt-4 text-center',
+                has && 'medal-earned border-white/10',
               )}
               aria-label={`${badge.name}: ${has ? 'earned' : `locked, ${badge.threshold} points`}`}
             >
-              {has && <Doodle kind="star" className="absolute -right-2 -top-2.5 h-6 w-6 rotate-12" />}
-              <span aria-hidden className={cn('clay h-12 w-12', has ? 'clay-gold' : 'clay-slate text-muted')}>
-                <BadgeIcon slug={badge.slug} />
+              <Medal badge={badge} earned={has} />
+              <span className={cn('mt-3 text-2xs font-semibold leading-tight', !has && 'text-muted')}>
+                {badge.name}
               </span>
-              <span className="mt-2.5 text-2xs font-semibold leading-tight">{badge.name}</span>
-              <span className="mt-0.5 text-2xs tabular-nums text-muted">
+              <span
+                className={cn(
+                  'mt-0.5 text-2xs tabular-nums',
+                  has ? 'font-semibold text-brand-gold-deep' : 'text-muted',
+                )}
+              >
                 {has ? 'Earned' : `${badge.threshold.toLocaleString('en-US')} pts`}
               </span>
             </li>
@@ -50,7 +49,7 @@ export function BadgeShelf({ points }: { points: number }) {
       </ol>
 
       {next ? (
-        <div className="mt-3 px-1">
+        <div className="mt-4 px-1">
           <div className="flex items-baseline justify-between gap-3 text-2xs text-muted">
             <span>
               <span className="font-semibold text-ink">{next.remaining.toLocaleString('en-US')}</span>{' '}
@@ -64,7 +63,7 @@ export function BadgeShelf({ points }: { points: number }) {
           {/* The bar measures from the previous tier, not from zero — otherwise
               the last stretch of every ladder would look nearly full for years. */}
           <div
-            className="mt-1.5 h-1.5 overflow-hidden rounded-pill bg-surface"
+            className="mt-1.5 h-2 overflow-hidden rounded-pill bg-canvas shadow-[inset_0_0_0_1px_rgba(248,250,252,0.08)]"
             role="progressbar"
             aria-valuemin={0}
             aria-valuemax={100}
@@ -72,34 +71,79 @@ export function BadgeShelf({ points }: { points: number }) {
             aria-label={`Progress to ${next.badge.name}`}
           >
             <div
-              className="h-full rounded-pill bg-brand-gold shadow-[inset_0_1px_0_rgba(255,255,255,0.45)] transition-[width] duration-700 ease-soft"
+              className="h-full rounded-pill bg-gradient-to-r from-brand-gold to-brand-gold-deep shadow-[inset_0_1px_0_rgba(255,255,255,0.45)] transition-[width] duration-700 ease-soft"
               style={{ width: `${Math.max(2, next.fraction * 100)}%` }}
             />
           </div>
           <p className="mt-2 max-w-measure text-2xs leading-relaxed text-muted">{next.badge.blurb}</p>
         </div>
       ) : (
-        <p className="mt-3 px-1 text-2xs text-muted">Every badge earned. {BADGES.at(-1)?.blurb}</p>
+        <p className="mt-4 px-1 text-2xs text-muted">Every badge earned. {BADGES.at(-1)?.blurb}</p>
       )}
     </div>
   );
 }
 
 /**
- * One glyph per tier, in the app's stroke style: a door for making the
- * cast, a flag for a comp win, a bolt for running the game, a gavel for the
- * jury, a podium for the finale, and the wordmark's climbing bars for the top.
+ * Each rung's finish, climbing: bronze, silver and gold, then gold-rimmed
+ * enamel for the jury and the finale, and a holographic face for the top.
+ * Spelled out for Tailwind's content scan.
  */
-function BadgeIcon({ slug }: { slug: Badge['slug'] }) {
+const FINISH: Record<string, string> = {
+  castmate: 'medal-bronze',
+  'comp-winner': 'medal-silver',
+  'power-player': 'medal-gold',
+  'jury-member': 'medal-velvet',
+  finalist: 'medal-ice',
+  'comp-beast': 'medal-holo',
+};
+
+/**
+ * One badge as a medal (`.medal` in globals.css). `sm` is for pinning the
+ * highest badge beside a name; the shelf uses the full size.
+ */
+export function Medal({
+  badge,
+  earned = true,
+  size = 'md',
+  className,
+}: {
+  badge: Badge;
+  earned?: boolean;
+  size?: 'sm' | 'md';
+  className?: string;
+}) {
+  return (
+    <span
+      aria-hidden
+      className={cn(
+        'medal',
+        earned && (FINISH[badge.slug] ?? 'medal-gold'),
+        size === 'sm' && 'medal-sm',
+        className,
+      )}
+    >
+      <BadgeIcon slug={badge.slug} size={size === 'sm' ? 14 : 24} faded={!earned} />
+    </span>
+  );
+}
+
+/**
+ * One glyph per tier, embossed on the medal: a door for making the cast, a
+ * flag for a comp win, a bolt for running the game, a gavel for the jury, a
+ * podium for the finale, and the wordmark's climbing bars for the top.
+ */
+function BadgeIcon({ slug, size, faded }: { slug: Badge['slug']; size: number; faded: boolean }) {
   const common = {
-    width: 22,
-    height: 22,
+    width: size,
+    height: size,
     viewBox: '0 0 24 24',
     fill: 'none',
     stroke: 'currentColor',
-    strokeWidth: 1.8,
+    strokeWidth: 2,
     strokeLinecap: 'round' as const,
     strokeLinejoin: 'round' as const,
+    className: faded ? 'opacity-50' : undefined,
   };
   switch (slug) {
     case 'castmate':

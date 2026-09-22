@@ -6,7 +6,7 @@ import { useFormState, useFormStatus } from 'react-dom';
 import { toast } from 'sonner';
 import { Avatar } from '@/components/Avatar';
 import { Collapsible } from '@/components/Collapsible';
-import { Sticker } from '@/components/Sticker';
+import { Tag } from '@/components/Tag';
 import { inviteFriendAction, type ActionState } from '@/server/actions';
 import type { InvitableFriend } from '@/server/social';
 
@@ -64,9 +64,9 @@ export function InviteFriends({
               {friend.handle && <span className="block truncate text-2xs text-muted">@{friend.handle}</span>}
             </span>
             {friend.alreadyIn ? (
-              <Sticker tone="ink" size="sm" className="shrink-0">
+              <Tag tone="ink" size="sm">
                 Already in
-              </Sticker>
+              </Tag>
             ) : (
               <InviteForm leagueId={leagueId} friend={friend} disabled={seatsLeft === 0} />
             )}

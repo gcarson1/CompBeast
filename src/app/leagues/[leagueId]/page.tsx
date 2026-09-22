@@ -5,8 +5,16 @@ import { cache } from 'react';
 import { SignInButton } from '@clerk/nextjs';
 import { Avatar, AvatarStack } from '@/components/Avatar';
 import { Collapsible, RowGroup } from '@/components/Collapsible';
-import { BeastDoodle } from '@/components/doodles/BeastDoodle';
-import { Doodle } from '@/components/doodles/Doodle';
+import {
+  AlertIcon,
+  ArrowRightIcon,
+  BoardIcon,
+  CrownIcon,
+  GearIcon,
+  LockIcon,
+  LockOpenIcon,
+  TallyMark,
+} from '@/components/icons';
 import { InviteCode } from '@/components/InviteCode';
 import { InviteFriends } from '@/components/InviteFriends';
 import { Leaderboard } from '@/components/Leaderboard';
@@ -14,13 +22,13 @@ import { LeagueFeed } from '@/components/LeagueFeed';
 import { MotionCard } from '@/components/motion/MotionCard';
 import { Reveal, RevealGroup } from '@/components/motion/Reveal';
 import { ShowTheme } from '@/components/ShowTheme';
-import { Sticker } from '@/components/Sticker';
+import { Tag, rankTone } from '@/components/Tag';
 import { getCurrentUser } from '@/lib/auth';
 import { describeLockState } from '@/lib/cycles';
 import { atRiskMessage, nearMissMessage } from '@/lib/engagement';
 import { lexiconFor, lower } from '@/lib/shows/lexicon';
 import { describeWebhook } from '@/lib/chat-webhook';
-import { cn, formatPoints, relativeTime } from '@/lib/ui';
+import { cn, formatPoints, pointsTone, relativeTime } from '@/lib/ui';
 import { getInvitableFriends } from '@/server/social';
 import {
   getCurrentCycle,
@@ -113,16 +121,20 @@ export default async function LeaguePage({ params }: { params: { leagueId: strin
                 <span className="min-w-0 flex-1">
                   <span className="block truncate text-base font-semibold">
                     {team?.name ?? 'No team yet'}
-                    {isYou && <span className="ml-1.5 text-2xs text-brand-gold-deep">you</span>}
+                    {isYou && (
+                      <Tag tone="mint" size="sm" className="ml-2 align-[1px]">
+                        You
+                      </Tag>
+                    )}
                   </span>
                   <span className="mt-0.5 block truncate text-2xs text-muted">
                     {member.user.name ?? member.user.handle ?? 'Unknown manager'}
                   </span>
                 </span>
                 {member.role === 'COMMISSIONER' && (
-                  <Sticker tone="lavender" size="sm" className="shrink-0">
+                  <Tag tone="lavender" size="sm">
                     Commish
-                  </Sticker>
+                  </Tag>
                 )}
               </li>
             );
@@ -176,8 +188,8 @@ export default async function LeaguePage({ params }: { params: { leagueId: strin
       */}
         {/* Who this league is, and the one thing to do in it. Not a panel:
             the top of the page is already where a scroll comes to rest. */}
-        <div>
-          <div className="flex items-center justify-between gap-3">
+        <div className="stage">
+          <div className="flex min-h-11 items-center justify-between gap-3">
             <Link href="/leagues" className="text-xs text-muted">
               ← Leagues
             </Link>
@@ -200,17 +212,9 @@ export default async function LeaguePage({ params }: { params: { leagueId: strin
             )}
           </div>
 
-          <header className="relative mt-4 pr-20 sm:pr-32">
-            {/* The Beast, at the header's shoulder. Shocked while the draft is
-            still open, grinning once the season is under way. */}
-            <BeastDoodle
-              mood={drafting ? 'shock' : 'grin'}
-              className="absolute -right-2 -top-3 h-20 w-20 rotate-6 sm:-right-3 sm:-top-5 sm:h-28 sm:w-28"
-            />
-            <Sticker tone="show" size="lg" tilt="l">
-              {league.season.show.name} · {league.season.name}
-            </Sticker>
-            <h1 className="headline mt-4 text-5xl sm:text-6xl">{league.name}</h1>
+          <header className="mt-3">
+            <ShowLine show={league.season.show.name} season={league.season.name} />
+            <h1 className="headline mt-3 text-5xl sm:text-6xl">{league.name}</h1>
             <div className="mt-4 flex flex-wrap items-center gap-x-4 gap-y-2 text-xs text-muted">
               <AvatarStack names={managerNames.slice(0, 4)} total={league.members.length} max={4} />
               <span>
@@ -223,32 +227,33 @@ export default async function LeaguePage({ params }: { params: { leagueId: strin
           {drafting && (
             // The one thing to do while the draft is open, so it gets the full
             // width and a button-shaped call to action inside the tile.
-            <MotionCard tilt className="card-pop-lavender relative mt-8">
-              <Sticker tone="gold" tilt="r" className="absolute -right-2 -top-3">
-                Draft
-              </Sticker>
+            <MotionCard tilt className="card-feature mt-8">
+              <TallyMark className="absolute -bottom-5 -right-3 h-32 w-32 text-show-accent opacity-[0.12]" />
               <Link
                 href={`/leagues/${league.id}/draft`}
                 prefetch={false}
-                className="flex flex-col gap-4 rounded-card p-5 sm:flex-row sm:items-center"
+                className="relative flex flex-col gap-4 rounded-card p-5 sm:flex-row sm:items-center"
               >
-                <span className="clay clay-gold h-12 w-12">
-                  <BoardIcon />
+                <span className="flex items-center justify-between gap-3 sm:contents">
+                  <span className="icon-well">
+                    <BoardIcon size={22} />
+                  </span>
+                  <Tag tone={preDraft ? 'outline' : 'show'} live={!preDraft} className="sm:hidden">
+                    {preDraft ? 'Pre-draft' : 'Live'}
+                  </Tag>
                 </span>
                 <span className="min-w-0 flex-1">
                   <span className="headline block text-2xl">
-                    {league.draftStatus === 'NOT_STARTED' ? 'Draft not started' : 'Draft in progress'}
+                    {preDraft ? 'Draft not started' : 'Draft in progress'}
                   </span>
-                  <span className="mt-1 block text-xs text-tile-muted">
+                  <span className="mt-1 block text-xs text-muted">
                     {league.teams.length} {league.teams.length === 1 ? 'team' : 'teams'} · {league.rosterSize}{' '}
                     picks each · {league.draftType.toLowerCase()} order
                   </span>
                 </span>
-                <span className="btn btn-sm shrink-0 bg-pop-lavender-ink text-pop-lavender">
-                  {league.draftStatus === 'NOT_STARTED' && isCommissioner
-                    ? 'Start the draft'
-                    : 'Open the draft room'}{' '}
-                  →
+                <span className="btn btn-sm shrink-0 bg-show-accent text-on-gold shadow-[inset_0_1px_0_rgba(255,255,255,0.35)] hover:brightness-110">
+                  {preDraft && isCommissioner ? 'Start the draft' : 'Open the draft room'}
+                  <ArrowRightIcon size={16} />
                 </span>
               </Link>
             </MotionCard>
@@ -258,32 +263,34 @@ export default async function LeaguePage({ params }: { params: { leagueId: strin
         {(myRow || (currentCycle && lockState) || nearMiss || atRisk) && (
           <Collapsible title="At a glance" titleClassName="eyebrow" className="mt-10">
             {/* `auto-fit` so two tiles share the row and three split it, with
-              no hole when one of them is absent. `pt-3` makes room for the
-              stickers that overhang the tiles' top edges. */}
+              no hole when one of them is absent. */}
             <RevealGroup
-              className="grid grid-cols-1 gap-4 pt-3 sm:grid-cols-[repeat(auto-fit,minmax(14rem,1fr))]"
+              className="grid grid-cols-1 gap-3 sm:grid-cols-[repeat(auto-fit,minmax(14rem,1fr))]"
               step={60}
             >
               {myTeam && myRow && (
                 <Reveal>
-                  <MotionCard tilt className="card-pop-mint relative h-full">
+                  <MotionCard tilt className="relative h-full">
                     <Link href={`/teams/${myTeam.id}`} className="flex h-full flex-col rounded-card p-5">
-                      <span className="text-2xs font-bold uppercase tracking-wide text-tile-muted">
-                        My team
+                      <span className="flex items-center justify-between gap-3">
+                        <span className="eyebrow">My team</span>
+                        <Tag tone={rankTone(myRow.rank)} size="sm">
+                          {myRow.rank === 1 && <CrownIcon size={13} className="-ml-0.5" />}#{myRow.rank} of{' '}
+                          {rows.length}
+                        </Tag>
                       </span>
-                      <span className="mt-1 block truncate text-base font-semibold">{myTeam.name}</span>
-                      <span className="mt-3 block font-display text-6xl leading-none tracking-wide">
-                        {myRow.totalPoints}
-                      </span>
-                      <span className="mt-auto flex flex-wrap items-center gap-2 pt-4">
-                        <Sticker tone={myRow.rank === 1 ? 'gold' : 'paper'} size="sm">
-                          {myRow.rank === 1 && <Doodle kind="crown" className="-ml-0.5 h-4 w-4" />}#
-                          {myRow.rank} of {rows.length}
-                        </Sticker>
-                        {/* The sign carries the meaning — colour on a mint block
-                          would not clear contrast for either tone. */}
-                        <span className="text-2xs font-semibold tabular-nums text-tile-muted">
-                          {formatPoints(myRow.lastCyclePoints)} last
+                      <span className="mt-2 block truncate text-base font-semibold">{myTeam.name}</span>
+                      <span className="mt-auto flex items-end justify-between gap-3 pt-4">
+                        <span className="font-display text-6xl leading-none tracking-wide">
+                          {myRow.totalPoints}
+                        </span>
+                        <span
+                          className={cn(
+                            'pb-1 text-xs font-semibold tabular-nums',
+                            pointsTone(myRow.lastCyclePoints),
+                          )}
+                        >
+                          {formatPoints(myRow.lastCyclePoints)} last {lower(lexicon.cycleSingular)}
                         </span>
                       </span>
                     </Link>
@@ -295,20 +302,21 @@ export default async function LeaguePage({ params }: { params: { leagueId: strin
                 <Reveal
                   as="section"
                   aria-label={`This ${lower(lexicon.cycleSingular)}`}
-                  className={cn('relative p-5', cycleLocked ? 'card' : 'card-pop-gold')}
+                  className={cn('relative overflow-hidden p-5', cycleLocked ? 'card' : 'card-pop-gold')}
                 >
-                  <Sticker tone={cycleLocked ? 'ink' : 'paper'} tilt="r" className="absolute -right-2 -top-3">
-                    {cycleLocked ? 'Locked' : 'Open'}
-                  </Sticker>
-                  <Doodle
-                    kind={cycleLocked ? 'lock' : 'lock-open'}
-                    tone={cycleLocked ? 'sky' : 'paper'}
-                    className="h-8 w-8 -rotate-6"
-                  />
-                  <p className="mt-3 text-2xs font-bold uppercase tracking-wide text-tile-muted">
-                    This {lower(lexicon.cycleSingular)}
-                  </p>
-                  <h3 className="headline mt-1 text-2xl">{currentCycle.label}</h3>
+                  {!cycleLocked && (
+                    <TallyMark className="absolute -bottom-4 -right-2 h-24 w-24 text-pop-gold-ink opacity-[0.08]" />
+                  )}
+                  <span className="flex items-center justify-between gap-3">
+                    <span className="text-2xs font-bold uppercase tracking-[0.18em] text-tile-muted">
+                      This {lower(lexicon.cycleSingular)}
+                    </span>
+                    <span className="flex items-center gap-1.5 text-2xs font-bold uppercase tracking-wide">
+                      {cycleLocked ? <LockIcon size={15} /> : <LockOpenIcon size={15} />}
+                      {cycleLocked ? 'Locked' : 'Open'}
+                    </span>
+                  </span>
+                  <h3 className="headline mt-2 text-2xl">{currentCycle.label}</h3>
                   <p className="mt-2 text-xs text-tile-muted">
                     {!lockState.showLockAt
                       ? 'Rosters are closed'
@@ -323,19 +331,21 @@ export default async function LeaguePage({ params }: { params: { leagueId: strin
                 <Reveal
                   as="section"
                   aria-label="Heads up"
-                  className="card relative p-5 sm:col-span-2 lg:col-span-1"
+                  className={cn(
+                    'card relative p-5 sm:col-span-2 lg:col-span-1',
+                    atRisk ? 'border-danger/40' : 'border-brand-gold/30',
+                  )}
                 >
-                  {/* Inset from the left edge: a tile to its left may carry its
-                    own tag on that corner, and two overhanging tags collide. */}
-                  <Sticker tone={atRisk ? 'red' : 'gold'} tilt="l" className="absolute left-4 -top-3">
+                  <span
+                    className={cn(
+                      'flex items-center gap-2 text-2xs font-bold uppercase tracking-[0.18em]',
+                      atRisk ? 'text-danger-deep' : 'text-brand-gold-deep',
+                    )}
+                  >
+                    <AlertIcon size={16} />
                     Heads up
-                  </Sticker>
-                  <Doodle
-                    kind="alert"
-                    tone={atRisk ? 'red' : 'gold'}
-                    className="absolute -right-2 -top-3 h-9 w-9 rotate-6"
-                  />
-                  <div className="mt-2 space-y-2">
+                  </span>
+                  <div className="mt-3 space-y-2">
                     {nearMiss && <p className="text-sm font-medium text-brand-gold-deep">{nearMiss}</p>}
                     {atRisk && <p className="text-sm font-medium text-danger-deep">{atRisk}</p>}
                   </div>
@@ -389,27 +399,23 @@ function PrivateLeagueGate({
 }) {
   return (
     <ShowTheme showSlug={league.season.show.slug}>
-      <div className="pt-2">
+      <div className="stage pt-2">
         <Link href="/leagues" className="text-xs text-muted">
           ← Leagues
         </Link>
-        <header className="relative mt-4 pr-20 sm:pr-32">
-          <BeastDoodle
-            mood="shock"
-            className="absolute -right-2 -top-3 h-20 w-20 rotate-6 sm:-right-3 sm:-top-5"
-          />
-          <Sticker tone="show" size="lg" tilt="l">
-            {league.season.show.name} · {league.season.name}
-          </Sticker>
-          <h1 className="headline mt-4 text-5xl sm:text-6xl">{league.name}</h1>
+        <header className="mt-5">
+          <ShowLine show={league.season.show.name} season={league.season.name} />
+          <h1 className="headline mt-3 text-5xl sm:text-6xl">{league.name}</h1>
         </header>
 
-        <section className="card relative mt-8 p-5" aria-labelledby="private-heading">
-          <Sticker tone="ink" tilt="r" className="absolute -right-2 -top-3">
-            Private
-          </Sticker>
-          <Doodle kind="lock" tone="sky" className="h-8 w-8 -rotate-6" />
-          <h2 id="private-heading" className="headline mt-3 text-2xl">
+        <section className="card-feature mt-8 p-5" aria-labelledby="private-heading">
+          <span className="flex items-center justify-between gap-3">
+            <span className="icon-well">
+              <LockIcon size={22} />
+            </span>
+            <Tag tone="outline">Private</Tag>
+          </span>
+          <h2 id="private-heading" className="headline mt-4 text-2xl">
             This league is members only
           </h2>
           <p className="mt-2 max-w-measure text-sm leading-relaxed text-muted">
@@ -435,43 +441,18 @@ function PrivateLeagueGate({
   );
 }
 
-function BoardIcon() {
+/**
+ * The line above a league's name: which show, in the show's colour, and
+ * which season, in words.
+ */
+function ShowLine({ show, season }: { show: string; season: string }) {
   return (
-    <svg
-      width="22"
-      height="22"
-      viewBox="0 0 24 24"
-      fill="none"
-      stroke="currentColor"
-      strokeWidth="1.8"
-      aria-hidden
-    >
-      <rect x="3" y="4" width="18" height="16" rx="2.5" />
-      <path d="M3 9.5h18M8.5 9.5V20M15.5 9.5V20" strokeLinecap="round" />
-      <path d="M5.5 13h1M11 13h2M18 13h1M5.5 16.5h1M11 16.5h2" strokeLinecap="round" />
-    </svg>
-  );
-}
-
-function GearIcon() {
-  return (
-    <svg
-      width="20"
-      height="20"
-      viewBox="0 0 24 24"
-      fill="none"
-      stroke="currentColor"
-      strokeWidth="1.8"
-      aria-hidden
-    >
-      {/* A cog: eight teeth around a hub. The previous glyph was a circle
-          with eight rays, which is a sun. */}
-      <path
-        d="M19.3 9.9 L22.1 10.4 L22.1 13.6 L19.3 14.1 L18.6 15.7 L20.3 18.0 L18.0 20.3 L15.7 18.6 L14.1 19.3 L13.6 22.1 L10.4 22.1 L9.9 19.3 L8.3 18.6 L6.0 20.3 L3.7 18.0 L5.4 15.7 L4.7 14.1 L1.9 13.6 L1.9 10.4 L4.7 9.9 L5.4 8.3 L3.7 6.0 L6.0 3.7 L8.3 5.4 L9.9 4.7 L10.4 1.9 L13.6 1.9 L14.1 4.7 L15.7 5.4 L18.0 3.7 L20.3 6.0 L18.6 8.3Z"
-        strokeLinejoin="round"
-      />
-      <circle cx="12" cy="12" r="3" />
-    </svg>
+    <p className="flex flex-wrap items-center gap-x-3 gap-y-2">
+      <Tag tone="show" size="lg">
+        {show}
+      </Tag>
+      <span className="text-xs font-medium text-muted">{season}</span>
+    </p>
   );
 }
 

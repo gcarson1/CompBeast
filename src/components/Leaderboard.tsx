@@ -6,15 +6,9 @@ import { useEffect, useRef, useState, useTransition } from 'react';
 import { m } from 'framer-motion';
 import { appScroller } from '@/components/AppScroller';
 import { Avatar } from '@/components/Avatar';
-import { Doodle } from '@/components/doodles/Doodle';
-import { Sticker } from '@/components/Sticker';
+import { RankPlate, Tag } from '@/components/Tag';
 import { cn, formatPoints, pointsTone } from '@/lib/ui';
 import type { LeaderboardRow } from '@/server/queries';
-
-// The podium: the top three ranks as moulded chips in the tile tones, in
-// medal order — gold, then the cooler sky and lavender for second and third.
-// Everyone else is a plain numeral. Spelled out for Tailwind's content scan.
-const PODIUM = ['clay clay-gold', 'clay clay-sky', 'clay clay-lavender'] as const;
 
 const PULL_THRESHOLD = 64;
 const MAX_PULL = 90;
@@ -144,36 +138,22 @@ export function Leaderboard({ rows, myTeamId }: { rows: LeaderboardRow[]; myTeam
                 <Link
                   href={`/teams/${row.teamId}`}
                   className={cn(
-                    'flex items-center gap-3 p-4 transition duration-200 ease-soft hover:bg-surface-raised motion-safe:active:scale-[0.99]',
-                    isMine && 'bg-brand-gold-soft/40',
+                    'relative flex items-center gap-3 p-4 transition duration-200 ease-soft hover:bg-surface-raised motion-safe:active:scale-[0.99]',
+                    // Your own row: a wash of gold and a gold edge on the left,
+                    // so it is found without reading a single name.
+                    isMine &&
+                      'bg-gradient-to-r from-brand-gold/[0.14] to-brand-gold/[0.03] before:absolute before:inset-y-3 before:left-0 before:w-[3px] before:rounded-r-pill before:bg-brand-gold',
                   )}
                 >
-                  {row.rank <= PODIUM.length ? (
-                    <span
-                      className={cn(
-                        'relative h-8 w-8 font-display text-md leading-none',
-                        PODIUM[row.rank - 1],
-                      )}
-                    >
-                      {row.rank}
-                      {/* Decorative — the numeral says it. */}
-                      {row.rank === 1 && (
-                        <Doodle kind="crown" className="absolute -right-2.5 -top-3 h-5 w-5 rotate-12" />
-                      )}
-                    </span>
-                  ) : (
-                    <span className="grid h-8 w-8 place-items-center text-base font-semibold tabular-nums text-muted">
-                      {row.rank}
-                    </span>
-                  )}
+                  <RankPlate rank={row.rank} />
                   <Avatar name={row.ownerName ?? row.teamName} size={38} />
                   <span className="min-w-0 flex-1">
-                    <span className="flex items-center gap-1.5 text-base font-semibold">
+                    <span className="flex items-center gap-2 text-base font-semibold">
                       <span className="min-w-0 truncate">{row.teamName}</span>
                       {isMine && (
-                        <Sticker tone="mint" size="sm" className="shrink-0">
-                          you
-                        </Sticker>
+                        <Tag tone="mint" size="sm">
+                          You
+                        </Tag>
                       )}
                     </span>
                     <span className="mt-0.5 block text-2xs text-muted">
@@ -181,8 +161,10 @@ export function Leaderboard({ rows, myTeamId }: { rows: LeaderboardRow[]; myTeam
                     </span>
                   </span>
                   <span className="text-right">
-                    <span className="block text-lg font-semibold tabular-nums">{row.totalPoints}</span>
-                    <span className={`block text-2xs tabular-nums ${pointsTone(row.lastCyclePoints)}`}>
+                    <span className="block font-display text-2xl leading-none tracking-wide">
+                      {row.totalPoints}
+                    </span>
+                    <span className={`mt-1 block text-2xs tabular-nums ${pointsTone(row.lastCyclePoints)}`}>
                       {formatPoints(row.lastCyclePoints)}
                     </span>
                   </span>

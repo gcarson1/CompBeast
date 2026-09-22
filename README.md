@@ -601,9 +601,12 @@ at the top.
 Badges are derived from the account's total, never stored, so there is no row
 to fall out of sync with the ledger and nothing to backfill. Because that total
 includes `CareerRecord`s, a badge earned in a league that was later deleted
-stays earned. The shelf shows every tier with the locked ones dimmed and a
-progress line to the next, measured from the previous tier rather than from
-zero so the last stretch never looks nearly full for years.
+stays earned. The shelf shows every tier as a hexagonal medal — bronze, silver
+and gold, then gold-rimmed enamel for the jury and the finale, and a holographic
+face for Comp Beast — with locked tiers as empty slots, and a progress line to
+the next, measured from the previous tier rather than from zero so the last
+stretch never looks nearly full for years. The highest medal earned is pinned to
+the account's avatar.
 
 The chart is hand-rolled SVG, not a charting library — it draws one polyline and
 some dots, and the smallest credible dependency is bigger than the page. That
@@ -724,7 +727,7 @@ hairline-divided `<RowGroup>` of reference material, like a settings screen (a l
 managers and details, an account's friends and alert settings, each show's buzz, the FAQ).
 The heading is a real button inside the real heading (`aria-expanded`); the body animates
 through `grid-template-rows`, is `inert` while closed, and lifts its overflow clip once
-settled so overhanging stickers are not shaved off. Opening a section is guided: once it
+settled so a tile's hover lift and glow are not shaved off. Opening a section is guided: once it
 has grown, if it runs past the bottom of the screen the page glides up just far enough to
 show it, never so far that the heading you tapped leaves the top.
 
@@ -736,6 +739,32 @@ it. Before a league's draft the reference rows sit above the feed; after it, bel
 
 Native `<details>` (the rule book's rulesets, a team's week-by-week lines) animate open where
 the browser supports `interpolate-size`, and open as before where it does not.
+
+## Visual language
+
+The one shape the app owns is the **slant** of the wordmark's three tally bars, and it is
+used for everything that *labels* something, the way a network's on-screen graphics do.
+Controls never lean: a button stays a rounded, level thing you press.
+
+- **`<Tag>`** (`src/components/Tag.tsx`, `.tag` in `globals.css`) — a status, rank, points
+  value or show, on a skewed backing so the text stays upright. Three sizes; fills for the
+  show accent, gold/silver/bronze (`rankTone`), red (with `live` for the breathing on-air
+  dot), outline, and the three pop tones. It replaced tilted die-cut "stickers".
+- **`<RankPlate>`** — a rank as a numbered plate: struck in metal for the podium, outlined
+  after. The leaderboard and a season's player scores use it.
+- **`<SeasonPlate>`** — a season's number plate in its show's colour ("BB 28", "S 51"),
+  wherever seasons are listed. The chip it replaced printed the year, which put "26" on
+  every season airing this year.
+- **Medals** — the badge shelf (see [Badges](#badges)).
+- **`.card-feature`** — the one thing to do on a page (open the draft room, start a
+  league), lit from its corner in the show's colour with the tally mark (`<TallyMark>`)
+  riding faintly in it. Solid colour blocks (`.card-pop-*`) are kept for the single number
+  a page is about — lifetime points, an open week.
+- **`.stage`** — a page title's glow, in the show's colour on a show's pages and gold
+  elsewhere; the section title's bar is a tally bar in the same colour.
+- **Icons** (`src/components/icons.tsx`) — one 24px grid and 1.8px stroke, placed where
+  they mean something. There is no mascot and no decoration that is not the brand's own
+  mark.
 
 ## Motion
 
@@ -785,8 +814,10 @@ both error boundaries report through the same late import.
 
 ## Open Graph
 
-Every public page has a share card drawn by `src/lib/og/card.tsx` — one layout, the two
-brand faces read from `src/lib/og/fonts` because satori cannot use the web fonts — with
+Every public page has a share card drawn by `src/lib/og/card.tsx` — one layout (the eyebrow
+as a slanted gold tag, the title's second sentence in gold, the tally mark set large and
+faint behind), the two brand faces read from `src/lib/og/fonts` because satori cannot use
+the web fonts — with
 the page routes deciding the words: the site default, `/seasons/[slug]`,
 `/players/[id]`, and the invite card at `/api/og/join?code=`. The invite card never shows
 the code; a screenshot of it should not be an invitation.

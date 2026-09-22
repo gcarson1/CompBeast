@@ -1,9 +1,7 @@
 import type { Metadata } from 'next';
 import Link from 'next/link';
 import { Suspense } from 'react';
-import { BeastDoodle } from '@/components/doodles/BeastDoodle';
-import { Doodle } from '@/components/doodles/Doodle';
-import { Collapsible } from '@/components/Collapsible';
+import { PlusIcon, TallyMark } from '@/components/icons';
 import { LeagueRail } from '@/components/LeagueRail';
 import { LiveSection, type FeaturedCast, type LiveBlockData } from '@/components/LiveSection';
 import { getSocialBuzz } from '@/lib/social-feed';
@@ -124,7 +122,7 @@ export default async function HomePage() {
     <div className="pt-2">
       {/* Your leagues and the two ways to get another. Not a panel: the top
           of the page is already where a scroll comes to rest. */}
-      <div>
+      <div className="stage">
         <div className="mb-3 flex items-center justify-between gap-3">
           <h1 className="headline text-4xl">Leagues</h1>
           <div className="flex shrink-0 gap-2">
@@ -137,11 +135,16 @@ export default async function HomePage() {
           </div>
         </div>
 
-        <Collapsible title="Your leagues" className="mt-6" panel={false}>
+        {/* The rail is the page, so it is not folded behind a heading that
+            repeats the title above it; the heading is for the outline only. */}
+        <section aria-labelledby="your-leagues" className="mt-4">
+          <h2 id="your-leagues" className="sr-only">
+            Your leagues
+          </h2>
           <Suspense fallback={<RailSkeleton />}>
             <HomeRail userId={user.id} />
           </Suspense>
-        </Collapsible>
+        </section>
       </div>
 
       {/* What is happening on air right now — one panel per show (see
@@ -241,32 +244,22 @@ function RailSkeleton() {
 
 function EmptyLeagues() {
   return (
-    <div className="card-pop-gold relative mt-6 overflow-visible p-5">
-      {/* The mascot leans in from the corner, half off the tile. Only the
-          copy makes room for it; the buttons get the full width. */}
-      <BeastDoodle className="absolute -right-3 -top-5 h-24 w-24 rotate-6" />
-      <Doodle kind="tally" tone="paper" className="absolute right-24 top-4 h-7 w-7 -rotate-6" />
-      <div className="pr-20">
-        <h2 className="headline text-2xl">You&apos;re not in a league yet</h2>
-        <p className="mt-2 max-w-measure text-xs leading-relaxed text-tile-muted">
-          Start one for any season that is still open, or join a friend&apos;s with their invite code — they
-          can show you a QR code to scan instead.
-        </p>
-      </div>
-      <div className="mt-4 flex flex-wrap gap-2">
-        <Link
-          href="/leagues/join"
-          prefetch={false}
-          className="btn border-2 border-pop-gold-ink/20 bg-white/40 text-pop-gold-ink hover:bg-white/60"
-        >
-          Join a league
+    <div className="card-feature mt-2 p-5">
+      <TallyMark className="absolute -bottom-6 -right-4 h-36 w-36 text-brand-gold opacity-[0.1]" />
+      <span className="icon-well">
+        <PlusIcon size={22} />
+      </span>
+      <h2 className="headline mt-4 text-2xl">You&apos;re not in a league yet</h2>
+      <p className="mt-2 max-w-measure text-xs leading-relaxed text-muted">
+        Start one for any season that is still open, or join a friend&apos;s with their invite code — they can
+        show you a QR code to scan instead.
+      </p>
+      <div className="relative mt-5 flex flex-wrap gap-2">
+        <Link href="/leagues/new" prefetch={false} className="btn-primary">
+          Create a league
         </Link>
-        <Link
-          href="/leagues/new"
-          prefetch={false}
-          className="btn bg-pop-gold-ink text-brand-gold-deep hover:bg-black"
-        >
-          Create
+        <Link href="/leagues/join" prefetch={false} className="btn-ghost">
+          Join with a code
         </Link>
       </div>
     </div>
