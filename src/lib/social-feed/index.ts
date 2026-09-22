@@ -40,6 +40,11 @@ const SHOW_FEEDS: Record<string, { url: string; label: string; home: string }> =
     label: 'Big Brother Junkies',
     home: 'https://bigbrotherjunkies.com',
   },
+  survivor: {
+    url: 'https://insidesurvivor.com/feed',
+    label: 'Inside Survivor',
+    home: 'https://insidesurvivor.com',
+  },
 };
 
 async function fetchText(url: string): Promise<string | null> {

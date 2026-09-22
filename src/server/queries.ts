@@ -543,6 +543,7 @@ export async function getSeasonsByStatus() {
       name: true,
       year: true,
       status: true,
+      startDate: true,
       // slug as well as name: the buzz feed keys its show-specific source off
       // the slug, and builds its universal query from the name.
       show: { select: { name: true, slug: true, lexicon: true } },

@@ -8,10 +8,6 @@ import { candidateCollector, collectPlayers, pushPlacementsAndJury, pushSurvival
  * results page states outright. Who found an idol, who orchestrated a
  * blindside, whether a vote was a majority — none of that is on a results
  * grid, so none of it is inferred here; those rules stay manual.
- *
- * No adapter produces `SurvivorSeasonFacts` yet. This mapper and that type
- * are the contract a Survivor results site has to be parsed into; once an
- * adapter exists it registers in pipeline.ts and nothing here changes.
  */
 export const mapSurvivorSeason: SeasonMapper<SurvivorSeasonFacts> = (facts, seasonExternalId) => {
   const { candidates, push } = candidateCollector(seasonExternalId);
@@ -54,38 +50,69 @@ export const mapSurvivorSeason: SeasonMapper<SurvivorSeasonFacts> = (facts, seas
       }
     }
 
-    const eliminatedIds = new Set(episode.eliminated.map((p) => p.externalId));
-    const votedOutIds = new Set(episode.votes.filter((v) => v.count > 0).map((v) => v.player.externalId));
+    if (episode.fireMakingWinner) {
+      push('FIRE_MAKING_WIN', episode.fireMakingWinner, weekNumber, weekLabel);
+    }
 
-    const multiEliminated = episode.eliminated.length > 1;
-    for (const player of episode.eliminated) {
-      // Someone who left without a single vote against them was not voted
-      // out — they quit, were evacuated, or were removed. Only a source that
-      // records votes can tell the two apart, so an episode with no vote data
-      // at all is flagged rather than assumed.
-      const hasVoteData = episode.votes.length > 0;
-      const wasVotedOut = votedOutIds.has(player.externalId);
-      const code = hasVoteData && !wasVotedOut ? 'ELIMINATED_INVOLUNTARY' : 'VOTED_OUT';
+    const votedIds = new Set(episode.exits.filter((e) => e.how === 'voted').map((e) => e.player.externalId));
+    const multiExit = episode.exits.length > 1;
+    for (const { player, how } of episode.exits) {
       const reasons: string[] = [];
       let confidence: 'HIGH' | 'MEDIUM' | 'LOW' = 'HIGH';
-      if (multiEliminated) {
+      if (multiExit && how === 'voted') {
+        // A double boot is real and common, but so is a parse that read one
+        // tribal as two; a human glance settles it.
         confidence = 'MEDIUM';
-        reasons.push(`${episode.eliminated.length} eliminations listed for ${weekLabel}`);
+        reasons.push(`${episode.exits.length} departures listed for ${weekLabel}`);
       }
-      if (!hasVoteData) {
-        confidence = 'MEDIUM';
-        reasons.push('No vote totals for this episode — could be a quit or evacuation');
-      }
-      push(code, player, weekNumber, weekLabel, confidence, reasons);
 
-      // Every vote on one name is a unanimous boot, but only when the source
-      // recorded the whole tribal.
-      if (
-        hasVoteData &&
-        wasVotedOut &&
-        episode.votes.every((v) => v.count === 0 || eliminatedIds.has(v.player.externalId))
-      ) {
-        push('VOTED_OUT_UNANIMOUS', player, weekNumber, weekLabel);
+      switch (how) {
+        case 'voted':
+          push('VOTED_OUT', player, weekNumber, weekLabel, confidence, reasons);
+          // Every vote cast landed on them: unanimous. Only when the votes
+          // are on the page — an empty tally proves nothing.
+          if (
+            episode.votes.length > 0 &&
+            votedIds.size === 1 &&
+            episode.votes.every((v) => v.count === 0 || v.player.externalId === player.externalId)
+          ) {
+            push('VOTED_OUT_UNANIMOUS', player, weekNumber, weekLabel);
+          }
+          break;
+        case 'fire':
+          push('FIRE_MAKING_LOSS', player, weekNumber, weekLabel);
+          break;
+        case 'evacuated':
+        case 'quit':
+          push('ELIMINATED_INVOLUNTARY', player, weekNumber, weekLabel);
+          break;
+        default:
+          push('VOTED_OUT', player, weekNumber, weekLabel, 'LOW', [
+            `The source does not say how ${player.name} left in ${weekLabel}`,
+          ]);
+      }
+    }
+  }
+
+  // Making the merge is stated by the page: the first episode played as one
+  // tribe, and everyone not yet gone when it began.
+  if (facts.mergeEpisode !== null) {
+    const mergeEpisode = airedEpisodes.find((e) => e.weekNumber === facts.mergeEpisode);
+    if (mergeEpisode) {
+      const goneBefore = new Set(
+        airedEpisodes
+          .filter((e) => e.weekNumber < mergeEpisode.weekNumber)
+          .flatMap((e) => e.eliminated.map((p) => p.externalId)),
+      );
+      const everyone = collectPlayers(facts, (e) => [
+        e.immunity,
+        e.tribalImmunity,
+        e.reward,
+        e.votes.map((v) => v.player),
+        e.eliminated,
+      ]);
+      for (const [id, player] of everyone) {
+        if (!goneBefore.has(id)) push('MADE_MERGE', player, mergeEpisode.weekNumber, mergeEpisode.weekLabel);
       }
     }
   }

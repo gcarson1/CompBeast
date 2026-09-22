@@ -42,7 +42,7 @@ export async function GET() {
     '',
     `> ${SITE_DESCRIPTION}`,
     '',
-    `${SITE_NAME} is a web app; it is free to play and runs in a modern web browser. Leagues hold 2 to 24 teams, each team drafts 1 to 12 contestants in a live snake draft, and every league scores with one of three rulesets (Classic, Balanced, Drama & Social). Big Brother results are captured from published season results; Survivor results are entered by administrators. Every point traces back to the aired event that produced it.`,
+    `${SITE_NAME} is a web app; it is free to play and runs in a modern web browser. Leagues hold 2 to 24 teams, each team drafts 1 to 12 contestants in a live snake draft, and every league scores with one of three rulesets (Classic, Balanced, Drama & Social). Results for every show are captured from published season results — Big Brother from a fan results site, Survivor from the season's Wikipedia article — reviewed before publishing, and every point traces back to the aired event that produced it.`,
     '',
     '## Start here',
     '',

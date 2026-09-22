@@ -104,7 +104,7 @@ export function CreateLeagueForm({
         <input
           id="teamName"
           className="field"
-          placeholder="Block Party"
+          placeholder="Jury Duty"
           required
           minLength={2}
           maxLength={40}
@@ -229,7 +229,7 @@ export function JoinLeagueForm({ defaultCode = '' }: { defaultCode?: string }) {
         <input
           id="inviteCode"
           className="field uppercase tracking-widest"
-          placeholder="DEMO-BB27"
+          placeholder="SUND-4K2P"
           // Also set on the DOM node, not just in RHF's defaultValues, so a
           // scanned QR code arrives filled in in the server-rendered HTML —
           // before hydration, and with JavaScript off.

@@ -21,16 +21,22 @@ const [ana, ben, cal, dee, eli, fay] = ['ana', 'ben', 'cal', 'dee', 'eli', 'fay'
 function episode(
   overrides: Partial<SurvivorEpisodeResult> & Pick<SurvivorEpisodeResult, 'weekNumber'>,
 ): SurvivorEpisodeResult {
+  // `eliminated` is the generic view of `exits`; a test states the exits and
+  // gets the other for free, the way an adapter would build them.
+  const exits =
+    overrides.exits ?? (overrides.eliminated ?? []).map((player) => ({ player, how: 'voted' as const }));
   return {
     weekLabel: `E${overrides.weekNumber}`,
     aired: true,
-    eliminated: [],
     immunity: [],
     tribalImmunity: [],
     reward: [],
     idolsPlayed: [],
     votes: [],
+    fireMakingWinner: null,
     ...overrides,
+    exits,
+    eliminated: exits.map((e) => e.player),
   };
 }
 
@@ -60,8 +66,8 @@ const facts: SurvivorSeasonFacts = {
       votes: [{ player: cal, count: 4 }],
       eliminated: [cal],
     }),
-    // A medevac: someone leaves with no votes cast at all.
-    episode({ weekNumber: 3, eliminated: [ben], votes: [], immunity: [ana] }),
+    // A medevac: the source says so.
+    episode({ weekNumber: 3, exits: [{ player: ben, how: 'evacuated' }], votes: [], immunity: [ana] }),
     // Scheduled, not aired.
     episode({ weekNumber: 4, aired: false }),
   ],
@@ -73,6 +79,7 @@ const facts: SurvivorSeasonFacts = {
     { order: 5, player: cal, dateLabel: '', dayLabel: '', placeLabel: '5th Place' },
     { order: 6, player: fay, dateLabel: '', dayLabel: '', placeLabel: '6th Place' },
   ],
+  mergeEpisode: 2,
   cast: [
     { ...ana, statusLabel: 'Winner', placeLabel: 'Sole Survivor' },
     { ...dee, statusLabel: 'Runner-Up', placeLabel: 'Runner-Up' },
@@ -118,11 +125,16 @@ describe('mapSurvivorSeason', () => {
     expect(forWeek(2, 'VOTED_OUT_UNANIMOUS').map((c) => c.player.externalId)).toEqual(['cal']);
   });
 
-  it('treats a departure with no votes as involuntary, and flags it', () => {
-    const [left] = forWeek(3, 'VOTED_OUT');
-    expect(left.player.externalId).toBe('ben');
-    expect(left.confidence).toBe('MEDIUM');
-    expect(left.reasons[0]).toMatch(/quit or evacuation/);
+  it('scores a medevac as an involuntary exit, not a vote-out', () => {
+    expect(forWeek(3, 'VOTED_OUT')).toHaveLength(0);
+    expect(forWeek(3, 'ELIMINATED_INVOLUNTARY').map((c) => c.player.externalId)).toEqual(['ben']);
+  });
+
+  it('credits the merge to everyone still in when the tribes merged', () => {
+    const merged = forWeek(2, 'MADE_MERGE')
+      .map((c) => c.player.externalId)
+      .sort();
+    expect(merged).toEqual(['ana', 'ben', 'cal', 'dee', 'eli']);
   });
 
   it('awards survival only through aired episodes and only to those still in', () => {
@@ -154,6 +166,6 @@ describe('mapSurvivorSeason', () => {
     const codes = new Set(candidates.map((c) => c.eventCode));
     expect(codes.has('IDOL_FOUND')).toBe(false);
     expect(codes.has('BLINDSIDE_ORCHESTRATED')).toBe(false);
-    expect(codes.has('MADE_MERGE')).toBe(false);
+    expect(codes.has('FIRE_MAKING_WIN')).toBe(false);
   });
 });

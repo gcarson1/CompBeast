@@ -13,13 +13,23 @@ import type { SocialBuzz } from '@/lib/social-feed';
  * people somewhere else, and taking over their tab mid-season to do it would
  * lose their place.
  */
-export function SocialFeed({ buzz, hashtag }: { buzz: SocialBuzz; hashtag: string | null }) {
+export function SocialFeed({
+  buzz,
+  hashtag,
+  id = 'buzz',
+}: {
+  buzz: SocialBuzz;
+  hashtag: string | null;
+  /** Distinguishes the heading ids when a page carries one feed per show. */
+  id?: string;
+}) {
   const xSearchUrl = hashtag ? `https://x.com/search?q=%23${encodeURIComponent(hashtag)}&f=live` : null;
+  const headingId = `${id}-heading`;
 
   return (
-    <section aria-labelledby="buzz-heading">
+    <section aria-labelledby={headingId}>
       <div className="mb-3 flex items-baseline justify-between gap-3">
-        <h2 id="buzz-heading" className="eyebrow flex items-center gap-1.5">
+        <h2 id={headingId} className="eyebrow flex items-center gap-1.5">
           <span className="h-1.5 w-1.5 animate-pulse rounded-full bg-danger" aria-hidden />
           Latest buzz
         </h2>

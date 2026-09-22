@@ -8,7 +8,9 @@
  * unlisted host there would throw at render, so those fall back to a plain
  * `<img>`. Plain CommonJS because next.config.js cannot import TypeScript.
  *
- * - wp.bigbrotherjunkies.com: contestant headshots, from ingestion.
+ * - wp.bigbrotherjunkies.com: Big Brother headshots, from ingestion.
+ * - www.paramountplus.com: Survivor headshots, from the network's own cast
+ *   articles, via the Wikipedia adapter.
  * - img.clerk.com: member avatars, from the auth provider.
  */
-module.exports = ['wp.bigbrotherjunkies.com', 'img.clerk.com'];
+module.exports = ['wp.bigbrotherjunkies.com', 'www.paramountplus.com', 'img.clerk.com'];

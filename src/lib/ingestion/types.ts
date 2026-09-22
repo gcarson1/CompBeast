@@ -41,6 +41,11 @@ export interface RawCycleResult {
   aired: boolean;
   /** Everyone who left the game this cycle, whatever the show calls it. */
   eliminated: RawPlayerRef[];
+  /**
+   * When the cycle aired, where the source says so outright. The pipeline
+   * prefers this to interpolating from elimination dates.
+   */
+  airsAt?: Date | null;
 }
 
 export interface RawPlacementEntry {
@@ -60,6 +65,8 @@ export interface RawCastMember extends RawPlayerRef {
   /** Source's status tag, e.g. "Winner", "Jury", "Out". */
   statusLabel: string | null;
   placeLabel: string | null;
+  /** Whatever else the source knows — age, hometown, tribe — stored on the contestant as is. */
+  metadata?: Record<string, unknown>;
 }
 
 export interface RawSeasonFacts<TCycle extends RawCycleResult = RawCycleResult> {
@@ -88,7 +95,15 @@ export interface BigBrotherWeekResult extends RawCycleResult {
 
 export type BigBrotherSeasonFacts = RawSeasonFacts<BigBrotherWeekResult>;
 
+/** How someone left the game, as far as the source states it. */
+export interface SurvivorExit {
+  player: RawPlayerRef;
+  how: 'voted' | 'fire' | 'evacuated' | 'quit' | 'unknown';
+}
+
 export interface SurvivorEpisodeResult extends RawCycleResult {
+  /** Every departure, with how it happened; `eliminated` holds the same players. */
+  exits: SurvivorExit[];
   /** Individual immunity winners (post-merge, or a tribe swap twist). */
   immunity: RawPlayerRef[];
   /** Every member of a tribe that won immunity (pre-merge). */
@@ -99,9 +114,14 @@ export interface SurvivorEpisodeResult extends RawCycleResult {
   idolsPlayed: Array<{ player: RawPlayerRef; negatedVotes: boolean }>;
   /** Votes received at tribal council, per player. */
   votes: Array<{ player: RawPlayerRef; count: number }>;
+  /** Who won the final-four fire-making challenge, when this episode had it. */
+  fireMakingWinner: RawPlayerRef | null;
 }
 
-export type SurvivorSeasonFacts = RawSeasonFacts<SurvivorEpisodeResult>;
+export interface SurvivorSeasonFacts extends RawSeasonFacts<SurvivorEpisodeResult> {
+  /** The episode in which the tribes merged; null before it airs. */
+  mergeEpisode: number | null;
+}
 
 // ---------------------------------------------------------------------------
 

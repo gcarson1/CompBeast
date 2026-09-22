@@ -3,6 +3,7 @@ import { prisma } from '../db';
 import { recalculateLeaguesForCycle, recalculateSeasonLeagues } from '../scoring/repository';
 import { lexiconFor } from '../shows/lexicon';
 import { bigBrotherJunkiesAdapter } from './sources/big-brother-junkies';
+import { wikipediaSurvivorAdapter } from './sources/wikipedia-survivor';
 import { mapBigBrotherSeason } from './mappers/big-brother';
 import { mapSurvivorSeason } from './mappers/survivor';
 import {
@@ -23,6 +24,7 @@ import {
  */
 const ADAPTERS: Record<string, SeasonSourceAdapter> = {
   [bigBrotherJunkiesAdapter.slug]: bigBrotherJunkiesAdapter,
+  [wikipediaSurvivorAdapter.slug]: wikipediaSurvivorAdapter as SeasonSourceAdapter,
 };
 
 const MAPPERS: Record<string, SeasonMapper> = {
@@ -98,15 +100,22 @@ export async function bootstrapSeasonFromSource(input: {
 
   const name = input.seasonName ?? facts.seasonLabel;
 
-  // A season with a crowned winner is over; anything else is still in play.
-  // Air dates would be a flimsier signal — sources often omit them entirely.
+  // A season with a crowned winner is over. One with an aired cycle, or a
+  // premiere already behind us, is in play. Anything else is still to come —
+  // and must say so, or the home page announces it as airing now.
   const hasWinner = facts.placements.some((e) => /winner|sole survivor/i.test(e.placeLabel));
-  const status = hasWinner ? 'COMPLETED' : 'ACTIVE';
+  const anyAired = facts.weeks.some((w) => w.aired);
+  const premiered = facts.premiereDate !== null && facts.premiereDate.getTime() <= Date.now();
+  const status = hasWinner ? 'COMPLETED' : anyAired || premiered ? 'ACTIVE' : 'UPCOMING';
 
+  const dates = {
+    startDate: facts.premiereDate ?? undefined,
+    endDate: facts.finaleDate ?? undefined,
+  };
   const season = await prisma.season.upsert({
     where: { slug: input.seasonExternalId },
-    update: { name, status },
-    create: { showId: show.id, slug: input.seasonExternalId, name, year: input.year, status },
+    update: { name, status, ...dates },
+    create: { showId: show.id, slug: input.seasonExternalId, name, year: input.year, status, ...dates },
   });
 
   // Cycles: one per week the source reports, plus a finale label on the last.
@@ -155,19 +164,25 @@ export async function bootstrapSeasonFromSource(input: {
       where: {
         sourceSlug_externalId: { sourceSlug: facts.sourceSlug, externalId: member.externalId },
       },
-      select: { contestantId: true, contestant: { select: { photoUrl: true } } },
+      select: { contestantId: true, contestant: { select: { photoUrl: true, metadata: true } } },
     });
 
     if (existingLink) {
-      // Bootstrap is safe to re-run, and the adapter only just started
-      // capturing photoUrl — backfill it for contestants that were already
-      // linked before that, without overwriting one set some other way.
+      // Bootstrap is safe to re-run. A photo the source has since gained is
+      // filled in, never overwritten; whatever else the source knows about
+      // the person is merged over what is there, so a re-run after the cast
+      // page grew a hometown column picks it up.
+      const data: Prisma.ContestantUpdateInput = {};
       if (member.photoUrl && !existingLink.contestant.photoUrl) {
-        await prisma.contestant.update({
-          where: { id: existingLink.contestantId },
-          data: { photoUrl: member.photoUrl },
-        });
+        data.photoUrl = member.photoUrl;
         photosBackfilled += 1;
+      }
+      if (member.metadata) {
+        const current = (existingLink.contestant.metadata ?? {}) as Record<string, unknown>;
+        data.metadata = { ...current, ...member.metadata } as Prisma.InputJsonObject;
+      }
+      if (Object.keys(data).length > 0) {
+        await prisma.contestant.update({ where: { id: existingLink.contestantId }, data });
       }
       continue;
     }
@@ -177,7 +192,11 @@ export async function bootstrapSeasonFromSource(input: {
         seasonId: season.id,
         name: member.name,
         photoUrl: member.photoUrl,
-        metadata: { sourceStatus: member.statusLabel, sourcePlace: member.placeLabel },
+        metadata: {
+          ...(member.metadata ?? {}),
+          sourceStatus: member.statusLabel,
+          sourcePlace: member.placeLabel,
+        } as Prisma.InputJsonObject,
       },
     });
     contestantsCreated += 1;
@@ -207,6 +226,11 @@ export async function bootstrapSeasonFromSource(input: {
 function buildCycleSchedule(facts: RawSeasonFacts): Map<number, Date> {
   const schedule = new Map<number, Date>();
   const year = facts.premiereDate?.getFullYear() ?? new Date().getFullYear();
+
+  // A source that states each cycle's air date needs no interpolation.
+  for (const week of facts.weeks) {
+    if (week.airsAt) schedule.set(week.weekNumber, week.airsAt);
+  }
 
   const eliminationDateByPlayer = new Map<string, string>();
   for (const entry of facts.placements) {

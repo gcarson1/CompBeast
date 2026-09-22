@@ -5,17 +5,17 @@ import { BeastDoodle } from '@/components/doodles/BeastDoodle';
 import { Doodle } from '@/components/doodles/Doodle';
 import { LeagueRail } from '@/components/LeagueRail';
 import { Reveal } from '@/components/motion/Reveal';
-import { LiveSection, type FeaturedCast } from '@/components/LiveSection';
+import { LiveSection, type FeaturedCast, type LiveBlockData } from '@/components/LiveSection';
 import { getSocialBuzz } from '@/lib/social-feed';
-import { SignedOutLanding, type LandingSeason } from '@/components/SignedOutLanding';
+import { SignedOutLanding, type LandingShow } from '@/components/SignedOutLanding';
 import { getCurrentUser } from '@/lib/auth';
 import { isEmailConfigured } from '@/lib/email/send';
 import { HOME_PATH, SITE_DESCRIPTION, SITE_NAME, absoluteUrl } from '@/lib/seo';
-import { FLAGSHIP_SHOW_NAME, FLAGSHIP_SHOW_SLUG, hashtagFor } from '@/lib/shows/registry';
+import { hashtagFor } from '@/lib/shows/registry';
 import {
   getHomeLeagues,
   getRecentHeadlines,
-  getRuleBook,
+  getRuleBooks,
   getSeasonScoreboard,
   getSeasonsByStatus,
 } from '@/server/queries';
@@ -48,10 +48,10 @@ type OpenSeason = Awaited<ReturnType<typeof getSeasonsByStatus>>['open'][number]
  * Home.
  *
  * Signed out this is the pitch; signed in it is the dashboard. Both render
- * the same `<LiveSection />` below the fold — the airing cast, the last
- * scored events and the community timeline — because "what is happening in
- * the house right now" is the reason to open the app in either state, and a
- * signed-in player losing access to it made no sense.
+ * the same `<LiveSection />` below the fold — for each show, the open
+ * season's cast, the last scored events and the community timeline —
+ * because "what is happening right now" is the reason to open the app in
+ * either state, and a signed-in player losing access to it made no sense.
  *
  * What renders *in the shell* is chosen deliberately. There is no loading
  * boundary above this page (see PageSkeleton.tsx), so everything awaited here
@@ -73,10 +73,10 @@ export default async function HomePage() {
 
   // Started here, awaited in two places. The live block always needs it;
   // the signed-out copy needs it too, *before* the shell goes out, so the
-  // season the prose names is the season whose faces are in the marquee.
+  // seasons the prose names are the seasons whose faces are in the marquee.
   // Signed in, nothing in the shell depends on it and it resolves inside
   // the boundary instead of holding the response.
-  const featuredPromise = getFeaturedCast(ordered);
+  const featuredPromise = getFeaturedCasts(ordered);
   // Signed in, nothing touches this until the boundary renders. Marking it
   // handled now keeps a fast database failure from surfacing as an unhandled
   // rejection in the meantime; the `await` inside the boundary still throws
@@ -90,30 +90,34 @@ export default async function HomePage() {
   );
 
   if (!user) {
-    const featured = await featuredPromise;
-    // The same selection the marquee makes — the first open season with a
-    // photographed cast — because the database also holds a synthetic demo
-    // season that is ACTIVE, and "Demo Season is airing now" is not a claim
-    // to put in front of a search engine. Only when no season qualifies does
-    // the copy fall back to whatever is first, which is also what the
-    // marquee's absence already says on such a database.
-    const lead = ordered.find((s) => s.id === featured?.seasonId) ?? ordered[0];
-    const season: LandingSeason | null = lead
-      ? {
-          slug: lead.slug,
-          name: lead.name,
-          status: lead.status === 'ACTIVE' ? 'ACTIVE' : 'UPCOMING',
-          contestantCount: lead._count.contestants,
-          showName: lead.show.name,
-          showSlug: lead.show.slug,
-          showLexicon: lead.show.lexicon,
-        }
-      : null;
-    const rulesets = await getRuleBook(season?.showSlug ?? FLAGSHIP_SHOW_SLUG);
+    const [featured, books] = await Promise.all([featuredPromise, getRuleBooks()]);
+    // One entry per show that has a rule book, in the rule book's order
+    // (flagship first). The season named for each is the one the marquee
+    // shows — the first open season with a photographed cast — because the
+    // database also holds synthetic demo seasons, and "Demo Season is airing
+    // now" is not a claim to put in front of a search engine. A show with
+    // no such season is still pitched, just without a season sentence.
+    const shows: LandingShow[] = books.map((book) => {
+      const lead = featured.find((f) => f.showSlug === book.slug);
+      const season = lead ? ordered.find((s) => s.id === lead.seasonId) : undefined;
+      return {
+        showName: book.name,
+        showSlug: book.slug,
+        lexicon: book.lexicon,
+        rulesets: book.rulesets,
+        season: season
+          ? {
+              slug: season.slug,
+              name: season.name,
+              status: season.status === 'ACTIVE' ? 'ACTIVE' : 'UPCOMING',
+              startsAt: season.startDate,
+              contestantCount: season._count.contestants,
+            }
+          : null,
+      };
+    });
 
-    return (
-      <SignedOutLanding live={live} season={season} rulesets={rulesets} emailAlerts={isEmailConfigured()} />
-    );
+    return <SignedOutLanding live={live} shows={shows} emailAlerts={isEmailConfigured()} />;
   }
 
   return (
@@ -155,21 +159,20 @@ async function HomeRail({ userId }: { userId: string }) {
   );
 }
 
-async function LiveBlock({ featured: pending }: { featured: Promise<FeaturedCast | null> }) {
+async function LiveBlock({ featured: pending }: { featured: Promise<FeaturedCast[]> }) {
   const featured = await pending;
-  // With nothing airing there is no season to tag, so the buzz falls back to
-  // the flagship show's news rather than a hashtag nobody is using.
-  const hashtag = featured ? hashtagFor(featured.showSlug, featured.seasonSlug) : null;
-  const [headlines, buzz] = await Promise.all([
-    featured ? getRecentHeadlines(featured.seasonId) : Promise.resolve([]),
-    getSocialBuzz({
-      showName: featured?.showName ?? FLAGSHIP_SHOW_NAME,
-      showSlug: featured?.showSlug ?? FLAGSHIP_SHOW_SLUG,
-      hashtag,
+  const blocks: LiveBlockData[] = await Promise.all(
+    featured.map(async (cast) => {
+      const hashtag = hashtagFor(cast.showSlug, cast.seasonSlug);
+      const [headlines, buzz] = await Promise.all([
+        getRecentHeadlines(cast.seasonId),
+        getSocialBuzz({ showName: cast.showName, showSlug: cast.showSlug, hashtag }),
+      ]);
+      return { featured: cast, headlines, buzz, hashtag };
     }),
-  ]);
+  );
 
-  return <LiveSection featured={featured} headlines={headlines} buzz={buzz} hashtag={hashtag} />;
+  return <LiveSection blocks={blocks} />;
 }
 
 /**
@@ -270,8 +273,16 @@ function EmptyLeagues() {
  * keyed off a slug or show name, so a synthetic/demo season with no real
  * photos is skipped automatically instead of needing a special case.
  */
-async function getFeaturedCast(seasons: OpenSeason[]): Promise<FeaturedCast | null> {
+/**
+ * One season per show: the first open one, in the order given (airing before
+ * upcoming), whose cast has photographs. A season without faces is not a
+ * marquee, and the demo seasons never have any, which is what keeps them off
+ * the home page.
+ */
+async function getFeaturedCasts(seasons: OpenSeason[]): Promise<FeaturedCast[]> {
+  const featured: FeaturedCast[] = [];
   for (const season of seasons) {
+    if (featured.some((f) => f.showSlug === season.show.slug)) continue;
     const board = await getSeasonScoreboard(season.slug);
     if (!board) continue;
 
@@ -281,16 +292,17 @@ async function getFeaturedCast(seasons: OpenSeason[]): Promise<FeaturedCast | nu
       .map((p) => ({ name: p.name, photoUrl: p.photoUrl }));
 
     if (cast.length > 0) {
-      return {
+      featured.push({
         seasonId: season.id,
         seasonSlug: board.season.slug,
         seasonName: board.season.name,
+        status: season.status === 'ACTIVE' ? 'ACTIVE' : 'UPCOMING',
+        startsAt: season.startDate,
         showName: season.show.name,
         showSlug: season.show.slug,
         cast,
-      };
+      });
     }
   }
-
-  return null;
+  return featured;
 }

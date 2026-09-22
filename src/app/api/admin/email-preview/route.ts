@@ -40,12 +40,12 @@ const SAMPLES: Record<NotificationType, { title: string; body: string; href: str
   },
   LEAGUE_INVITE: {
     title: 'Dana invited you to Sunday Night Crew',
-    body: 'Big Brother 28 · 6 of 10 seats taken · invite code SUND-4K2P',
+    body: 'Survivor 51 · 6 of 10 seats taken · invite code SUND-4K2P',
     href: '/leagues/join?code=SUND-4K2P',
   },
   LEAGUE_MEMBER_JOINED: {
     title: 'Marco joined Sunday Night Crew',
-    body: 'Backdoor Bandits took a seat.',
+    body: 'Torch Snuffers took a seat.',
     href: '/leagues/demo',
   },
   LEAGUE_UPDATED: {

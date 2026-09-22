@@ -143,6 +143,14 @@ export const SURVIVOR_EVENTS: EventDefinitionSpec[] = [
     description: 'Voted out while holding an unplayed hidden immunity idol.',
   },
   {
+    code: 'FIRE_MAKING_LOSS',
+    label: 'Lose the fire-making challenge',
+    category: 'ELIMINATION_ENDGAME',
+    points: -2,
+    isRepeatable: false,
+    description: 'Lost fire-making at final four and became the last member of the jury.',
+  },
+  {
     code: 'ELIMINATED_INVOLUNTARY',
     label: 'Left the game',
     category: 'ELIMINATION_ENDGAME',

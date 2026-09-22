@@ -4,7 +4,9 @@ import type { ReactNode } from 'react';
 import { BeastDoodle } from '@/components/doodles/BeastDoodle';
 import { Doodle } from '@/components/doodles/Doodle';
 import { JsonLd } from '@/components/JsonLd';
+import { premiereLabel } from '@/components/LiveSection';
 import { Reveal } from '@/components/motion/Reveal';
+import { ShowTheme } from '@/components/ShowTheme';
 import { Sticker } from '@/components/Sticker';
 import { DEFAULT_LOCK_OFFSET_MINUTES, MAX_LOCK_OFFSET_MINUTES } from '@/lib/cycles';
 import {
@@ -16,29 +18,28 @@ import {
   tvSeriesNode,
   websiteId,
 } from '@/lib/seo';
-import { lexiconFor, lower, type ShowLexicon } from '@/lib/shows/lexicon';
-import {
-  FLAGSHIP_SHOW_NAME,
-  FLAGSHIP_SHOW_SLUG,
-  HEADLINE_EVENT_COUNT,
-  showcaseEventsFor,
-} from '@/lib/shows/registry';
+import { lower, type ShowLexicon } from '@/lib/shows/lexicon';
+import { HEADLINE_EVENT_COUNT, showcaseEventsFor } from '@/lib/shows/registry';
 import { formatPoints, pointsTone } from '@/lib/ui';
 import { LEAGUE_LIMITS } from '@/lib/validation';
 import type { getRuleBook } from '@/server/queries';
 
 type RuleBook = Awaited<ReturnType<typeof getRuleBook>>;
 
-/** The season the copy talks about — the airing one when there is one. */
-export interface LandingSeason {
-  slug: string;
-  name: string;
-  status: 'ACTIVE' | 'UPCOMING';
-  contestantCount: number;
+/** One show as the landing page pitches it: its words, its rules, its open season. */
+export interface LandingShow {
   showName: string;
   showSlug: string;
-  /** `Show.lexicon` as stored, resolved by `lexiconFor`. */
-  showLexicon: unknown;
+  lexicon: ShowLexicon;
+  rulesets: RuleBook;
+  /** The season the copy names — the airing one, else the next — or null. */
+  season: {
+    slug: string;
+    name: string;
+    status: 'ACTIVE' | 'UPCOMING';
+    startsAt: Date | null;
+    contestantCount: number;
+  } | null;
 }
 
 /**
@@ -51,19 +52,23 @@ export interface LandingSeason {
  * now a CSS animation (`animate-rise`), the sign-in button is the only
  * client island, and everything below the fold ships as plain HTML.
  *
+ * The page pitches the platform first and each show on its own terms. The
+ * hero, how-it-works, league sizes and comparison are about Comp Beast and
+ * say "cast", "contestant", "episode"; the live block, the show tiles and
+ * the scoring section are one block per show, in that show's colour and
+ * vocabulary, so neither show is the default and neither is an afterthought.
+ *
  * The page is written for two readers at once. A person skimming on a phone
  * gets the display headline and one paragraph per section. A crawler or a
  * language model gets the same paragraphs as self-contained answers: each
  * one opens its section, says the whole thing in 40–60 words, and is dense
  * with the names it needs to know what this is about — Comp Beast, the
- * featured show, its competitions and its vocabulary — because that is how
- * a model decides whether a page answers the question it was asked. The
- * show's words come from its lexicon and its headline events from the show
- * registry, so the same page pitches whichever show is airing.
+ * shows, their competitions and their vocabulary — because that is how a
+ * model decides whether a page answers the question it was asked.
  *
  * Every number on the page is read from the same place the app enforces it:
- * the scoring table and the point values in the prose come from the live
- * rule book, the league sizes from the validation schema, the lock times
+ * the scoring tables and the point values in the prose come from the live
+ * rule books, the league sizes from the validation schema, the lock times
  * from `cycles.ts`. The FAQ is one array rendered twice, as text and as
  * FAQPage JSON-LD, so the schema cannot say something the page does not.
  *
@@ -73,25 +78,22 @@ export interface LandingSeason {
  */
 export function SignedOutLanding({
   live,
-  season,
-  rulesets,
+  shows,
   emailAlerts,
 }: {
-  /** The airing cast, the last scored events and the buzz panel — passed in
+  /** The open seasons' casts, last scored events and buzz panels — passed in
    *  so the signed-in home renders the identical block. */
   live: ReactNode;
-  season: LandingSeason | null;
-  rulesets: RuleBook;
+  shows: LandingShow[];
   /** Whether alerts can also go out by email in this deployment. */
   emailAlerts: boolean;
 }) {
-  const facts = deriveFacts(season, rulesets);
+  const facts = deriveFacts(shows);
   const faq = buildFaq(facts, emailAlerts);
-  const { showName, showSlug } = facts;
 
   return (
     <div className="pt-6">
-      <JsonLd data={applicationNode(facts, showSlug, showName)} />
+      <JsonLd data={applicationNode(facts)} />
       <JsonLd data={faqNode(faq)} />
 
       <header className="relative">
@@ -100,7 +102,7 @@ export function SignedOutLanding({
             eyebrow is now a sticker; the camera beside it is decoration. */}
         <p className="animate-rise">
           <Sticker tone="gold" size="lg" tilt="l">
-            Free fantasy leagues for {showName}
+            Free fantasy leagues for reality competition TV
           </Sticker>
         </p>
         <Doodle
@@ -136,6 +138,50 @@ export function SignedOutLanding({
 
       <div className="mt-14">{live}</div>
 
+      <Section id="shows" title="Pick your show" lede={facts.showsLede}>
+        {/* One tile per show, each in its own colour: the two brands get
+            equal billing, and the platform's gold stays for the platform. */}
+        <ul className="mt-5 grid gap-4 pt-3 sm:grid-cols-2">
+          {facts.shows.map((show) => (
+            <li key={show.showSlug}>
+              <ShowTheme showSlug={show.showSlug}>
+                <div className="card card-lift relative flex h-full flex-col p-5">
+                  <Sticker tone="show" tilt="r" className="absolute -right-2 -top-3">
+                    {show.season?.status === 'ACTIVE' ? 'Airing now' : show.season ? 'Up next' : 'Off season'}
+                  </Sticker>
+                  <h3 className="headline text-2xl">{show.showName}</h3>
+                  <p className="mt-2 max-w-measure text-xs leading-relaxed text-muted">{show.pitch}</p>
+                  <dl className="mt-4 grid grid-cols-2 gap-3 border-t border-hairline pt-4 text-2xs">
+                    <div>
+                      <dt className="font-semibold uppercase tracking-wide text-muted">Season</dt>
+                      <dd className="mt-0.5 text-sm font-semibold text-ink">{show.season?.name ?? '—'}</dd>
+                    </div>
+                    <div>
+                      <dt className="font-semibold uppercase tracking-wide text-muted">Cast</dt>
+                      <dd className="mt-0.5 text-sm font-semibold text-ink">
+                        {show.season?.contestantCount
+                          ? `${show.season.contestantCount} ${lower(show.lexicon.contestantPlural)}`
+                          : '—'}
+                      </dd>
+                    </div>
+                  </dl>
+                  <div className="mt-auto flex flex-wrap gap-2 pt-4">
+                    {show.season && (
+                      <Link href={`/seasons/${show.season.slug}`} className="btn-ghost btn-sm">
+                        Meet the cast
+                      </Link>
+                    )}
+                    <Link href="/rules" className="btn-ghost btn-sm">
+                      {show.showName} rules
+                    </Link>
+                  </div>
+                </div>
+              </ShowTheme>
+            </li>
+          ))}
+        </ul>
+      </Section>
+
       <Section id="how-it-works" title="How it works" lede={facts.howItWorks}>
         {/* Three claims as a numbered, hairline-separated list on a narrow/wide
             column split — deliberately not a three-up card grid. Cards here
@@ -143,7 +189,7 @@ export function SignedOutLanding({
             shape every generated landing page reaches for, and it flattens the
             claims into decoration instead of letting them read in order. */}
         <ol className="mt-5 divide-y divide-hairline border-y border-hairline">
-          {facts.claims.map((claim) => (
+          {CLAIMS.map((claim) => (
             <li
               key={claim.step}
               className="grid grid-cols-[2.5rem_1fr] gap-x-4 py-5 sm:grid-cols-[4rem_1fr] sm:gap-x-6"
@@ -165,69 +211,92 @@ export function SignedOutLanding({
         </ol>
       </Section>
 
-      {facts.scoring && (
-        <Section id="scoring" title={`How ${showName} fantasy scoring works`} lede={facts.scoring.lede}>
-          <figure className="mt-5">
-            {/* `table-fixed` with the event column at 40%: a phone is 335px
-                wide inside the gutters, and left to auto-layout the fourth
-                column fell off the edge behind a scrollbar nobody sees. */}
-            <div className="card overflow-hidden">
-              <table className="w-full table-fixed text-xs">
-                <caption className="sr-only">
-                  Point values for selected {showName} events under each Comp Beast ruleset
-                </caption>
-                <colgroup>
-                  <col className="w-[40%]" />
-                  {facts.scoring.columns.map((column) => (
-                    <col key={column.id} />
-                  ))}
-                </colgroup>
-                <thead>
-                  <tr className="bg-canvas/60 text-2xs uppercase tracking-wide text-muted">
-                    <th scope="col" className="px-3 py-2.5 text-left font-semibold">
-                      Event
-                    </th>
-                    {facts.scoring.columns.map((column) => (
-                      <th key={column.id} scope="col" className="px-2 py-2.5 text-right font-semibold">
-                        {column.name}
-                      </th>
-                    ))}
-                  </tr>
-                </thead>
-                <tbody className="divide-y divide-hairline">
-                  {facts.scoring.rows.map((row) => (
-                    <tr key={row.label}>
-                      <th scope="row" className="px-3 py-2.5 text-left font-medium leading-snug text-ink">
-                        {row.label}
-                      </th>
-                      {row.points.map((points, i) => (
-                        <td
-                          key={facts.scoring!.columns[i].id}
-                          className={`px-2 py-2.5 text-right font-semibold tabular-nums ${
-                            points === null ? 'text-muted' : pointsTone(points)
-                          }`}
-                        >
-                          {points === null ? '—' : formatPoints(points)}
-                        </td>
-                      ))}
-                    </tr>
-                  ))}
-                </tbody>
-              </table>
-            </div>
-            <figcaption className="mt-2 text-2xs text-muted">
-              {facts.scoring.rows.length} of {facts.eventCount} scored events. A dash means the ruleset does
-              not score that event.{' '}
+      {facts.shows.some((s) => s.scoring) && (
+        <Section id="scoring" title="How scoring works" lede={facts.scoringLede}>
+          <div className="mt-5 space-y-8">
+            {facts.shows
+              .filter((show) => show.scoring)
+              .map((show) => (
+                <ShowTheme key={show.showSlug} showSlug={show.showSlug}>
+                  <figure>
+                    <figcaption className="mb-3">
+                      <Sticker tone="show" size="sm">
+                        {show.showName}
+                      </Sticker>
+                      <p className="mt-2 max-w-measure text-sm leading-relaxed text-muted">
+                        {show.scoring!.lede}
+                      </p>
+                    </figcaption>
+                    {/* `table-fixed` with the event column at 40%: a phone is
+                        335px wide inside the gutters, and left to auto-layout
+                        the fourth column fell off the edge behind a scrollbar
+                        nobody sees. */}
+                    <div className="card overflow-hidden">
+                      <table className="w-full table-fixed text-xs">
+                        <caption className="sr-only">
+                          Point values for selected {show.showName} events under each Comp Beast ruleset
+                        </caption>
+                        <colgroup>
+                          <col className="w-[40%]" />
+                          {show.scoring!.columns.map((column) => (
+                            <col key={column.id} />
+                          ))}
+                        </colgroup>
+                        <thead>
+                          <tr className="bg-canvas/60 text-2xs uppercase tracking-wide text-muted">
+                            <th scope="col" className="px-3 py-2.5 text-left font-semibold">
+                              Event
+                            </th>
+                            {show.scoring!.columns.map((column) => (
+                              <th
+                                key={column.id}
+                                scope="col"
+                                className="px-2 py-2.5 text-right font-semibold"
+                              >
+                                {column.name}
+                              </th>
+                            ))}
+                          </tr>
+                        </thead>
+                        <tbody className="divide-y divide-hairline">
+                          {show.scoring!.rows.map((row) => (
+                            <tr key={row.label}>
+                              <th
+                                scope="row"
+                                className="px-3 py-2.5 text-left font-medium leading-snug text-ink"
+                              >
+                                {row.label}
+                              </th>
+                              {row.points.map((points, i) => (
+                                <td
+                                  key={show.scoring!.columns[i].id}
+                                  className={`px-2 py-2.5 text-right font-semibold tabular-nums ${
+                                    points === null ? 'text-muted' : pointsTone(points)
+                                  }`}
+                                >
+                                  {points === null ? '—' : formatPoints(points)}
+                                </td>
+                              ))}
+                            </tr>
+                          ))}
+                        </tbody>
+                      </table>
+                    </div>
+                  </figure>
+                </ShowTheme>
+              ))}
+            <p className="text-2xs text-muted">
+              A dash means the ruleset does not score that event.{' '}
               {/* Underlined because it sits inside running text; colour
                   alone is not a distinguishable link (WCAG 1.4.1). */}
               <Link
                 href="/rules"
                 className="text-brand-gold-deep underline decoration-brand-gold-deep/40 underline-offset-2"
               >
-                See the full table →
+                See every rule for every show →
               </Link>
-            </figcaption>
-          </figure>
+            </p>
+          </div>
         </Section>
       )}
 
@@ -345,69 +414,86 @@ function Section({
 // Spelled out for Tailwind's content scan.
 const STAT_TONES = ['card-pop-gold', 'card-pop-lavender', 'card-pop-mint', 'card-pop-sky'] as const;
 
-function buildClaims(lexicon: ShowLexicon) {
-  return [
-    {
-      step: '01',
-      title: `Draft the real ${lower(lexicon.contestantPlural)}`,
-      body: 'Snake-draft the live cast before the season locks in.',
-    },
-    {
-      step: '02',
-      title: 'Score every move',
-      body: 'Competition wins, blindsides, eliminations and blowups all count toward your team.',
-    },
-    {
-      step: '03',
-      title: 'Live leaderboard',
-      body: 'Ranks update episode by episode, all season long.',
-    },
-  ];
-}
+const CLAIMS = [
+  {
+    step: '01',
+    title: 'Draft the real cast',
+    body: 'Snake-draft the season’s contestants before the roster locks.',
+  },
+  {
+    step: '02',
+    title: 'Score every move',
+    body: 'Competition wins, blindsides, eliminations and blowups all count toward your team.',
+  },
+  {
+    step: '03',
+    title: 'Live leaderboard',
+    body: 'Ranks update episode by episode, all season long.',
+  },
+];
 
-interface Facts {
-  season: LandingSeason | null;
+/** A show's one-line pitch on its tile — its vocabulary, not the platform's. */
+const SHOW_PITCHES: Record<string, string> = {
+  'big-brother':
+    'Head of Household, the veto, nominations, evictions and the jury — every week in the house scored as it airs, straight from the results.',
+  survivor:
+    'Immunity, rewards, idols, tribal council and the merge — every episode on the island scored as it airs, from the voting history down.',
+};
+
+interface ShowFacts {
   showName: string;
   showSlug: string;
   lexicon: ShowLexicon;
-  claims: ReturnType<typeof buildClaims>;
+  season: LandingShow['season'];
+  pitch: string;
   eventCount: number;
-  rulesetCount: number;
   rulesetNames: string[];
   defaultRulesetName: string | null;
-  /** Point value under the default ruleset, by event code. */
-  defaultPoints: Map<string, number>;
   /** The headline events as "label points" pairs, for the prose. */
   headline: Array<{ label: string; points: number }>;
-  lede: string;
-  howItWorks: string;
   scoring: {
     lede: string;
     columns: Array<{ id: string; name: string }>;
     rows: Array<{ label: string; points: Array<number | null> }>;
   } | null;
+}
+
+interface Facts {
+  shows: ShowFacts[];
+  lede: string;
+  showsLede: string;
+  howItWorks: string;
+  scoringLede: string;
   leagueSetup: string;
   stats: Array<{ value: string; label: string }>;
   comparison: string;
   comparisonRows: Array<{ feature: string; compBeast: string; spreadsheet: string }>;
 }
 
-function deriveFacts(season: LandingSeason | null, rulesets: RuleBook): Facts {
-  const showName = season?.showName ?? FLAGSHIP_SHOW_NAME;
-  const showSlug = season?.showSlug ?? FLAGSHIP_SHOW_SLUG;
-  const lexicon = lexiconFor(showSlug, season?.showLexicon);
-  const contestants = lower(lexicon.contestantPlural);
-  const cycle = lower(lexicon.cycleSingular);
+function seasonSentence(show: LandingShow): string | null {
+  const { season, lexicon } = show;
+  if (!season) return null;
+  if (season.status === 'ACTIVE') {
+    return season.contestantCount > 0
+      ? `${season.name} is airing now with ${season.contestantCount} ${lower(lexicon.contestantPlural)}.`
+      : `${season.name} is airing now.`;
+  }
+  const when = season.startsAt ? ` on ${premiereLabel(season.startsAt)}` : '';
+  return season.contestantCount > 0
+    ? `${season.name} premieres${when} with a ${season.contestantCount}-${lower(lexicon.contestantSingular)} cast, and leagues are open.`
+    : `${season.name} premieres${when}, and leagues are open.`;
+}
+
+function deriveShowFacts(show: LandingShow): ShowFacts {
+  const { rulesets, lexicon } = show;
   const eventIds = new Set(rulesets.flatMap((r) => r.eventDefinitions.map((l) => l.eventDefinition.id)));
   const eventCount = eventIds.size;
-  const rulesetNames = rulesets.map((r) => r.name);
   const defaultRuleset = rulesets.find((r) => r.isDefault) ?? rulesets[0] ?? null;
 
   const pointsIn = (ruleset: RuleBook[number], code: string): number | null => {
     const link = ruleset.eventDefinitions.find((l) => l.eventDefinition.code === code);
     return link ? Number(link.pointsOverride ?? link.eventDefinition.points) : null;
   };
-
   const defaultPoints = new Map<string, number>();
   if (defaultRuleset) {
     for (const link of defaultRuleset.eventDefinitions) {
@@ -418,18 +504,7 @@ function deriveFacts(season: LandingSeason | null, rulesets: RuleBook): Facts {
     }
   }
 
-  const seasonSentence = !season
-    ? 'New seasons open for leagues as soon as their cast is announced.'
-    : season.status === 'ACTIVE'
-      ? season.contestantCount > 0
-        ? `${season.name} is airing now with a ${season.contestantCount}-${lower(lexicon.contestantSingular)} cast.`
-        : `${season.name} is airing now.`
-      : `${season.name} is open for leagues ahead of its premiere.`;
-
-  const { minTeams, maxTeams, minRoster, maxRoster } = LEAGUE_LIMITS;
-  const maxLockHours = MAX_LOCK_OFFSET_MINUTES / 60;
-
-  const showcase = showcaseEventsFor(showSlug);
+  const showcase = showcaseEventsFor(show.showSlug);
   const labelFor = (code: string) =>
     rulesets.flatMap((r) => r.eventDefinitions).find((l) => l.eventDefinition.code === code)?.eventDefinition
       .label;
@@ -444,67 +519,77 @@ function deriveFacts(season: LandingSeason | null, rulesets: RuleBook): Facts {
   });
   const headlineSentence = headline.map((h) => `${h.label} ${formatPoints(h.points)}`).join(', ');
 
-  let scoring: Facts['scoring'] = null;
+  let scoring: ShowFacts['scoring'] = null;
   if (defaultRuleset && eventCount > 0) {
     const rows = showcase.flatMap((code) => {
       const label = labelFor(code);
       if (!label) return [];
       return [{ label, points: rulesets.map((r) => pointsIn(r, code)) }];
     });
-
     scoring = {
       lede:
         headline.length >= 3
-          ? `${SITE_NAME} scores ${eventCount} ${showName} events across ${rulesets.length} rulesets, each with a fixed point value. Under the default ${defaultRuleset.name} rules: ${headlineSentence}. Every point traces to the aired result that produced it.`
-          : `${SITE_NAME} scores ${eventCount} ${showName} events across ${rulesets.length} rulesets, each with a fixed point value. Every league picks its ruleset before the draft, and every point on the leaderboard traces back to the aired result that produced it.`,
+          ? `${eventCount} scored ${show.showName} events. Under the default ${defaultRuleset.name} rules: ${headlineSentence}.`
+          : `${eventCount} scored ${show.showName} events, each with a fixed point value.`,
       columns: rulesets.map((r) => ({ id: r.id, name: r.name })),
       rows,
     };
   }
 
+  return {
+    showName: show.showName,
+    showSlug: show.showSlug,
+    lexicon,
+    season: show.season,
+    pitch:
+      SHOW_PITCHES[show.showSlug] ??
+      `Every ${lower(lexicon.cycleSingular)} of ${show.showName}, scored as it airs.`,
+    eventCount,
+    rulesetNames: rulesets.map((r) => r.name),
+    defaultRulesetName: defaultRuleset?.name ?? null,
+    headline,
+    scoring,
+  };
+}
+
+function deriveFacts(input: LandingShow[]): Facts {
+  const shows = input.map(deriveShowFacts);
+  const { minTeams, maxTeams, minRoster, maxRoster } = LEAGUE_LIMITS;
+  const maxLockHours = MAX_LOCK_OFFSET_MINUTES / 60;
+  const names = shows.map((s) => s.showName);
+  const showList =
+    names.length > 1 ? `${names.slice(0, -1).join(', ')} and ${names.at(-1)}` : (names[0] ?? '');
+  const seasonSentences = input.map(seasonSentence).filter((s): s is string => s !== null);
+  const totalEvents = shows.reduce((sum, s) => sum + s.eventCount, 0);
+  const rulesetsPerShow = shows[0]?.rulesetNames.length ?? 0;
+
   const stats = [
     { value: `${minTeams}–${maxTeams}`, label: 'teams per league' },
-    { value: `${minRoster}–${maxRoster}`, label: `${contestants} per roster` },
-    ...(eventCount > 0 ? [{ value: String(eventCount), label: 'scored events' }] : []),
-    ...(rulesets.length > 0
-      ? [
-          {
-            value: String(rulesets.length),
-            label: rulesets.length === 1 ? 'scoring ruleset' : 'scoring rulesets',
-          },
-        ]
+    { value: `${minRoster}–${maxRoster}`, label: 'players per roster' },
+    ...(totalEvents > 0 ? [{ value: String(totalEvents), label: 'scored events' }] : []),
+    ...(shows.length > 0
+      ? [{ value: String(shows.length), label: shows.length === 1 ? 'show' : 'shows' }]
       : []),
   ];
 
   const scoringCell =
-    eventCount > 0
-      ? `${eventCount} scored events at fixed values; ${rulesets.length} ${
-          rulesets.length === 1 ? 'ruleset' : 'rulesets'
-        } to choose from`
+    totalEvents > 0
+      ? `${totalEvents} scored events at fixed values across ${shows.length} ${shows.length === 1 ? 'show' : 'shows'}; ${rulesetsPerShow} rulesets per show`
       : 'Fixed rulesets chosen before the draft';
 
   return {
-    season,
-    showName,
-    showSlug,
-    lexicon,
-    claims: buildClaims(lexicon),
-    eventCount,
-    rulesetCount: rulesets.length,
-    rulesetNames,
-    defaultRulesetName: defaultRuleset?.name ?? null,
-    defaultPoints,
-    headline,
-    lede: `${SITE_DESCRIPTION} ${seasonSentence}`,
-    howItWorks: `A league lasts one season. A commissioner creates it, picks a scoring ruleset and opens between ${minTeams} and ${maxTeams} team seats, shared by invite code or QR code. Every team snake-drafts ${contestants} onto a roster of up to ${maxRoster}, each ${cycle}'s results are scored as they air, and the leaderboard ranks every team live until the finale.`,
-    scoring,
-    leagueSetup: `Leagues hold between ${minTeams} and ${maxTeams} teams, and each roster carries ${minRoster} to ${maxRoster} ${contestants}, both set by the commissioner before the draft. Rosters are drafted once and stay fixed for the season. Each ${cycle} shows a roster lock time — ${DEFAULT_LOCK_OFFSET_MINUTES} minutes before airtime by default, and a commissioner can move it up to ${maxLockHours} hours earlier.`,
+    shows,
+    lede: [SITE_DESCRIPTION, ...seasonSentences].join(' '),
+    showsLede: `${SITE_NAME} runs leagues for ${showList}. Each show keeps its own rule book, its own words and its own colours; a league belongs to one season of one show, and everything else — the draft, the standings, the chat — works the same way for both.`,
+    howItWorks: `A league lasts one season. A commissioner creates it, picks a scoring ruleset and opens between ${minTeams} and ${maxTeams} team seats, shared by invite code or QR code. Every team snake-drafts contestants onto a roster of up to ${maxRoster}, each episode's results are scored as they air, and the leaderboard ranks every team live until the finale.`,
+    scoringLede: `Every event has a fixed point value, and every league picks one of ${rulesetsPerShow} rulesets for its show before the draft: Classic scores only what the broadcast shows, Balanced turns the variance down, and Drama & Social adds the alliances, blowups and tears. Every point on a leaderboard traces to the aired result that produced it.`,
+    leagueSetup: `Leagues hold between ${minTeams} and ${maxTeams} teams, and each roster carries ${minRoster} to ${maxRoster} players, both set by the commissioner before the draft. Rosters are drafted once and stay fixed for the season. Each episode shows a roster lock time — ${DEFAULT_LOCK_OFFSET_MINUTES} minutes before airtime by default, and a commissioner can move it up to ${maxLockHours} hours earlier.`,
     stats,
     comparison: `Most fantasy leagues for reality TV still live in a spreadsheet and a group chat, where one person keys in every result and settles every dispute. ${SITE_NAME} replaces that with an auditable ledger: results are captured from published season results, every correction is recorded, and standings recompute from the ledger rather than from a formula somebody edited.`,
     comparisonRows: [
       {
         feature: 'Results',
-        compBeast: 'Captured from published season results or entered by admins, reviewed before publishing',
+        compBeast: 'Captured from published season results, reviewed before publishing',
         spreadsheet: 'Typed in by one person after each episode',
       },
       {
@@ -524,7 +609,7 @@ function deriveFacts(season: LandingSeason | null, rulesets: RuleBook): Facts {
       },
       {
         feature: 'Standings',
-        compBeast: `Live leaderboard with ${cycle}-by-${cycle} breakdowns`,
+        compBeast: 'Live leaderboard with episode-by-episode breakdowns',
         spreadsheet: 'Recalculated by hand',
       },
       { feature: 'Cost', compBeast: 'Free', spreadsheet: 'Free' },
@@ -542,44 +627,42 @@ interface FaqItem {
  * hand the reader the whole answer, not half of it and a link.
  */
 function buildFaq(facts: Facts, emailAlerts: boolean): FaqItem[] {
-  const { season, showName, lexicon } = facts;
-  const contestant = lower(lexicon.contestantSingular);
-  const contestants = lower(lexicon.contestantPlural);
-  const cycle = lower(lexicon.cycleSingular);
   const { minTeams, maxTeams, minRoster, maxRoster } = LEAGUE_LIMITS;
   const maxLockHours = MAX_LOCK_OFFSET_MINUTES / 60;
+  const names = facts.shows.map((s) => s.showName);
+  const showList = names.length > 1 ? names.join(' and ') : (names[0] ?? 'reality competition TV');
 
-  const seasonClause = !season
-    ? ''
-    : season.status === 'ACTIVE'
-      ? `, and ${season.name} is airing now`
-      : `, and ${season.name} is open for leagues`;
+  const showsAnswer = [
+    ...facts.shows.map((show) => {
+      const s = show.season;
+      const state = !s
+        ? 'is between seasons'
+        : s.status === 'ACTIVE'
+          ? `is airing now — ${s.name}`
+          : `is up next — ${s.name}${s.startsAt ? ` premieres ${premiereLabel(s.startsAt)}` : ''}`;
+      return `${show.showName} ${state}.`;
+    }),
+    'Each show has its own rule book and vocabulary, and leagues can be created for any season that is upcoming or airing. Results are captured from published season results and reviewed before they reach a leaderboard.',
+  ].join(' ');
 
-  const examples = facts.headline.slice(0, 3);
-  const rulesetList =
-    facts.rulesetNames.length > 1
-      ? `${facts.rulesetNames.slice(0, -1).join(', ')} or ${facts.rulesetNames.at(-1)}`
-      : (facts.rulesetNames[0] ?? '');
-
-  const scoringAnswer =
-    facts.rulesetCount > 0
-      ? [
-          `Each league picks one of ${facts.rulesetCount} ${
-            facts.rulesetCount === 1 ? 'ruleset' : 'rulesets'
-          } before its draft: ${rulesetList}.`,
-          facts.defaultRulesetName && examples.length === 3
-            ? `Every event has a fixed value — under ${facts.defaultRulesetName}: ${examples
-                .map((e) => `${e.label} ${formatPoints(e.points)}`)
-                .join(', ')}.`
-            : 'Every scorable event has a fixed point value.',
-          `Results are recorded as each ${cycle} airs, and a team earns a ${contestant}'s points for every ${cycle} it rostered them.`,
-        ].join(' ')
-      : `Every scorable event has a fixed point value. Results are recorded as each ${cycle} airs, and a team earns a ${contestant}'s points for every ${cycle} it rostered them.`;
+  const scoringAnswer = [
+    `Each league picks one ruleset for its show before its draft — ${facts.shows[0]?.rulesetNames.join(', ') ?? 'Classic, Balanced or Drama & Social'}.`,
+    ...facts.shows
+      .filter((show) => show.headline.length >= 3)
+      .map(
+        (show) =>
+          `Under ${show.showName}'s ${show.defaultRulesetName}: ${show.headline
+            .slice(0, 3)
+            .map((e) => `${e.label} ${formatPoints(e.points)}`)
+            .join(', ')}.`,
+      ),
+    "Results are recorded as each episode airs, and a team earns a contestant's points for every episode it rostered them.",
+  ].join(' ');
 
   return [
     {
       question: `What is ${SITE_NAME}?`,
-      answer: `${SITE_NAME} is a free fantasy league app for reality competition TV — Big Brother and Survivor. Friends form a league, snake-draft the real cast, and earn points every episode from what happens on the broadcast — competition wins, blindsides, eliminations and the finale — while a live leaderboard ranks every team in the league.`,
+      answer: `${SITE_NAME} is a free fantasy league app for reality competition TV — ${showList}. Friends form a league, snake-draft the real cast, and earn points every episode from what happens on the broadcast — competition wins, blindsides, eliminations and the finale — while a live leaderboard ranks every team in the league.`,
     },
     {
       question: `Is ${SITE_NAME} free to play?`,
@@ -587,11 +670,11 @@ function buildFaq(facts: Facts, emailAlerts: boolean): FaqItem[] {
     },
     {
       question: 'Which shows can I play?',
-      answer: `Big Brother and Survivor${seasonClause ? `${seasonClause.replace(/^, and /, ' — ')}` : ''}. Each has its own rule book and vocabulary, and leagues can be created for any season that is upcoming or airing. Big Brother results are captured automatically from published season results; Survivor results are entered by the site's administrators as episodes air. Leagues, drafts, scoring and standings work the same way for both.`,
+      answer: showsAnswer,
     },
     {
       question: 'How does the draft work?',
-      answer: `Every league runs a live snake draft. The commissioner sets the roster size, from ${minRoster} to ${maxRoster} ${contestants} per team, and starts the draft once at least two teams are seated. Pick order reverses each round, the board updates for everyone within seconds, and each manager gets an alert when their pick is due.`,
+      answer: `Every league runs a live snake draft. The commissioner sets the roster size, from ${minRoster} to ${maxRoster} players per team, and starts the draft once at least two teams are seated. Pick order reverses each round, the board updates for everyone within seconds, and each manager gets an alert when their pick is due.`,
     },
     {
       question: 'How is scoring calculated?',
@@ -603,11 +686,12 @@ function buildFaq(facts: Facts, emailAlerts: boolean): FaqItem[] {
     },
     {
       question: 'Can I change my roster during the season?',
-      answer: `Not yet. Rosters are set at the draft and stay fixed for the season, so every point is attributable to exactly one team. Each league still shows a lock time every ${cycle} — ${DEFAULT_LOCK_OFFSET_MINUTES} minutes before airtime by default, adjustable by the commissioner up to ${maxLockHours} hours earlier — so everyone can see when a week closes.`,
+      answer: `Not yet. Rosters are set at the draft and stay fixed for the season, so every point is attributable to exactly one team. Each league still shows a lock time every episode — ${DEFAULT_LOCK_OFFSET_MINUTES} minutes before airtime by default, adjustable by the commissioner up to ${maxLockHours} hours earlier — so everyone can see when an episode closes.`,
     },
     {
       question: 'Can I play a season that has already finished?',
-      answer: `No. Leagues can only be created or joined for seasons that are upcoming or currently airing; drafting a cast whose results are already known is not a game. Finished seasons stay online as read-only archives that rank every ${contestant} by fantasy points beside where they actually placed.`,
+      answer:
+        'No. Leagues can only be created or joined for seasons that are upcoming or currently airing; drafting a cast whose results are already known is not a game. Finished seasons stay online as read-only archives that rank every contestant by fantasy points beside where they actually placed.',
     },
     {
       question: 'How do I know when something happens in my league?',
@@ -624,8 +708,9 @@ function buildFaq(facts: Facts, emailAlerts: boolean): FaqItem[] {
   ];
 }
 
-function applicationNode(facts: Facts, showSlug: string, showName: string) {
+function applicationNode(facts: Facts) {
   const { minTeams, maxTeams, minRoster, maxRoster } = LEAGUE_LIMITS;
+  const totalEvents = facts.shows.reduce((sum, s) => sum + s.eventCount, 0);
   return {
     '@context': 'https://schema.org',
     '@type': 'WebApplication',
@@ -639,14 +724,12 @@ function applicationNode(facts: Facts, showSlug: string, showName: string) {
     isAccessibleForFree: true,
     offers: { '@type': 'Offer', price: '0', priceCurrency: 'USD' },
     inLanguage: 'en',
-    about: tvSeriesNode(showSlug, showName),
+    about: facts.shows.map((show) => tvSeriesNode(show.showSlug, show.showName)),
     featureList: [
       `Live snake draft for ${minTeams}–${maxTeams} teams`,
-      `Rosters of ${minRoster}–${maxRoster} ${lower(facts.lexicon.contestantPlural)}`,
-      ...(facts.eventCount > 0
-        ? [`${facts.eventCount} scored events across ${facts.rulesetCount} rulesets`]
-        : []),
-      `Live leaderboard with ${lower(facts.lexicon.cycleSingular)}-by-${lower(facts.lexicon.cycleSingular)} breakdowns`,
+      `Rosters of ${minRoster}–${maxRoster} players`,
+      ...(totalEvents > 0 ? [`${totalEvents} scored events across ${facts.shows.length} shows`] : []),
+      'Live leaderboard with episode-by-episode breakdowns',
       'Invite codes, QR codes and friend invites',
       'In-app notifications for draft turns and league changes',
       'Finished-season archives ranked by fantasy points',
