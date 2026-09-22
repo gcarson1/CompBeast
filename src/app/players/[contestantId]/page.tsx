@@ -62,8 +62,8 @@ export default async function PlayerPage({ params }: { params: { contestantId: s
             { name: player.name, path: `/players/${player.id}` },
           ])}
         />
-        {/* Screen 1: who they are and what they have scored. */}
-        <div className="screen">
+        {/* Who they are and what they have scored. */}
+        <div>
           <Link href={`/seasons/${player.season.slug}`} className="text-xs text-muted">
             ← {player.season.name}
           </Link>
@@ -100,8 +100,8 @@ export default async function PlayerPage({ params }: { params: { contestantId: s
           </div>
         </div>
 
-        {/* Screen 2: the detail, behind tabs. */}
-        <div className="screen pt-2">
+        {/* The detail, behind tabs — a panel, so a scroll settles on the tabs. */}
+        <div className="panel mt-8">
           <PlayerTabs
             events={player.events}
             gameLog={player.gameLog}

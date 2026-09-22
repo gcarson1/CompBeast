@@ -36,7 +36,7 @@ export function DeleteAccountPanel({ leaguesCommissioned }: { leaguesCommissione
   const matches = typed.trim() === CONFIRM_WORD;
 
   return (
-    <section className="mt-10 rounded-card border border-danger/30 p-4" aria-labelledby="delete-account">
+    <section className="mt-8 rounded-card border border-danger/30 p-4" aria-labelledby="delete-account">
       <h2 id="delete-account" className="headline text-xl text-danger-deep">
         Delete your account
       </h2>

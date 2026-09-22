@@ -13,7 +13,10 @@ export function AppHeader({
   unreadCount?: number;
 }) {
   return (
-    <header className="sticky top-0 z-20 bg-canvas/90 px-5 pb-2 pt-4 backdrop-blur">
+    // Outside the scroller (see AppScroller.tsx), so it never moves. The
+    // hairline under it appears only once content is passing beneath —
+    // `data-scrolled` on the root, set by the scroller.
+    <header className="app-header relative z-20 flex-none border-b border-transparent bg-canvas pb-2 pl-[max(1.25rem,env(safe-area-inset-left))] pr-[max(1.25rem,env(safe-area-inset-right))] pt-[calc(env(safe-area-inset-top)+1rem)] transition-[border-color,box-shadow] duration-200">
       <div className="mx-auto flex max-w-md items-center sm:max-w-lg lg:max-w-3xl justify-between">
         <Link href="/leagues" aria-label="Comp Beast home">
           <CompBeastLogo />

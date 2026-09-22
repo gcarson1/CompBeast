@@ -125,16 +125,23 @@ export function RevealGroup({
 }
 
 /**
- * The observer's root: the viewport, pulled in a little at the bottom so the
- * rise happens where it can be seen — and extended a long way *upward*. An
- * element only ever gets a callback when its intersection changes, so a
- * jump that lands past it (an anchor link, a restored scroll position,
- * find-in-page) would otherwise never fire and leave it hidden for good.
- * With the root reaching above the viewport, "the reader has passed this"
- * is itself an intersection, and the element is shown the moment it is
+ * The observer's root: the viewport, extended a fifth of a screen *below* it
+ * and a long way *above* it.
+ *
+ * Below, so a section starts rising in before it arrives rather than as it
+ * arrives. Scrolling now settles on a section at a time, and a snap carries
+ * the next one onto the screen in a fraction of a second; triggered at the
+ * fold, the section landed blank and faded in half a second later, which
+ * read as a gap in the page.
+ *
+ * Above, because an element only ever gets a callback when its intersection
+ * changes, so a jump that lands past it (an anchor link, a restored scroll
+ * position, find-in-page) would otherwise never fire and leave it hidden for
+ * good. With the root reaching above the viewport, "the reader has passed
+ * this" is itself an intersection, and the element is shown the moment it is
  * anywhere above the fold.
  */
-const ROOT_MARGIN = '100000px 0px -6% 0px';
+const ROOT_MARGIN = '100000px 0px 20% 0px';
 
 function show(el: HTMLElement, delay: number) {
   el.style.setProperty('--reveal-delay', `${delay}ms`);

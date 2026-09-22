@@ -4,50 +4,25 @@
 
 @layer base {
   /*
-   * The page is the content, no more, and it moves a screen at a time.
-   *
-   * `overscroll-behavior-y: none` removes the rubber-band past the end of the
-   * document — on a phone that bounce drags the whole page, sticky bottom nav
-   * included, up off the bottom edge. There is no pull-to-refresh to lose (the
-   * leaderboard implements its own).
-   *
-   * `scroll-snap-type: y mandatory` with `.screen` blocks that are exactly one
-   * viewport tall: every rest position is a screen boundary, so a scroll
-   * gesture lands on the next screenful instead of anywhere at all.
-   *
-   * Mandatory is only safe because of how the screens are built. A first pass
-   * used `proximity` against sections of arbitrary height, and it fought the
-   * reader rather than guiding them: with snap points at unpredictable
-   * distances the browser re-decides where to land on every layout change, so
-   * a scroll would slide and then yank. Screens one viewport apart make the
-   * decision obvious. A screen whose section has been expanded past the
-   * viewport is an *oversized* snap area, which the spec says may rest at any
-   * position that covers the viewport — so opening something never traps.
-   *
-   * `svh`, never `dvh`: `dvh` changes as a phone's URL bar collapses, which
-   * resizes every screen mid-scroll and re-snaps under the reader's thumb.
-   * That is the single biggest source of snap jank on a phone. `svh` is the
-   * viewport with the browser chrome showing, and it does not move.
+   * The document does not scroll. The app is a column exactly one viewport
+   * tall — header, one scroll container, bottom nav — and only the middle
+   * scrolls (<AppScroller>). That is what makes the bars immovable: they are
+   * not sticky elements riding a scrolling document, they are simply not in
+   * the part that scrolls. See AppScroller.tsx for the three phone bugs this
+   * retires.
    */
-  html {
+  @supports (interpolate-size: allow-keywords) {
+    :root {
+      interpolate-size: allow-keywords;
+    }
+  }
+
+  html,
+  body {
+    height: 100%;
+    overflow: hidden;
+    overscroll-behavior: none;
     -webkit-tap-highlight-color: transparent;
-    overscroll-behavior-y: none;
-    scroll-snap-type: y mandatory;
-    scroll-padding-top: var(--chrome-top);
-  }
-
-  /*
-   * The app's fixed furniture, measured once here so a screen can subtract it.
-   * The bottom nav only renders for a signed-in reader, so the layout marks
-   * the tree it is in rather than every screen guessing.
-   */
-  :root {
-    --chrome-top: 3.75rem;
-    --chrome-bottom: 0px;
-  }
-
-  [data-bottom-nav='true'] {
-    --chrome-bottom: 4.0625rem;
   }
 
   body {
@@ -195,48 +170,87 @@
   }
 
   /*
-   * One screenful. A page is a short stack of these, and each is at least the
-   * viewport minus the app's fixed chrome — so by default you see exactly one
-   * screen of content, and a scroll takes you to the next (see `html` above).
+   * The scroll container every page lives in (<AppScroller>).
    *
-   * `min-height`, not `height`: a screen whose sections have been expanded
-   * grows, and the snap rules handle that. The content sits at the top rather
-   * than centred, because the snap aligns the screen's start to just under the
-   * header and a heading that drifts from that line reads as misaligned.
+   * `overscroll-behavior-y: none`: no rubber-band past either end, so the
+   * page stops where its content stops.
    *
-   * Group deliberately. Four folded headings belong on one screen, not on four
-   * near-empty ones.
+   * `scroll-snap-type: y proximity` over a handful of `.panel`s: when a
+   * scroll comes to rest near the top of the next panel, it settles there
+   * with the heading just under the header. Proximity, deliberately, not
+   * mandatory. Two earlier versions snapped the document itself, and both
+   * fought the reader: mandatory snapping cannot rest partway through a
+   * panel taller than the screen without fighting (a league feed, a
+   * standings table, an expanded section — the CSS working group's own
+   * issue #6863 describes it as difficult and full of unexpected scrolls),
+   * and snapping the *document* on a phone re-snaps every time the URL bar
+   * resizes the viewport. Inside a fixed-size box with few, large targets,
+   * proximity guides a scroll that ends near a section and never overrides
+   * one that does not.
+   *
+   * `scroll-padding-top` leaves a little air between the header and a
+   * snapped heading. `scrollbar-gutter: stable` stops the column shifting
+   * sideways on desktop when a page becomes tall enough to scroll.
    */
-  .screen {
-    min-height: calc(100svh - var(--chrome-top) - var(--chrome-bottom));
+  .app-scroller {
+    /*
+     * `relative` is load-bearing. Without a positioned ancestor inside the
+     * scroller, an absolutely positioned element — every `sr-only` label,
+     * every decorative SVG pinned to a corner — takes the whole page as its
+     * containing block: it is neither clipped by the scroller nor scrolled
+     * with it, and it stretches the *document* to wherever it sits in the
+     * content. The document then had 900px to scroll, and focusing a control
+     * (the feed's composer, a section's button) let the browser scroll it,
+     * which carried the header up off the screen.
+     */
+    position: relative;
+    overflow-y: auto;
+    overscroll-behavior-y: none;
+    scroll-snap-type: y proximity;
+    scroll-padding-top: 1rem;
+    scrollbar-gutter: stable;
+  }
+
+  /* The header's edge, shown once content is scrolling underneath it. */
+  [data-scrolled='true'] .app-header {
+    border-bottom-color: theme(colors.hairline);
+    box-shadow: 0 10px 20px -16px rgba(0, 0, 0, 0.8);
+  }
+
+  /*
+   * A page's major blocks — the ones a scroll settles on. Few and large:
+   * two targets closer together than about half a screen feel like the page
+   * catching, not guiding, so the section directly under a page's title is
+   * not a panel (the top of the page already is one, below), and a stack of
+   * folded rows is one panel, not several.
+   */
+  .panel {
+    scroll-snap-align: start;
+  }
+
+  /* Stood down by <AppScroller> for starting too soon after the previous
+     resting point; see the spacing rule there. */
+  .panel[data-snap='off'] {
+    scroll-snap-align: none;
+  }
+
+  /* The top of a page is a resting point — but only on a page with panels.
+     Proximity to a single target near the top would pull every small scroll
+     back up to it. */
+  #main:has(.panel) {
     scroll-snap-align: start;
   }
 
   /*
-   * The footer closes the document, so it aligns its *end* to the bottom of
-   * the viewport. Under mandatory snapping a trailing element with no snap
-   * position of its own can be unreachable — the last screen's start is the
-   * final place the scroller may rest, and anything below it is then content
-   * you cannot scroll to.
-   *
-   * Only on a page built from screens, though. Mandatory snapping with a
-   * *single* snap target parks the document on it and will not let go: on a
-   * page with no screens the footer was the only target, so every such page
-   * (the rule book, the draft room, every form) loaded pinned to its own
-   * bottom and could not be scrolled back up. A page with no screens has no
-   * snap targets at all, which is ordinary scrolling.
+   * And so is the very end. Without it the last panel is the last place a
+   * scroll can settle, and when that panel starts within a third of a screen
+   * of the end, proximity pulls every attempt to reach the bottom back up to
+   * it: the footer's last lines could be seen by dragging and never rested
+   * on. Aligning the footer's end to the scroller's end makes the true bottom
+   * a target of its own.
    */
-  main:has(.screen) ~ .screen-end {
+  .app-scroller:has(.panel) .app-footer {
     scroll-snap-align: end;
-    /*
-     * The bottom nav is sticky, so it is pinned over the foot of the page
-     * until the document's true bottom. Aligning the footer's end to the
-     * viewport's end therefore parked it *underneath* the nav, with its last
-     * lines covered. Reserving the nav's height moves that rest position down
-     * to the real end of the document, where the nav has come to rest in the
-     * flow and nothing overlaps.
-     */
-    scroll-margin-bottom: var(--chrome-bottom);
   }
 
   /*
@@ -265,6 +279,24 @@
      transition has ended. */
   .collapse-body[data-open='true'][data-settled='true'] > * {
     overflow: visible;
+  }
+
+  /*
+   * A native <details> that opens instead of jumping — the rule book's
+   * rulesets and a team's week-by-week lines. Progressive: where the browser
+   * can animate to `height: auto` (`interpolate-size`) the body slides open;
+   * everywhere else it opens as it always did. Nothing is hidden either way.
+   */
+  .disclosure::details-content {
+    block-size: 0;
+    overflow: clip;
+    transition:
+      block-size 300ms theme(transitionTimingFunction.soft),
+      content-visibility 300ms allow-discrete;
+  }
+
+  .disclosure[open]::details-content {
+    block-size: auto;
   }
 
   /*
@@ -562,8 +594,8 @@
   opacity: 1;
   transform: none;
   transition:
-    opacity 520ms cubic-bezier(0.2, 0.8, 0.2, 1) var(--reveal-delay, 0ms),
-    transform 640ms cubic-bezier(0.34, 1.4, 0.64, 1) var(--reveal-delay, 0ms);
+    opacity 280ms cubic-bezier(0.2, 0.8, 0.2, 1) var(--reveal-delay, 0ms),
+    transform 380ms cubic-bezier(0.34, 1.4, 0.64, 1) var(--reveal-delay, 0ms);
 }
 
 @media (prefers-reduced-motion: reduce) {
@@ -663,5 +695,16 @@
 
   .marquee-copy[aria-hidden='true'] {
     display: none;
+  }
+}
+
+/* Print the page, not the viewport: the shell's fixed height and hidden
+   overflow would otherwise cut everything below the first screen. */
+@media print {
+  html,
+  body,
+  .app-scroller {
+    height: auto;
+    overflow: visible;
   }
 }

@@ -18,7 +18,9 @@ export function BottomNav() {
   const pathname = usePathname();
 
   return (
-    <nav className="sticky bottom-0 z-20 border-t border-hairline bg-surface/95 px-4 pb-[env(safe-area-inset-bottom)] pt-2 backdrop-blur">
+    // Outside the scroller, at the foot of the app column, so it cannot be
+    // carried up the screen: it is not in the flow of anything that scrolls.
+    <nav className="relative z-20 flex-none border-t border-hairline bg-surface px-4 pb-[max(0.25rem,env(safe-area-inset-bottom))] pt-2">
       <ul className="mx-auto flex max-w-md items-center sm:max-w-lg lg:max-w-3xl justify-around">
         {TABS.map((tab) => {
           const active = tab.owns.some((prefix) => pathname === prefix || pathname.startsWith(`${prefix}/`));

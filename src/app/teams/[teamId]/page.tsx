@@ -45,7 +45,7 @@ export default async function TeamPage({ params }: { params: { teamId: string } 
       <div className="pt-2">
         {/* Screen 1: whose team, and how it is doing. Starts at the top of the
             page so the back link is inside it — see the account page. */}
-        <div className="screen">
+        <div>
           <Link href={`/leagues/${team.leagueId}`} className="text-xs text-muted">
             ← League
           </Link>
@@ -84,11 +84,10 @@ export default async function TeamPage({ params }: { params: { teamId: string } 
           />
         </div>
 
-        {/* Screen 2: the roster, and the week-by-week under it. */}
-        <div className="screen pt-2">
+        <div>
           <Collapsible
             title="Roster"
-            className="mt-6"
+            className="mt-10"
             aside={roster.length > 0 ? `${stillIn}/${roster.length} still in` : undefined}
           >
             {roster.length === 0 ? (
@@ -139,7 +138,7 @@ export default async function TeamPage({ params }: { params: { teamId: string } 
           </Collapsible>
 
           {score && score.cycles.length > 0 && (
-            <Collapsible title="Week by week" titleClassName="eyebrow" className="mt-8">
+            <Collapsible title="Week by week" className="mt-10">
               <div className="card divide-y divide-hairline">
                 {/*
               Newest week first. Copied before reversing because `reverse()`
@@ -149,7 +148,7 @@ export default async function TeamPage({ params }: { params: { teamId: string } 
               That is also why this is not done in the query.
             */}
                 {[...score.cycles].reverse().map((cycle) => (
-                  <details key={cycle.cycleId} className="group">
+                  <details key={cycle.cycleId} className="disclosure group">
                     <summary className="flex cursor-pointer list-none items-center justify-between p-4 text-muted transition hover:text-ink">
                       <span className="text-base font-medium text-ink">{cycle.label}</span>
                       <span className="flex items-center gap-2">

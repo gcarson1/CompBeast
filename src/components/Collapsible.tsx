@@ -1,28 +1,34 @@
 'use client';
 
 import { useEffect, useId, useRef, useState, type ReactNode } from 'react';
+import { appScroller } from '@/components/AppScroller';
 import { Reveal } from '@/components/motion/Reveal';
 import { cn } from '@/lib/ui';
 
 /**
  * A page section that folds.
  *
- * Every section on the app's own screens is one of these, so a page is a
- * short stack of headings that open into their content rather than a long
- * strip to wander down. Several of these usually share one `.screen`, which
- * is what the scroll snaps to. The heading itself is the control: a real
- * `<button>` inside the `<h2>`, so the outline a screen reader navigates by
- * is unchanged and `aria-expanded` says which way it is.
+ * Two shapes:
  *
- * The body stays in the DOM either way (the grid-rows transition in
- * globals.css is what animates it) and is `inert` while closed, so nothing a
- * reader cannot see can take focus or be announced. Server-rendered content
- * passes through as children; only the open/closed bit lives here.
+ * - `section` (default) — a primary block with a real heading (`section-title`
+ *   or `eyebrow`), content below it. It is also a `.panel`, a place a scroll
+ *   settles, unless `panel={false}` (the section directly under a page's
+ *   title, which the top of the page already covers).
+ * - `row` — one line in a list of reference sections (managers, league
+ *   details, settings), full-width with the chevron at the right, like a
+ *   settings screen. Rows go in a <RowGroup>, which is one panel for the lot:
+ *   a snap target every fifty pixels would make the page catch, not guide.
  *
- * `title` takes the heading's own style — `section-title` for a primary
- * block, `eyebrow` for a reference list — and `aside` is the small text at
- * the right of the heading row (a count, a link), which stays outside the
- * button so a link there is still a link.
+ * Either way the heading is the control: a real `<button>` inside the real
+ * `<h2>`, so the outline a screen reader navigates by is unchanged and
+ * `aria-expanded` says which way it is. The body stays in the DOM (the
+ * grid-rows transition in globals.css animates it) and is `inert` while
+ * closed, so nothing a reader cannot see can take focus or be announced.
+ *
+ * Opening a section is guided: once it has grown, if what it revealed runs
+ * past the bottom of the screen, the page glides up just far enough to show
+ * it — never so far that the heading you tapped leaves the top. Closing
+ * leaves the page where it is.
  *
  * A section with an `id` is a link target (`/account#email` from every email
  * footer), and a closed target is a broken link: it opens itself when the
@@ -31,8 +37,10 @@ import { cn } from '@/lib/ui';
 export function Collapsible({
   id,
   title,
-  titleClassName = 'section-title',
+  variant = 'section',
+  titleClassName,
   headingLevel = 2,
+  panel,
   aside,
   defaultOpen = true,
   className,
@@ -41,10 +49,17 @@ export function Collapsible({
 }: {
   id?: string;
   title: ReactNode;
-  /** The heading's style: `section-title`, `eyebrow`, or a class of your own for a nested item. */
+  variant?: 'section' | 'row';
+  /**
+   * The heading's type. A `section` defaults to `section-title` (or pass
+   * `eyebrow`); a `row` defaults to `text-sm` and may be set larger.
+   */
   titleClassName?: string;
   /** `3` for an item inside a section — a FAQ question under its section heading. */
   headingLevel?: 2 | 3;
+  /** Whether a scroll settles on this section. Defaults to true for a top-level `section`. */
+  panel?: boolean;
+  /** Small text at the right of the heading. On a `section` it may be a link; on a `row` it is text. */
   aside?: ReactNode;
   defaultOpen?: boolean;
   className?: string;
@@ -56,14 +71,19 @@ export function Collapsible({
   // must not: the tiles inside carry stickers and the Beast overhanging their
   // corners, and a permanent `overflow: hidden` would shave them off.
   const [settled, setSettled] = useState(true);
-  // Set when the section opened itself for a hash: once its body has grown,
-  // it scrolls into place. At anchor time the body was still folded, so the
-  // page was often too short to bring the heading up to the header line.
-  const scrollWhenSettled = useRef(false);
+  // What to do once the body has finished growing: bring the section into
+  // view for a reader who opened it, or put its heading at the top for a
+  // hash that opened it.
+  const afterOpen = useRef<'reveal' | 'anchor' | null>(null);
+  const sectionRef = useRef<HTMLElement>(null);
   const headingId = useId();
   const bodyId = useId();
 
+  const isRow = variant === 'row';
+  const isPanel = panel ?? (!isRow && headingLevel === 2);
+
   const toggle = () => {
+    afterOpen.current = open ? null : 'reveal';
     setSettled(false);
     setOpen((value) => !value);
   };
@@ -71,11 +91,10 @@ export function Collapsible({
   useEffect(() => {
     if (!id) return;
     const onHash = () => {
-      if (window.location.hash === `#${id}`) {
-        scrollWhenSettled.current = true;
-        setSettled(false);
-        setOpen(true);
-      }
+      if (window.location.hash !== `#${id}`) return;
+      afterOpen.current = 'anchor';
+      setSettled(false);
+      setOpen(true);
     };
     onHash();
     window.addEventListener('hashchange', onHash);
@@ -88,72 +107,134 @@ export function Collapsible({
   // longer than the transition is the floor.
   useEffect(() => {
     if (settled) return;
-    const timer = setTimeout(() => setSettled(true), 400);
+    const timer = setTimeout(() => setSettled(true), 360);
     return () => clearTimeout(timer);
   }, [settled, open]);
 
   useEffect(() => {
-    if (!settled || !open || !scrollWhenSettled.current || !id) return;
-    scrollWhenSettled.current = false;
-    const el = document.getElementById(id);
-    if (!el) return;
-    // An explicit position rather than `scrollIntoView`: with snapping on the
-    // root, Chrome lands `scrollIntoView` on a neighbouring snap point when
-    // a folded section sits just above. The offset is the root's
-    // `scroll-padding-top`, i.e. the sticky header.
-    const padding = parseFloat(getComputedStyle(document.documentElement).scrollPaddingTop) || 0;
-    window.scrollTo({ top: el.getBoundingClientRect().top + window.scrollY - padding, behavior: 'smooth' });
-  }, [settled, open, id]);
+    const intent = afterOpen.current;
+    if (!settled || !open || !intent) return;
+    afterOpen.current = null;
+    const section = sectionRef.current;
+    if (!section) return;
+
+    const scroller = appScroller();
+    const view = scroller.getBoundingClientRect();
+    const box = section.getBoundingClientRect();
+    const padding = parseFloat(getComputedStyle(scroller).scrollPaddingTop) || 0;
+    // How far down the heading could travel before it leaves the top line.
+    const headroom = box.top - (view.top + padding);
+
+    let delta = 0;
+    if (intent === 'anchor') {
+      delta = headroom;
+    } else {
+      // Only as far as it takes to show the whole section, and never past
+      // the heading: a long section opens with its heading at the top and
+      // the rest a scroll away, which is where the reader expects it.
+      const overflow = box.bottom - (view.bottom - 24);
+      if (overflow > 0) delta = Math.min(overflow, headroom);
+    }
+    if (Math.abs(delta) > 1) scroller.scrollBy({ top: delta, behavior: 'smooth' });
+  }, [settled, open]);
 
   const Heading = headingLevel === 3 ? 'h3' : 'h2';
-  // A nested item does not rise in on scroll; only a page-level section does.
-  const Wrapper = headingLevel === 3 ? 'section' : Reveal;
+
+  const heading = isRow ? (
+    <Heading id={headingId} className="m-0">
+      <button
+        type="button"
+        aria-expanded={open}
+        aria-controls={bodyId}
+        onClick={toggle}
+        className="flex min-h-[52px] w-full items-center gap-3 py-3 text-left transition-colors hover:text-ink"
+      >
+        {/* Wraps rather than truncates: a question in a FAQ is a row too, and
+            a clipped question is a question nobody can read. */}
+        <span className={cn('min-w-0 flex-1 font-semibold text-ink', titleClassName ?? 'text-sm')}>
+          {title}
+        </span>
+        {aside && <span className="shrink-0 text-2xs text-muted">{aside}</span>}
+        <Chevron />
+      </button>
+    </Heading>
+  ) : (
+    <div className="flex items-end justify-between gap-3">
+      <Heading id={headingId} className={cn(titleClassName ?? 'section-title', 'min-w-0')}>
+        <button
+          type="button"
+          aria-expanded={open}
+          aria-controls={bodyId}
+          onClick={toggle}
+          // The heading's own type carries into the button — Tailwind's
+          // preflight already makes a button inherit font, size, weight,
+          // colour and tracking, and resets only text-transform, which is
+          // put back. A 44px hit height without changing the heading's line:
+          // negative vertical margin absorbs the padding.
+          className="-my-2 flex min-h-[44px] max-w-full items-center gap-2 rounded-btn py-2 pr-1 text-left [text-transform:inherit] transition hover:text-ink"
+        >
+          <span className={cn('min-w-0', headingLevel === 2 && 'truncate')}>{title}</span>
+          <Chevron />
+        </button>
+      </Heading>
+      {aside && <div className="shrink-0 pb-0.5 text-2xs text-muted">{aside}</div>}
+    </div>
+  );
+
+  const body = (
+    <div
+      id={bodyId}
+      className="collapse-body"
+      data-open={open}
+      data-settled={settled}
+      onTransitionEnd={(event) => {
+        if (event.target === event.currentTarget) setSettled(true);
+      }}
+    >
+      {/* React 18 does not know `inert` and drops a boolean `true` with a
+          warning; an empty string is passed through as `inert=""`, which is
+          the attribute present, which is inert. */}
+      <div {...(open ? {} : { inert: '' as unknown as boolean })} aria-hidden={!open}>
+        <div className={cn(isRow ? 'pb-4' : 'pt-3', bodyClassName)}>{children}</div>
+      </div>
+    </div>
+  );
 
   return (
-    <Wrapper
-      as={headingLevel === 3 ? undefined : 'section'}
+    // The snap target is this plain element, never the <Reveal> inside it:
+    // a section still waiting to rise in is translated, and a snap target
+    // that moves as it animates is one the scroll cannot settle on.
+    <section
+      ref={sectionRef}
       id={id}
-      className={cn(className)}
       aria-labelledby={headingId}
+      // A folded section is one heading tall — not a destination. Only an
+      // open one is a place to settle, or two targets end up a line apart
+      // and the page catches on the way past.
+      className={cn(isPanel && open && 'panel', className)}
     >
-      <div className="flex items-end justify-between gap-3">
-        <Heading id={headingId} className={cn(titleClassName, 'min-w-0')}>
-          <button
-            type="button"
-            aria-expanded={open}
-            aria-controls={bodyId}
-            onClick={toggle}
-            // The heading's own type carries into the button — Tailwind's
-            // preflight already makes a button inherit font, size, weight,
-            // colour and tracking, and resets only text-transform, which is
-            // put back. The chevron is the only thing added. A 44px hit
-            // height without changing the heading's line: negative vertical
-            // margin absorbs the padding.
-            className="-my-2 flex min-h-[44px] max-w-full items-center gap-2 rounded-btn py-2 pr-1 text-left [text-transform:inherit] transition hover:text-ink"
-          >
-            <span className={cn('min-w-0', headingLevel === 2 && 'truncate')}>{title}</span>
-            <Chevron />
-          </button>
-        </Heading>
-        {aside && <div className="shrink-0 pb-0.5 text-2xs text-muted">{aside}</div>}
-      </div>
-      <div
-        id={bodyId}
-        className="collapse-body"
-        data-open={open}
-        data-settled={settled}
-        onTransitionEnd={(event) => {
-          if (event.target === event.currentTarget) setSettled(true);
-        }}
-      >
-        {/* React 18 does not know `inert` and drops a boolean `true` with a
-            warning; an empty string is passed through as `inert=""`, which
-            is the attribute present, which is inert. */}
-        <div {...(open ? {} : { inert: '' as unknown as boolean })} aria-hidden={!open}>
-          <div className={cn('pt-3', bodyClassName)}>{children}</div>
-        </div>
-      </div>
-    </Wrapper>
+      {isRow || headingLevel === 3 ? (
+        <>
+          {heading}
+          {body}
+        </>
+      ) : (
+        <Reveal>
+          {heading}
+          {body}
+        </Reveal>
+      )}
+    </section>
+  );
+}
+
+/**
+ * A list of `row` sections — the reference material at the foot of a page —
+ * drawn as one hairline-divided block and treated as one panel.
+ */
+export function RowGroup({ children, className }: { children: ReactNode; className?: string }) {
+  return (
+    <div className={cn('panel divide-y divide-hairline border-y border-hairline', className)}>{children}</div>
   );
 }
 

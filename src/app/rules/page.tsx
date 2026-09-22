@@ -35,9 +35,12 @@ export default async function RulesPage() {
       {/* One section per show, each in its own colours. The rules are the
           show's own rows, so a show with a thinner rule book simply has a
           shorter section; nothing here knows what any show's events are. */}
-      {books.map((book) => (
+      {books.map((book, index) => (
         <ShowTheme key={book.slug} showSlug={book.slug}>
-          <section className="mt-8" aria-labelledby={`rules-${book.slug}`}>
+          {/* Every show after the first is a panel, so a scroll that ends near
+              the next show's rule book settles on it. The first sits under the
+              page title, which the top of the page already covers. */}
+          <section className={index === 0 ? 'mt-8' : 'panel mt-14'} aria-labelledby={`rules-${book.slug}`}>
             <div className="flex items-center gap-3">
               <Sticker tone="show" size="lg" tilt="l">
                 {book.name}
@@ -59,7 +62,11 @@ export default async function RulesPage() {
                 }
 
                 return (
-                  <details key={ruleset.id} className="card group overflow-hidden" open={ruleset.isDefault}>
+                  <details
+                    key={ruleset.id}
+                    className="disclosure card group overflow-hidden"
+                    open={ruleset.isDefault}
+                  >
                     {/* The ruleset name is a real heading, not a bold span: the
                         page outline (h1 Scoring → h2 show → h3 ruleset → h4
                         category) is what a screen reader navigates by and what

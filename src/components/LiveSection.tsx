@@ -42,10 +42,13 @@ export function LiveSection({ blocks }: { blocks: LiveBlockData[] }) {
   if (blocks.length === 0) return null;
 
   return (
-    <div className="space-y-12">
+    // One panel for the whole block, not one per show: with each show's buzz
+    // folded a show is a couple of hundred pixels tall, and two snap targets
+    // that close make the page catch instead of guiding it.
+    <div className="panel space-y-10">
       {blocks.map(({ featured, headlines, buzz, hashtag }) => (
         <ShowTheme key={featured.seasonId} showSlug={featured.showSlug}>
-          <section aria-labelledby={`live-${featured.seasonSlug}`} className="space-y-6">
+          <section aria-labelledby={`live-${featured.seasonSlug}`} className="space-y-5">
             <div>
               <div className="mb-3 flex flex-wrap items-end justify-between gap-x-3 gap-y-2">
                 <h2 id={`live-${featured.seasonSlug}`} className="section-title">

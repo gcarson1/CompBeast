@@ -5,7 +5,6 @@ import { BeastDoodle } from '@/components/doodles/BeastDoodle';
 import { Doodle } from '@/components/doodles/Doodle';
 import { Collapsible } from '@/components/Collapsible';
 import { LeagueRail } from '@/components/LeagueRail';
-import { Reveal } from '@/components/motion/Reveal';
 import { LiveSection, type FeaturedCast, type LiveBlockData } from '@/components/LiveSection';
 import { getSocialBuzz } from '@/lib/social-feed';
 import { SignedOutLanding, type LandingShow } from '@/components/SignedOutLanding';
@@ -123,8 +122,9 @@ export default async function HomePage() {
 
   return (
     <div className="pt-2">
-      {/* Screen 1: your leagues and the two ways to get another. */}
-      <div className="screen">
+      {/* Your leagues and the two ways to get another. Not a panel: the top
+          of the page is already where a scroll comes to rest. */}
+      <div>
         <div className="mb-3 flex items-center justify-between gap-3">
           <h1 className="headline text-4xl">Leagues</h1>
           <div className="flex shrink-0 gap-2">
@@ -137,16 +137,17 @@ export default async function HomePage() {
           </div>
         </div>
 
-        <Collapsible title="Your leagues" className="mt-6">
+        <Collapsible title="Your leagues" className="mt-6" panel={false}>
           <Suspense fallback={<RailSkeleton />}>
             <HomeRail userId={user.id} />
           </Suspense>
         </Collapsible>
       </div>
 
-      {/* Screen 2: what is happening in the houses right now. It carries its
-          own headings, so it is one screen rather than a folding section. */}
-      <Reveal className="screen pt-2">{live}</Reveal>
+      {/* What is happening on air right now — one panel per show (see
+          LiveSection). Not inside a <Reveal>: a transformed ancestor would
+          move the panels' snap points while it animates. */}
+      <div className="mt-10">{live}</div>
     </div>
   );
 }

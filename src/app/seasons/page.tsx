@@ -43,14 +43,15 @@ export default async function SeasonsPage() {
   return (
     <div className="pt-2">
       <JsonLd data={breadcrumbList([{ name: 'Seasons', path: '/seasons' }])} />
-      {/* Screen 1: the seasons you can actually play. */}
-      <div className="screen">
+      {/* The seasons you can actually play. Not a panel: the top of the page
+          is already where a scroll comes to rest. */}
+      <div>
         <h1 className="headline text-4xl">Seasons</h1>
         <p className="mt-2 max-w-measure text-xs text-muted">
           Play along with a season that is still running, or look back at one that has wrapped.
         </p>
 
-        <Collapsible title="Open for leagues" className="mt-6" aside={`${open.length} open`}>
+        <Collapsible title="Open for leagues" className="mt-6" panel={false} aside={`${open.length} open`}>
           {open.length === 0 ? (
             <p className="card p-4 text-xs text-muted">
               Nothing is airing right now. Check back when the next season starts.
@@ -105,15 +106,9 @@ export default async function SeasonsPage() {
         </Collapsible>
       </div>
 
-      {/* Screen 2: the read-only past, folded until asked for. */}
-      <div className="screen pt-2">
-        <Collapsible
-          title="Archive"
-          titleClassName="eyebrow"
-          defaultOpen={false}
-          className="mt-6"
-          aside={`${archived.length} finished`}
-        >
+      {/* The read-only past. Open: it is short, and it is the rest of the page. */}
+      <div>
+        <Collapsible title="Archive" className="mt-10" aside={`${archived.length} finished`}>
           <p className="mb-3 max-w-measure text-2xs leading-relaxed text-muted">
             Finished seasons are read-only — the whole cast is already known, so there is no game left to
             draft.

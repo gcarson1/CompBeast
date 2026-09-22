@@ -4,7 +4,7 @@ import { notFound } from 'next/navigation';
 import { cache } from 'react';
 import { SignInButton } from '@clerk/nextjs';
 import { Avatar, AvatarStack } from '@/components/Avatar';
-import { Collapsible } from '@/components/Collapsible';
+import { Collapsible, RowGroup } from '@/components/Collapsible';
 import { BeastDoodle } from '@/components/doodles/BeastDoodle';
 import { Doodle } from '@/components/doodles/Doodle';
 import { InviteCode } from '@/components/InviteCode';
@@ -87,6 +87,81 @@ export default async function LeaguePage({ params }: { params: { leagueId: strin
   const myRow = myTeam ? (rows.find((row) => row.teamId === myTeam.id) ?? null) : null;
   const managerNames = league.members.map((m) => m.user.name ?? m.user.handle ?? '?');
 
+  const preDraft = league.draftStatus === 'NOT_STARTED';
+  // Reference material, as one folded list: who is in, the league's details
+  // (with the invite code), and — before the draft — inviting friends.
+  // Before the draft, while the league is still filling, the details open.
+  const referenceRows = (
+    <RowGroup className="mt-10">
+      <Collapsible
+        variant="row"
+        title="Managers"
+        defaultOpen={false}
+        aside={`${league.members.length} · ${openSeats === 0 ? 'full' : `${openSeats} open`}`}
+      >
+        <ul className="card divide-y divide-hairline">
+          {league.members.map((member) => {
+            const team = league.teams.find((t) => t.owner?.id === member.user.id);
+            const isYou = member.user.id === user?.id;
+            return (
+              <li key={member.user.id} className="flex items-center gap-3 p-4">
+                <Avatar
+                  name={member.user.name ?? member.user.handle ?? '?'}
+                  photoUrl={member.user.avatarUrl}
+                  size={38}
+                />
+                <span className="min-w-0 flex-1">
+                  <span className="block truncate text-base font-semibold">
+                    {team?.name ?? 'No team yet'}
+                    {isYou && <span className="ml-1.5 text-2xs text-brand-gold-deep">you</span>}
+                  </span>
+                  <span className="mt-0.5 block truncate text-2xs text-muted">
+                    {member.user.name ?? member.user.handle ?? 'Unknown manager'}
+                  </span>
+                </span>
+                {member.role === 'COMMISSIONER' && (
+                  <Sticker tone="lavender" size="sm" className="shrink-0">
+                    Commish
+                  </Sticker>
+                )}
+              </li>
+            );
+          })}
+        </ul>
+        <p className="mt-2 px-1 text-2xs leading-relaxed text-muted">
+          {openSeats === 0
+            ? 'Every seat is taken — this league is full.'
+            : `${openSeats} ${
+                openSeats === 1 ? 'seat is' : 'seats are'
+              } still open — tap the invite code to copy it, or show the QR code for someone to scan.`}
+        </p>
+      </Collapsible>
+      <Collapsible
+        variant="row"
+        title="League details"
+        defaultOpen={preDraft && openSeats > 0}
+        aside={<span className="font-mono tracking-widest">{league.inviteCode}</span>}
+      >
+        <div className="card divide-y divide-hairline">
+          <InviteCode code={league.inviteCode} leagueName={league.name} />
+          <Row label="Scoring" value={league.scoringRuleset.name} href="/rules" />
+          <Row label="Draft" value={`${league.draftType.toLowerCase()} · ${league.rosterSize} rounds`} />
+          <Row label="Visibility" value={league.isPublic ? 'Public' : 'Private'} />
+          {/* The service name only, never the URL: the URL is the credential. */}
+          {describeWebhook(league.chatWebhookUrl) && (
+            <Row label="Chat" value={`${describeWebhook(league.chatWebhookUrl)} connected`} />
+          )}
+        </div>
+        {league.scoringRuleset.description && (
+          <p className="mt-2 px-1 text-2xs leading-relaxed text-muted">{league.scoringRuleset.description}</p>
+        )}
+      </Collapsible>
+      {isMember && preDraft && (
+        <InviteFriends leagueId={league.id} friends={invitableFriends} seatsLeft={openSeats} />
+      )}
+    </RowGroup>
+  );
+
   return (
     <ShowTheme showSlug={league.season.show.slug}>
       <div className="pt-2">
@@ -99,8 +174,9 @@ export default async function LeaguePage({ params }: { params: { leagueId: strin
         secondary sections. The first pass laid all of these out as equal
         panes in one grid, and the league's own name was just another box.
       */}
-        {/* Screen 1: who this league is, and the one thing to do in it. */}
-        <div className="screen">
+        {/* Who this league is, and the one thing to do in it. Not a panel:
+            the top of the page is already where a scroll comes to rest. */}
+        <div>
           <div className="flex items-center justify-between gap-3">
             <Link href="/leagues" className="text-xs text-muted">
               ← Leagues
@@ -179,211 +255,126 @@ export default async function LeaguePage({ params }: { params: { leagueId: strin
           )}
         </div>
 
-        {/* Screen 2: how this week is going, and the table. */}
-        <div className="screen pt-2">
-          {(myRow || (currentCycle && lockState) || nearMiss || atRisk) && (
-            <Collapsible title="At a glance" titleClassName="eyebrow" className="mt-6">
-              {/* `auto-fit` so two tiles share the row and three split it, with
+        {(myRow || (currentCycle && lockState) || nearMiss || atRisk) && (
+          <Collapsible title="At a glance" titleClassName="eyebrow" className="mt-10">
+            {/* `auto-fit` so two tiles share the row and three split it, with
               no hole when one of them is absent. `pt-3` makes room for the
               stickers that overhang the tiles' top edges. */}
-              <RevealGroup
-                className="grid grid-cols-1 gap-4 pt-3 sm:grid-cols-[repeat(auto-fit,minmax(14rem,1fr))]"
-                step={60}
-              >
-                {myTeam && myRow && (
-                  <Reveal>
-                    <MotionCard tilt className="card-pop-mint relative h-full">
-                      <Link href={`/teams/${myTeam.id}`} className="flex h-full flex-col rounded-card p-5">
-                        <span className="text-2xs font-bold uppercase tracking-wide text-tile-muted">
-                          My team
-                        </span>
-                        <span className="mt-1 block truncate text-base font-semibold">{myTeam.name}</span>
-                        <span className="mt-3 block font-display text-6xl leading-none tracking-wide">
-                          {myRow.totalPoints}
-                        </span>
-                        <span className="mt-auto flex flex-wrap items-center gap-2 pt-4">
-                          <Sticker tone={myRow.rank === 1 ? 'gold' : 'paper'} size="sm">
-                            {myRow.rank === 1 && <Doodle kind="crown" className="-ml-0.5 h-4 w-4" />}#
-                            {myRow.rank} of {rows.length}
-                          </Sticker>
-                          {/* The sign carries the meaning — colour on a mint block
-                          would not clear contrast for either tone. */}
-                          <span className="text-2xs font-semibold tabular-nums text-tile-muted">
-                            {formatPoints(myRow.lastCyclePoints)} last
-                          </span>
-                        </span>
-                      </Link>
-                    </MotionCard>
-                  </Reveal>
-                )}
-
-                {currentCycle && lockState && (
-                  <Reveal
-                    as="section"
-                    aria-label={`This ${lower(lexicon.cycleSingular)}`}
-                    className={cn('relative p-5', cycleLocked ? 'card' : 'card-pop-gold')}
-                  >
-                    <Sticker
-                      tone={cycleLocked ? 'ink' : 'paper'}
-                      tilt="r"
-                      className="absolute -right-2 -top-3"
-                    >
-                      {cycleLocked ? 'Locked' : 'Open'}
-                    </Sticker>
-                    <Doodle
-                      kind={cycleLocked ? 'lock' : 'lock-open'}
-                      tone={cycleLocked ? 'sky' : 'paper'}
-                      className="h-8 w-8 -rotate-6"
-                    />
-                    <p className="mt-3 text-2xs font-bold uppercase tracking-wide text-tile-muted">
-                      This {lower(lexicon.cycleSingular)}
-                    </p>
-                    <h3 className="headline mt-1 text-2xl">{currentCycle.label}</h3>
-                    <p className="mt-2 text-xs text-tile-muted">
-                      {!lockState.showLockAt
-                        ? 'Rosters are closed'
-                        : cycleLocked
-                          ? `Locked ${relativeTime(lockState.lockAt)}`
-                          : `Rosters lock ${relativeTime(lockState.lockAt)}`}
-                    </p>
-                  </Reveal>
-                )}
-
-                {(nearMiss || atRisk) && (
-                  <Reveal
-                    as="section"
-                    aria-label="Heads up"
-                    className="card relative p-5 sm:col-span-2 lg:col-span-1"
-                  >
-                    {/* Inset from the left edge: a tile to its left may carry its
-                    own tag on that corner, and two overhanging tags collide. */}
-                    <Sticker tone={atRisk ? 'red' : 'gold'} tilt="l" className="absolute left-4 -top-3">
-                      Heads up
-                    </Sticker>
-                    <Doodle
-                      kind="alert"
-                      tone={atRisk ? 'red' : 'gold'}
-                      className="absolute -right-2 -top-3 h-9 w-9 rotate-6"
-                    />
-                    <div className="mt-2 space-y-2">
-                      {nearMiss && <p className="text-sm font-medium text-brand-gold-deep">{nearMiss}</p>}
-                      {atRisk && <p className="text-sm font-medium text-danger-deep">{atRisk}</p>}
-                    </div>
-                  </Reveal>
-                )}
-              </RevealGroup>
-            </Collapsible>
-          )}
-
-          <Collapsible
-            title="Standings"
-            className="mt-8"
-            aside={
-              myTeam && (
-                <Link href={`/teams/${myTeam.id}`} className="text-xs text-brand-gold-deep">
-                  My team →
-                </Link>
-              )
-            }
-          >
-            <Leaderboard rows={rows} myTeamId={myTeam?.id ?? null} />
-          </Collapsible>
-        </div>
-
-        {/* Screen 3: everything you look *up* rather than look at — the two
-            reference lists, inviting people, and the feed. All folded, so the
-            screen is a short menu until something is opened. */}
-        <div className="screen pt-2">
-          <div className="lg:grid lg:grid-cols-2 lg:gap-6">
-            <Collapsible
-              title={
-                <>
-                  Managers <span className="ml-1 tracking-normal text-ink">{league.members.length}</span>
-                </>
-              }
-              titleClassName="eyebrow"
-              defaultOpen={false}
-              className="mt-8"
-              aside={openSeats === 0 ? 'Full' : `${openSeats} ${openSeats === 1 ? 'seat' : 'seats'} open`}
+            <RevealGroup
+              className="grid grid-cols-1 gap-4 pt-3 sm:grid-cols-[repeat(auto-fit,minmax(14rem,1fr))]"
+              step={60}
             >
-              <ul className="card divide-y divide-hairline">
-                {league.members.map((member) => {
-                  const team = league.teams.find((t) => t.owner?.id === member.user.id);
-                  const isYou = member.user.id === user?.id;
-                  return (
-                    <li key={member.user.id} className="flex items-center gap-3 p-4">
-                      <Avatar
-                        name={member.user.name ?? member.user.handle ?? '?'}
-                        photoUrl={member.user.avatarUrl}
-                        size={38}
-                      />
-                      <span className="min-w-0 flex-1">
-                        <span className="block truncate text-base font-semibold">
-                          {team?.name ?? 'No team yet'}
-                          {isYou && <span className="ml-1.5 text-2xs text-brand-gold-deep">you</span>}
-                        </span>
-                        <span className="mt-0.5 block truncate text-2xs text-muted">
-                          {member.user.name ?? member.user.handle ?? 'Unknown manager'}
+              {myTeam && myRow && (
+                <Reveal>
+                  <MotionCard tilt className="card-pop-mint relative h-full">
+                    <Link href={`/teams/${myTeam.id}`} className="flex h-full flex-col rounded-card p-5">
+                      <span className="text-2xs font-bold uppercase tracking-wide text-tile-muted">
+                        My team
+                      </span>
+                      <span className="mt-1 block truncate text-base font-semibold">{myTeam.name}</span>
+                      <span className="mt-3 block font-display text-6xl leading-none tracking-wide">
+                        {myRow.totalPoints}
+                      </span>
+                      <span className="mt-auto flex flex-wrap items-center gap-2 pt-4">
+                        <Sticker tone={myRow.rank === 1 ? 'gold' : 'paper'} size="sm">
+                          {myRow.rank === 1 && <Doodle kind="crown" className="-ml-0.5 h-4 w-4" />}#
+                          {myRow.rank} of {rows.length}
+                        </Sticker>
+                        {/* The sign carries the meaning — colour on a mint block
+                          would not clear contrast for either tone. */}
+                        <span className="text-2xs font-semibold tabular-nums text-tile-muted">
+                          {formatPoints(myRow.lastCyclePoints)} last
                         </span>
                       </span>
-                      {member.role === 'COMMISSIONER' && (
-                        <Sticker tone="lavender" size="sm" className="shrink-0">
-                          Commish
-                        </Sticker>
-                      )}
-                    </li>
-                  );
-                })}
-              </ul>
-              <p className="mt-2 px-1 text-2xs leading-relaxed text-muted">
-                {openSeats === 0
-                  ? 'Every seat is taken — this league is full.'
-                  : `${openSeats} ${
-                      openSeats === 1 ? 'seat is' : 'seats are'
-                    } still open — tap the invite code to copy it, or show the QR code for someone to scan.`}
-              </p>
-            </Collapsible>
-
-            <Collapsible title="League" titleClassName="eyebrow" defaultOpen={false} className="mt-8">
-              <div className="card divide-y divide-hairline">
-                <InviteCode code={league.inviteCode} leagueName={league.name} />
-                <Row label="Scoring" value={league.scoringRuleset.name} href="/rules" />
-                <Row
-                  label="Draft"
-                  value={`${league.draftType.toLowerCase()} · ${league.rosterSize} rounds`}
-                />
-                <Row label="Visibility" value={league.isPublic ? 'Public' : 'Private'} />
-                {/* The service name only, never the URL: the URL is the credential. */}
-                {describeWebhook(league.chatWebhookUrl) && (
-                  <Row label="Chat" value={`${describeWebhook(league.chatWebhookUrl)} connected`} />
-                )}
-              </div>
-              {league.scoringRuleset.description && (
-                <p className="mt-2 px-1 text-2xs leading-relaxed text-muted">
-                  {league.scoringRuleset.description}
-                </p>
+                    </Link>
+                  </MotionCard>
+                </Reveal>
               )}
-            </Collapsible>
-          </div>
 
-          {isMember && league.draftStatus === 'NOT_STARTED' && (
-            <InviteFriends leagueId={league.id} friends={invitableFriends} seatsLeft={openSeats} />
-          )}
+              {currentCycle && lockState && (
+                <Reveal
+                  as="section"
+                  aria-label={`This ${lower(lexicon.cycleSingular)}`}
+                  className={cn('relative p-5', cycleLocked ? 'card' : 'card-pop-gold')}
+                >
+                  <Sticker tone={cycleLocked ? 'ink' : 'paper'} tilt="r" className="absolute -right-2 -top-3">
+                    {cycleLocked ? 'Locked' : 'Open'}
+                  </Sticker>
+                  <Doodle
+                    kind={cycleLocked ? 'lock' : 'lock-open'}
+                    tone={cycleLocked ? 'sky' : 'paper'}
+                    className="h-8 w-8 -rotate-6"
+                  />
+                  <p className="mt-3 text-2xs font-bold uppercase tracking-wide text-tile-muted">
+                    This {lower(lexicon.cycleSingular)}
+                  </p>
+                  <h3 className="headline mt-1 text-2xl">{currentCycle.label}</h3>
+                  <p className="mt-2 text-xs text-tile-muted">
+                    {!lockState.showLockAt
+                      ? 'Rosters are closed'
+                      : cycleLocked
+                        ? `Locked ${relativeTime(lockState.lockAt)}`
+                        : `Rosters lock ${relativeTime(lockState.lockAt)}`}
+                  </p>
+                </Reveal>
+              )}
 
-          {/* Full width on purpose: the feed is the part people come back to, and
-          it reads badly squeezed into a half column next to a settings list. */}
-          <LeagueFeed
-            leagueId={league.id}
-            messages={messages}
-            canPost={isMember}
-            isCommissioner={isCommissioner}
-          />
-        </div>
+              {(nearMiss || atRisk) && (
+                <Reveal
+                  as="section"
+                  aria-label="Heads up"
+                  className="card relative p-5 sm:col-span-2 lg:col-span-1"
+                >
+                  {/* Inset from the left edge: a tile to its left may carry its
+                    own tag on that corner, and two overhanging tags collide. */}
+                  <Sticker tone={atRisk ? 'red' : 'gold'} tilt="l" className="absolute left-4 -top-3">
+                    Heads up
+                  </Sticker>
+                  <Doodle
+                    kind="alert"
+                    tone={atRisk ? 'red' : 'gold'}
+                    className="absolute -right-2 -top-3 h-9 w-9 rotate-6"
+                  />
+                  <div className="mt-2 space-y-2">
+                    {nearMiss && <p className="text-sm font-medium text-brand-gold-deep">{nearMiss}</p>}
+                    {atRisk && <p className="text-sm font-medium text-danger-deep">{atRisk}</p>}
+                  </div>
+                </Reveal>
+              )}
+            </RevealGroup>
+          </Collapsible>
+        )}
+
+        <Collapsible
+          title="Standings"
+          className="mt-10"
+          aside={
+            myTeam && (
+              <Link href={`/teams/${myTeam.id}`} className="text-xs text-brand-gold-deep">
+                My team →
+              </Link>
+            )
+          }
+        >
+          <Leaderboard rows={rows} myTeamId={myTeam?.id ?? null} />
+        </Collapsible>
+
+        {/* Before the draft the league is still being filled, so the
+            reference rows — with the invite code open — come before the
+            feed; once it is under way the feed is what people come back
+            for, and the rows fold away beneath it. */}
+        {preDraft && referenceRows}
+        <LeagueFeed
+          leagueId={league.id}
+          messages={messages}
+          canPost={isMember}
+          isCommissioner={isCommissioner}
+        />
+        {!preDraft && referenceRows}
       </div>
     </ShowTheme>
   );
 }
-
 /**
  * What a non-member sees of a private league: enough to know they have the
  * right link, and the one thing they can do about it. The invite code is the

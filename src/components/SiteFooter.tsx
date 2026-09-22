@@ -20,7 +20,9 @@ export function SiteFooter() {
   const who = operator();
 
   return (
-    <footer className="screen-end mx-auto w-full max-w-md px-5 pb-5 pt-8 text-2xs text-muted sm:max-w-lg lg:max-w-3xl">
+    // The last thing in the scroller. With no bottom nav (signed out) it is
+    // also the last thing above the home indicator, hence the safe area.
+    <footer className="app-footer mx-auto w-full max-w-md border-t border-hairline px-5 pb-[calc(env(safe-area-inset-bottom)+1.25rem)] pt-6 text-2xs text-muted sm:max-w-lg lg:max-w-3xl">
       <nav aria-label="Site" className="flex flex-wrap gap-x-4 gap-y-1.5">
         {LINKS.map((link) => (
           <Link key={link.href} href={link.href} className="hover:text-ink">

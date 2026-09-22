@@ -14,8 +14,9 @@ export default async function NotificationsPage() {
 
   return (
     <div className="pt-2">
-      {/* One screen: the list is the page. */}
-      <div className="screen">
+      {/* One list is the page, so it has no panels: a single snap target
+          would only pull every small scroll back to the top. */}
+      <div>
         <Link href="/leagues" className="text-xs text-muted">
           ← Home
         </Link>

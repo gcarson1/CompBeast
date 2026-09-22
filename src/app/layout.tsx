@@ -9,6 +9,7 @@ import { AppHeader } from '@/components/AppHeader';
 import { BottomNav } from '@/components/BottomNav';
 import { ErrorReporting } from '@/components/ErrorReporting';
 import { JsonLd } from '@/components/JsonLd';
+import { AppScroller } from '@/components/AppScroller';
 import { AmbientStickers } from '@/components/motion/AmbientStickers';
 import { MotionProvider } from '@/components/motion/MotionProvider';
 import { ServiceWorkerRegistrar } from '@/components/ServiceWorkerRegistrar';
@@ -79,6 +80,11 @@ export const viewport: Viewport = {
   themeColor: '#0F172A',
   width: 'device-width',
   initialScale: 1,
+  // Lay out under the notch and home indicator, and pad for them ourselves
+  // (`env(safe-area-inset-*)` on the header, nav and footer). Without it the
+  // installed app, whose status bar is `black-translucent`, drew the header
+  // underneath the clock.
+  viewportFit: 'cover',
   // No maximumScale/userScalable cap. Pinch-zoom is the single most-used
   // accessibility affordance on a phone, and locking it is a WCAG 1.4.4
   // failure. A layout that needs a zoom lock to hold together is the bug.
@@ -128,26 +134,30 @@ export default async function RootLayout({ children }: { children: React.ReactNo
           <div className="pointer-events-none fixed inset-x-0 top-0 -z-10 h-[420px] bg-[radial-gradient(60%_100%_at_50%_0%,rgba(245,158,11,0.10),transparent_70%)]" />
           {/* Faint stickers drifting in the desktop gutters (see AmbientStickers.tsx). */}
           <AmbientStickers />
-          {/* `min-h-svh`, not `dvh`: a phone's URL bar collapsing changes
-              `dvh` mid-scroll, which resizes every screen under the reader's
-              thumb. `data-bottom-nav` tells `.screen` how much fixed chrome
-              to subtract (globals.css) — the nav only exists when signed in. */}
-          <div className="flex min-h-svh flex-col" data-bottom-nav={Boolean(user)}>
+          {/* The app shell: exactly one viewport tall, and only the middle
+              scrolls (see AppScroller.tsx). The header and the bottom nav are
+              outside the scroller, so no scroll, bounce or URL-bar resize can
+              move them; the footer is inside it, pinned to the bottom of a
+              short page by the `min-h-full` column. */}
+          <div className="flex h-dvh flex-col">
             <AppHeader
               isPlatformAdmin={user?.isPlatformAdmin ?? false}
               signedIn={Boolean(user)}
               unreadCount={unreadCount}
             />
-            {/* Framer's feature bundle, loaded once for every `m.*` tile below;
-                the children stay server-rendered. The snap points are the
-                `.screen` blocks inside each page, and every page's first
-                screen carries its title — so the browser's re-snap after a
-                layout change lands on the top of the page rather than on the
-                first thing below the title. */}
-            <main id="main" className="mx-auto w-full max-w-md flex-1 px-5 pb-4 sm:max-w-lg lg:max-w-3xl">
-              <MotionProvider>{children}</MotionProvider>
-            </main>
-            <SiteFooter />
+            <AppScroller className="app-scroller min-h-0 flex-1">
+              <div className="flex min-h-full flex-col">
+                {/* Framer's feature bundle, loaded once for every `m.*` tile
+                    below; the children stay server-rendered. */}
+                <main
+                  id="main"
+                  className="mx-auto w-full max-w-md flex-1 px-5 pb-10 pt-2 sm:max-w-lg lg:max-w-3xl"
+                >
+                  <MotionProvider>{children}</MotionProvider>
+                </main>
+                <SiteFooter />
+              </div>
+            </AppScroller>
             {user && <BottomNav />}
           </div>
           <Toaster theme="dark" position="top-center" richColors closeButton />

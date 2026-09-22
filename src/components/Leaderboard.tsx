@@ -4,6 +4,7 @@ import Link from 'next/link';
 import { useRouter } from 'next/navigation';
 import { useEffect, useRef, useState, useTransition } from 'react';
 import { m } from 'framer-motion';
+import { appScroller } from '@/components/AppScroller';
 import { Avatar } from '@/components/Avatar';
 import { Doodle } from '@/components/doodles/Doodle';
 import { Sticker } from '@/components/Sticker';
@@ -35,7 +36,9 @@ export function Leaderboard({ rows, myTeamId }: { rows: LeaderboardRow[]; myTeam
   }, [isPending, revealing]);
 
   const onPointerDown = (e: React.PointerEvent) => {
-    if (revealing || window.scrollY > 0) return;
+    // Only from the very top of the page, like every pull-to-refresh. The page
+    // scrolls inside the app shell, not the document (AppScroller.tsx).
+    if (revealing || appScroller().scrollTop > 0) return;
     startY.current = e.clientY;
   };
 

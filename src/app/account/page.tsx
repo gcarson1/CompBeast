@@ -2,7 +2,7 @@ import Link from 'next/link';
 import { redirect } from 'next/navigation';
 import { Avatar } from '@/components/Avatar';
 import { BadgeShelf } from '@/components/BadgeShelf';
-import { Collapsible } from '@/components/Collapsible';
+import { Collapsible, RowGroup } from '@/components/Collapsible';
 import { DeleteAccountPanel } from '@/components/DeleteAccountPanel';
 import { EmailPreferences } from '@/components/EmailPreferences';
 import { FriendsPanel } from '@/components/FriendsPanel';
@@ -51,10 +51,9 @@ export default async function AccountPage() {
 
   return (
     <div className="pt-2">
-      {/* Screen 1: who you are and what you have scored. It starts at the very
-          top of the page: anything above the first screen cannot be rested on
-          under mandatory snapping, so the back link belongs inside it. */}
-      <div className="screen">
+      {/* Who you are and what you have scored. Not a panel: the top of the
+          page is already where a scroll comes to rest. */}
+      <div>
         <Link href="/leagues" className="text-xs text-muted">
           ← Home
         </Link>
@@ -115,80 +114,77 @@ export default async function AccountPage() {
       </div>
 
       <RevealGroup step={80}>
-        {/* Screen 2: the ladder and this season's line. */}
-        <div className="screen pt-2">
+        <Collapsible
+          title="Badges"
+          className="mt-10"
+          aside={`${earnedBadges(account.totalPoints).length} of ${BADGES.length}`}
+        >
+          <BadgeShelf points={account.totalPoints} />
+        </Collapsible>
+
+        {current && (
           <Collapsible
-            title="Badges"
-            className="mt-6"
-            aside={`${earnedBadges(account.totalPoints).length} of ${BADGES.length}`}
+            title="This season"
+            className="mt-10"
+            aside={
+              <Link href={`/leagues/${current.leagueId}`} className="text-brand-gold-deep">
+                {current.leagueName} →
+              </Link>
+            }
           >
-            <BadgeShelf points={account.totalPoints} />
-          </Collapsible>
-
-          {current && (
-            <Collapsible
-              title="This season"
-              className="mt-8"
-              aside={
-                <Link href={`/leagues/${current.leagueId}`} className="text-brand-gold-deep">
-                  {current.leagueName} →
-                </Link>
-              }
-            >
-              <div className="card p-4">
-                <div className="mb-4 flex items-end justify-between gap-3">
-                  <span className="min-w-0">
-                    <span className="block truncate text-2xs text-muted">{current.teamName}</span>
-                    <span className="font-display text-5xl leading-none tracking-wide">
-                      {current.totalPoints}
-                    </span>
+            <div className="card p-4">
+              <div className="mb-4 flex items-end justify-between gap-3">
+                <span className="min-w-0">
+                  <span className="block truncate text-2xs text-muted">{current.teamName}</span>
+                  <span className="font-display text-5xl leading-none tracking-wide">
+                    {current.totalPoints}
                   </span>
-                  {current.rank > 0 && (
-                    <Sticker tone={current.rank === 1 ? 'gold' : 'ink'} size="sm" className="shrink-0">
-                      {current.rank === 1 && <Doodle kind="crown" className="-ml-0.5 h-4 w-4" />}#
-                      {current.rank} of {current.teamCount}
-                    </Sticker>
-                  )}
-                </div>
-                <PointHistoryChart history={current.history} caption={current.teamName} />
+                </span>
+                {current.rank > 0 && (
+                  <Sticker tone={current.rank === 1 ? 'gold' : 'ink'} size="sm" className="shrink-0">
+                    {current.rank === 1 && <Doodle kind="crown" className="-ml-0.5 h-4 w-4" />}#{current.rank}{' '}
+                    of {current.teamCount}
+                  </Sticker>
+                )}
               </div>
-            </Collapsible>
-          )}
-        </div>
-
-        {/* Screen 3: the record, and the settings you rarely touch. */}
-        <div className="screen pt-2">
-          <Collapsible title="Season history" titleClassName="eyebrow" className="mt-6">
-            {account.rows.length === 0 ? (
-              <div className="rounded-card border border-dashed border-hairline p-5">
-                <p className="max-w-measure text-xs leading-relaxed text-muted">
-                  You have not played a season yet. Join or create a league and your results will build up
-                  here.
-                </p>
-                <Link href="/leagues/new" prefetch={false} className="btn-primary btn-sm mt-3">
-                  Create a league
-                </Link>
-              </div>
-            ) : (
-              <ul className="divide-y divide-hairline border-y border-hairline">
-                {ordered.map((row) => (
-                  <SeasonRow key={row.id} row={row} />
-                ))}
-              </ul>
-            )}
-            {past.length === 0 && account.rows.length > 0 && (
-              <p className="mt-3 text-2xs text-muted">
-                Finished seasons stay here permanently, with the score you ended on — even if the league is
-                deleted later.
-              </p>
-            )}
+              <PointHistoryChart history={current.history} caption={current.teamName} />
+            </div>
           </Collapsible>
+        )}
 
+        <Collapsible title="Season history" className="mt-10" aside={`${account.rows.length}`}>
+          {account.rows.length === 0 ? (
+            <div className="rounded-card border border-dashed border-hairline p-5">
+              <p className="max-w-measure text-xs leading-relaxed text-muted">
+                You have not played a season yet. Join or create a league and your results will build up here.
+              </p>
+              <Link href="/leagues/new" prefetch={false} className="btn-primary btn-sm mt-3">
+                Create a league
+              </Link>
+            </div>
+          ) : (
+            <ul className="divide-y divide-hairline border-y border-hairline">
+              {ordered.map((row) => (
+                <SeasonRow key={row.id} row={row} />
+              ))}
+            </ul>
+          )}
+          {past.length === 0 && account.rows.length > 0 && (
+            <p className="mt-3 text-2xs text-muted">
+              Finished seasons stay here permanently, with the score you ended on — even if the league is
+              deleted later.
+            </p>
+          )}
+        </Collapsible>
+
+        {/* The settings you rarely touch, as one folded list. Friends opens
+              itself when someone is waiting on an answer — that is the one
+              thing here that asks something of you. */}
+        <RowGroup className="mt-10">
           <Collapsible
+            variant="row"
             title="Friends"
-            titleClassName="eyebrow"
-            defaultOpen={false}
-            className="mt-8"
+            defaultOpen={friends.incoming.length > 0}
             aside={`${friends.friends.length}${friends.incoming.length > 0 ? ` · ${friends.incoming.length} waiting` : ''}`}
           >
             <p className="mb-4 max-w-measure text-2xs leading-relaxed text-muted">
@@ -199,9 +195,9 @@ export default async function AccountPage() {
           </Collapsible>
 
           {/* Hidden entirely when the deployment has no VAPID keys — like the
-            email switches, a control that governs nothing is worse than none. */}
+                email switches, a control that governs nothing is worse than none. */}
           {vapidKey && (
-            <Collapsible title="Push alerts" titleClassName="eyebrow" defaultOpen={false} className="mt-8">
+            <Collapsible variant="row" title="Push alerts" defaultOpen={false}>
               <p className="mb-4 max-w-measure text-2xs leading-relaxed text-muted">
                 The same alerts as the bell, delivered to this device even when Comp Beast is closed. Turn it
                 on separately on each phone or computer you use.
@@ -211,21 +207,15 @@ export default async function AccountPage() {
           )}
 
           {/* id="email" is the anchor every email footer links back to; the
-            section opens itself when the page lands on that hash. */}
-          <Collapsible
-            id="email"
-            title="Email alerts"
-            titleClassName="eyebrow"
-            defaultOpen={false}
-            className="mt-8"
-          >
+                row opens itself when the page lands on that hash. */}
+          <Collapsible id="email" variant="row" title="Email alerts" defaultOpen={false}>
             <p className="mb-4 max-w-measure text-2xs leading-relaxed text-muted">
               Alerts always appear in the app. These decide which of them also reach{' '}
               <span className="text-ink">{user.email}</span>.
             </p>
             <EmailPreferences preferences={emailPreferences} />
           </Collapsible>
-        </div>
+        </RowGroup>
       </RevealGroup>
 
       <DeleteAccountPanel leaguesCommissioned={leaguesCommissioned} />

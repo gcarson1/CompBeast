@@ -670,48 +670,72 @@ count, and neither moves a `max(createdAt)`.
 
 ## Page structure
 
-The page is the content, no more: `overscroll-behavior-y: none` on the root removes the
-rubber-band past the end of the document (on a phone that bounce dragged the whole page,
-sticky bottom nav included, off the bottom edge), and there is no pull-to-refresh to lose
-— the leaderboard implements its own.
+**The document does not scroll.** The app is a column exactly one viewport tall — header,
+one scroll container (`<AppScroller>`), bottom nav — and only the middle scrolls. Two earlier
+versions let the document scroll with `sticky` bars, and on a phone that is fragile three
+ways at once: the URL bar collapsing resizes the viewport mid-scroll, the rubber-band past
+either end drags the sticky bars with it, and a bar in the flow can be carried up the screen
+by the footer at the bottom of a short page. With the bars *outside* the part that scrolls,
+none of those can happen. `viewport-fit=cover` and `env(safe-area-inset-*)` on the header,
+nav and footer keep the installed app clear of the notch and the home indicator.
 
-**A page is a stack of screens.** Each `.screen` is at least one viewport minus the app's
-fixed chrome (`calc(100svh - var(--chrome-top) - var(--chrome-bottom))`), and the root
-carries `scroll-snap-type: y mandatory`, so every rest position is a screen boundary and a
-scroll gesture lands on the next screenful rather than anywhere at all.
+Owning the scroller means owning what the browser did for the document: `<AppScroller>`
+puts every new page at its top (Next resets the *document*, which no longer scrolls, and a
+page that inherited the last one's offset opened in its middle), restores the offset on
+back and forward, leaves a `#hash` target to scroll itself, and marks the root
+`data-scrolled` so the header shows its edge only once content passes under it. Anything that
+reads a scroll position goes through `appScroller()`. Two details are load-bearing:
 
-Three things make mandatory snapping safe here, each of which broke something first:
+- **`position: relative` on the scroller.** Without a positioned ancestor inside it, every
+  `sr-only` label and corner-pinned SVG took the whole page as its containing block,
+  stretched the document to wherever it sat, and let the browser scroll the document to show
+  a focused control — which carried the header off the top. A listener puts the document
+  back at 0 if anything ever scrolls it again.
+- **Every snap and scroll calculation measures the scroller, never `window`.**
 
-- **Screens, not sections.** A first pass snapped to sections of arbitrary height with
-  `proximity`, and it fought the reader rather than guiding them: with snap points at
-  unpredictable distances the browser re-decides where to land on every layout change, so
-  a scroll would slide and then yank back. Screens one viewport apart make the decision
-  obvious. Group them deliberately — four folded headings belong on one screen, not on
-  four near-empty ones — and a screen whose sections have been expanded is simply an
-  *oversized* snap area, which the spec lets the scroller rest anywhere within, so opening
-  something never traps.
-- **`svh`, never `dvh`.** `dvh` changes as a phone's URL bar collapses, which resizes every
-  screen mid-scroll and re-snaps under the reader's thumb. That is the single biggest
-  source of snap jank on a phone.
-- **Every page's first screen starts at the top of the page.** Anything above the first
-  snap point cannot be rested on, so a back link left outside one was unreachable.
+**Scrolling settles on sections.** The scroller has `scroll-snap-type: y proximity` over a
+handful of `.panel`s — a page's major blocks — so a scroll that comes to rest near the next
+section settles with its heading just under the header, and one that doesn't is left alone.
+Proximity, deliberately: mandatory snapping cannot rest partway through a panel taller than
+the screen without fighting the reader (a league feed, a standings table, an expanded
+section; the CSS working group's issue #6863 describes exactly that), and the first two
+attempts here, which snapped the document, fought the reader for that reason and the URL-bar
+one. The rules that make it guide rather than catch:
 
-Pages that are a form or a long reference — the draft room, league settings, the rule
-book — have no screens, and a document with no snap targets scrolls normally. That is
-deliberate: snapping while someone types is hostile. The footer is the one shared snap
-target and is scoped to `main:has(.screen) ~ .screen-end` for exactly this reason; as the
-*only* target on a screen-less page it parked the document on its own bottom and would not
-let go. It aligns its end, with `scroll-margin-bottom` reserving the sticky bottom nav —
-without that the footer's last lines rested underneath the nav.
+- **Few, large targets.** The section directly under a page's title is not a panel (the top
+  of the page already is one); a stack of folded rows is one panel; a folded section is not a
+  target at all (it is one heading tall); the live block is one panel, not one per show.
+- **At least half a screen apart, whatever the data.** A panel's height is content — a league
+  with two teams has a standings table a couple of hundred pixels tall — so `<AppScroller>`
+  measures on every resize and stands down any panel that starts less than 45% of a screen
+  after the previous resting point (`data-snap="off"`).
+- **The end is a resting point.** The footer aligns its end, or a last panel starting near the
+  bottom pulls every attempt to reach the footer back up to it.
+- **No snapping on forms or reference pages.** The draft room, settings and the rule book's
+  first show have no panels; a page with no targets scrolls normally.
 
-Sections fold. `<Collapsible>` (`src/components/Collapsible.tsx`) is a real heading with a
-button inside it (`aria-expanded`), a body animated through `grid-template-rows` and made
-`inert` while closed, and an overflow clip that lifts once the transition settles so the
-stickers overhanging the tiles inside are not shaved off. Reference lists start folded;
-the things you came for start open. A section that is a link target (`/account#email`,
-from every email footer) opens itself on its hash and scrolls into place once its body
-has grown — with an explicit `scrollTo`, because `scrollIntoView` under root snapping
-lands on a neighbouring snap point when a folded section sits just above.
+The gesture tests for this drive headless Chrome over the DevTools protocol with
+`Input.synthesizeScrollGesture` — real touch flicks at a phone viewport — and assert where
+each one comes to rest; a programmatic `scrollTo` does not exercise the same path.
+
+**Sections fold.** `<Collapsible>` (`src/components/Collapsible.tsx`) comes in two shapes:
+a `section` — a primary block with a real heading — and a `row`, one line in a
+hairline-divided `<RowGroup>` of reference material, like a settings screen (a league's
+managers and details, an account's friends and alert settings, each show's buzz, the FAQ).
+The heading is a real button inside the real heading (`aria-expanded`); the body animates
+through `grid-template-rows`, is `inert` while closed, and lifts its overflow clip once
+settled so overhanging stickers are not shaved off. Opening a section is guided: once it
+has grown, if it runs past the bottom of the screen the page glides up just far enough to
+show it, never so far that the heading you tapped leaves the top.
+
+Defaults are chosen per section rather than all one way: what you came for starts open,
+reference material starts folded, and a few open themselves when they need you — a league's
+details (with the invite code) and *Invite friends* while seats are open before the draft,
+*Friends* when someone is waiting on an answer, *Email alerts* when an email footer links to
+it. Before a league's draft the reference rows sit above the feed; after it, below.
+
+Native `<details>` (the rule book's rulesets, a team's week-by-week lines) animate open where
+the browser supports `interpolate-size`, and open as before where it does not.
 
 ## Motion
 

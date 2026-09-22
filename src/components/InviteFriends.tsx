@@ -32,7 +32,7 @@ export function InviteFriends({
 }) {
   if (friends.length === 0) {
     return (
-      <Collapsible title="Invite friends" titleClassName="eyebrow" defaultOpen={false} className="mt-8">
+      <Collapsible variant="row" title="Invite friends" defaultOpen={false}>
         <div className="rounded-card border border-dashed border-hairline p-4">
           <p className="max-w-measure text-xs leading-relaxed text-muted">
             Add friends and you can drop them into a league in one tap, instead of copying the invite code
@@ -47,10 +47,12 @@ export function InviteFriends({
   }
 
   return (
+    // A row in the league's reference list, open while there are seats to
+    // fill — before the draft this is the thing to do.
     <Collapsible
+      variant="row"
       title="Invite friends"
-      titleClassName="eyebrow"
-      className="mt-8"
+      defaultOpen={seatsLeft > 0}
       aside={seatsLeft === 0 ? 'League full' : `${seatsLeft} ${seatsLeft === 1 ? 'seat' : 'seats'} left`}
     >
       <ul className="card divide-y divide-hairline">

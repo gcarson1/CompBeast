@@ -97,7 +97,9 @@ export function SignedOutLanding({
       <JsonLd data={faqNode(faq)} />
 
       {/* Screen 1: the pitch and the way in. */}
-      <div className="screen">
+      {/* The pitch. Not a panel: the top of the page is already where a
+          scroll comes to rest. */}
+      <div>
         <header className="relative">
           {/* Still a CSS entrance and still visible in the HTML — nothing in
             the hero may start at opacity 0 (see the `rise` keyframe). The
@@ -142,7 +144,8 @@ export function SignedOutLanding({
       </div>
 
       {/* Screen 2: proof that it is live right now. */}
-      <div className="screen pt-6">{live}</div>
+      {/* Proof that it is live: one panel per show (see LiveSection). */}
+      <div className="mt-14">{live}</div>
 
       <Section id="shows" title="Pick your show" lede={facts.showsLede}>
         {/* One tile per show, each in its own colour: the two brands get
@@ -328,7 +331,14 @@ export function SignedOutLanding({
         </dl>
       </Section>
 
-      <Section id="compare" title={`${SITE_NAME} vs. a spreadsheet league`} lede={facts.comparison}>
+      {/* Folded: a dense table for the reader who is weighing it up. The
+          lede above it says the whole thing in one paragraph. */}
+      <Section
+        id="compare"
+        title={`${SITE_NAME} vs. a spreadsheet league`}
+        lede={facts.comparison}
+        defaultOpen={false}
+      >
         <div className="card mt-5 overflow-hidden">
           <table className="w-full table-fixed text-xs">
             <caption className="sr-only">
@@ -370,17 +380,17 @@ export function SignedOutLanding({
       <Section id="faq" title="Frequently asked questions">
         {/* An accordion: every answer is in the HTML for a crawler and the
             FAQPage schema, and one question at a time for a person. */}
-        <ul className="divide-y divide-hairline border-b border-hairline">
+        <ul className="divide-y divide-hairline border-y border-hairline">
           {faq.map((item) => (
-            <li key={item.question} className="py-3">
+            <li key={item.question}>
               <Collapsible
+                variant="row"
                 title={item.question}
-                titleClassName="text-base font-semibold"
+                titleClassName="text-base"
                 headingLevel={3}
                 defaultOpen={false}
-                bodyClassName="pt-1.5"
               >
-                <p className="max-w-measure pb-2 text-sm leading-relaxed text-muted">{item.answer}</p>
+                <p className="max-w-measure text-sm leading-relaxed text-muted">{item.answer}</p>
               </Collapsible>
             </li>
           ))}
@@ -410,15 +420,17 @@ function Section({
   id,
   title,
   lede,
+  defaultOpen = true,
   children,
 }: {
   id: string;
   title: string;
   lede?: string;
+  defaultOpen?: boolean;
   children: ReactNode;
 }) {
   return (
-    <Collapsible id={id} title={title} className="screen mt-10 pt-2" bodyClassName="pt-1">
+    <Collapsible id={id} title={title} className="mt-14" bodyClassName="pt-1" defaultOpen={defaultOpen}>
       {lede && <p className="mt-2 max-w-measure text-sm leading-relaxed text-muted">{lede}</p>}
       {children}
     </Collapsible>

@@ -78,7 +78,7 @@ export default async function SeasonPage({ params }: { params: { slug: string } 
         />
         {/* Screen 1: which season this is, and whether you can play it. Starts
             at the top of the page so the back link is inside it. */}
-        <div className="screen">
+        <div>
           <Link href="/seasons" className="text-xs text-muted">
             ← Seasons
           </Link>
@@ -120,9 +120,8 @@ export default async function SeasonPage({ params }: { params: { slug: string } 
           )}
         </div>
 
-        {/* Screen 2: the scoreboard. */}
-        <div className="screen pt-2">
-          <Collapsible title="Player scores" className="mt-6" aside={`${players.length} ranked`}>
+        <div>
+          <Collapsible title="Player scores" className="mt-10" aside={`${players.length} ranked`}>
             <p className="mb-3 text-2xs text-muted">
               Ranked by fantasy points, which is not the same as how they placed on the show.
             </p>
