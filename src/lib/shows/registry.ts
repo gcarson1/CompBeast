@@ -113,14 +113,14 @@ const SHOWCASE_EVENTS: Record<string, string[]> = {
   ],
   survivor: [
     'IMMUNITY_WIN',
-    'IDOL_PLAYED_SUCCESSFULLY',
-    'VOTE_RECEIVED',
+    'TRIBAL_IMMUNITY_WIN',
+    'VOTED_WITH_MAJORITY',
     'EPISODE_SURVIVED',
     'MADE_MERGE',
     'PLACEMENT_WINNER',
     'JURY_VOTE_RECEIVED',
     'BLINDSIDE_ORCHESTRATED',
-    'CRIED',
+    'EPISODE_TITLE_QUOTE',
   ],
 };
 

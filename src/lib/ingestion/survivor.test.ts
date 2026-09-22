@@ -31,8 +31,10 @@ function episode(
     immunity: [],
     tribalImmunity: [],
     reward: [],
+    tribalReward: [],
     idolsPlayed: [],
     votes: [],
+    correctVoters: [],
     fireMakingWinner: null,
     ...overrides,
     exits,
@@ -80,6 +82,10 @@ const facts: SurvivorSeasonFacts = {
     { order: 6, player: fay, dateLabel: '', dayLabel: '', placeLabel: '6th Place' },
   ],
   mergeEpisode: 2,
+  juryVotes: [
+    { player: ana, count: 5 },
+    { player: dee, count: 2 },
+  ],
   cast: [
     { ...ana, statusLabel: 'Winner', placeLabel: 'Sole Survivor' },
     { ...dee, statusLabel: 'Runner-Up', placeLabel: 'Runner-Up' },

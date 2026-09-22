@@ -1,4 +1,5 @@
 import { OG_SIZE, renderOgCard } from '@/lib/og/card';
+import { eliminationLabel } from '@/lib/shows/lexicon';
 import { formatPoints } from '@/lib/ui';
 import { getContestantProfile } from '@/server/queries';
 
@@ -17,7 +18,7 @@ export default async function Image({ params }: { params: { contestantId: string
     title: player.name,
     subtitle: player.isActive
       ? `${player.showLexicon.activeLabel}.`
-      : `${player.showLexicon.eliminationVerb}${player.eliminatedCycle ? ` · ${player.eliminatedCycle.label}` : ''}.`,
+      : `${eliminationLabel(player.showLexicon, player.metadata)}${player.eliminatedCycle ? ` · ${player.eliminatedCycle.label}` : ''}.`,
     stats: [
       { value: formatPoints(player.totalPoints), label: 'fantasy points' },
       { value: String(player.events.length), label: 'scored events' },

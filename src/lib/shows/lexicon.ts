@@ -90,3 +90,14 @@ export function lexiconFor(showSlug: string, stored?: unknown): ShowLexicon {
 export function lower(word: string): string {
   return word.charAt(0).toLowerCase() + word.slice(1);
 }
+
+/**
+ * How a contestant left, as a status label. A source that knows the
+ * difference — voted out, lost fire-making, evacuated, quit — writes it to
+ * the contestant's metadata as `exit`; the show's general verb is the
+ * fallback for one that does not.
+ */
+export function eliminationLabel(lexicon: ShowLexicon, metadata: unknown): string {
+  const exit = (metadata as { exit?: unknown } | null)?.exit;
+  return typeof exit === 'string' && exit.trim() ? exit : lexicon.eliminationVerb;
+}

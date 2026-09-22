@@ -76,5 +76,23 @@ export async function installShow(prisma: PrismaClient, spec: ShowSpec) {
     console.log(`  ${spec.name}: ruleset "${rulesetSpec.name}" → ${included.length} rules`);
   }
 
+  // Events the catalogue no longer has. One that was never scored simply
+  // goes; one with history stays as a row — the ledger's snapshots point at
+  // it — but leaves every ruleset, so it neither scores nor shows again.
+  const catalogued = new Set(spec.events.map((e) => e.code));
+  const stale = await prisma.eventDefinition.findMany({
+    where: { showId: show.id, code: { notIn: [...catalogued] } },
+    select: { id: true, code: true, _count: { select: { scoredEvents: true } } },
+  });
+  for (const definition of stale) {
+    if (definition._count.scoredEvents === 0) {
+      await prisma.eventDefinition.delete({ where: { id: definition.id } });
+      console.log(`  ${spec.name}: removed ${definition.code}`);
+    } else {
+      await prisma.scoringRulesetEventDefinition.deleteMany({ where: { eventDefinitionId: definition.id } });
+      console.log(`  ${spec.name}: retired ${definition.code} (kept for its history)`);
+    }
+  }
+
   return { show, eventDefinitions, rulesets };
 }

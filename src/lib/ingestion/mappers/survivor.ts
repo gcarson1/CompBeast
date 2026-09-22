@@ -17,18 +17,12 @@ export const mapSurvivorSeason: SeasonMapper<SurvivorSeasonFacts> = (facts, seas
   for (const episode of airedEpisodes) {
     const { weekNumber, weekLabel } = episode;
 
-    // Two individual immunity winners in one episode is a split tribal or a
-    // parsing artifact; a human should look before it scores.
-    const multiImmunity = episode.immunity.length > 1;
+    // Two immunity winners in one episode is a split tribal council, which
+    // the source states as plainly as a single one — no review needed. (The
+    // Big Brother mapper flags a double HOH because its grid can only mean
+    // that or a misread; a Survivor summary row is one group's result.)
     for (const player of episode.immunity) {
-      push(
-        'IMMUNITY_WIN',
-        player,
-        weekNumber,
-        weekLabel,
-        multiImmunity ? 'MEDIUM' : 'HIGH',
-        multiImmunity ? [`${episode.immunity.length} immunity winners listed for ${weekLabel}`] : [],
-      );
+      push('IMMUNITY_WIN', player, weekNumber, weekLabel);
     }
 
     for (const player of episode.tribalImmunity) {
@@ -37,6 +31,14 @@ export const mapSurvivorSeason: SeasonMapper<SurvivorSeasonFacts> = (facts, seas
 
     for (const player of episode.reward) {
       push('REWARD_WIN', player, weekNumber, weekLabel);
+    }
+
+    for (const player of episode.tribalReward) {
+      push('TRIBAL_REWARD_WIN', player, weekNumber, weekLabel);
+    }
+
+    for (const player of episode.correctVoters) {
+      push('VOTED_WITH_MAJORITY', player, weekNumber, weekLabel);
     }
 
     for (const { player, negatedVotes } of episode.idolsPlayed) {
@@ -55,20 +57,13 @@ export const mapSurvivorSeason: SeasonMapper<SurvivorSeasonFacts> = (facts, seas
     }
 
     const votedIds = new Set(episode.exits.filter((e) => e.how === 'voted').map((e) => e.player.externalId));
-    const multiExit = episode.exits.length > 1;
+    // Two departures in one episode is a split tribal or a double boot,
+    // each in its own voting-history column; the source is not guessing and
+    // neither is this.
     for (const { player, how } of episode.exits) {
-      const reasons: string[] = [];
-      let confidence: 'HIGH' | 'MEDIUM' | 'LOW' = 'HIGH';
-      if (multiExit && how === 'voted') {
-        // A double boot is real and common, but so is a parse that read one
-        // tribal as two; a human glance settles it.
-        confidence = 'MEDIUM';
-        reasons.push(`${episode.exits.length} departures listed for ${weekLabel}`);
-      }
-
       switch (how) {
         case 'voted':
-          push('VOTED_OUT', player, weekNumber, weekLabel, confidence, reasons);
+          push('VOTED_OUT', player, weekNumber, weekLabel);
           // Every vote cast landed on them: unanimous. Only when the votes
           // are on the page — an empty tally proves nothing.
           if (
@@ -80,7 +75,8 @@ export const mapSurvivorSeason: SeasonMapper<SurvivorSeasonFacts> = (facts, seas
           }
           break;
         case 'fire':
-          push('FIRE_MAKING_LOSS', player, weekNumber, weekLabel);
+          // Losing fire at final four is a fourth-place finish, which the
+          // placement already says; there is no penalty on top.
           break;
         case 'evacuated':
         case 'quit':
@@ -121,12 +117,25 @@ export const mapSurvivorSeason: SeasonMapper<SurvivorSeasonFacts> = (facts, seas
     episode.immunity,
     episode.tribalImmunity,
     episode.reward,
+    episode.tribalReward,
     episode.idolsPlayed.map((i) => i.player),
     episode.votes.map((v) => v.player),
     episode.eliminated,
   ]);
   pushSurvival(facts, players, 'EPISODE_SURVIVED', push);
   pushPlacementsAndJury(facts, players, push);
+
+  // The final tribal council: the jury table names the finalists and how
+  // many votes each drew. Pinned to the last aired episode, like placements.
+  const finale = airedEpisodes.at(-1);
+  if (finale && facts.juryVotes.length > 0) {
+    for (const { player, count } of facts.juryVotes) {
+      push('MADE_FINAL_TRIBAL', player, finale.weekNumber, finale.weekLabel);
+      for (let i = 1; i <= count; i += 1) {
+        push('JURY_VOTE_RECEIVED', player, finale.weekNumber, finale.weekLabel, 'HIGH', [], String(i));
+      }
+    }
+  }
 
   return candidates;
 };

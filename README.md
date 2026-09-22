@@ -117,6 +117,26 @@ a `ScoreAudit` row, so a player can always be shown *why* their score moved.
 ruleset: `snapshot` (default) honors what was recorded, so settled weeks never move under
 players' feet when a commissioner edits a rule; `ruleset` restates history on purpose.
 
+### The Survivor model
+
+Survivor's point values (`src/lib/shows/survivor.ts`) were set against real seasons
+rather than by feel. The published community models — Purple Rock's Pick-4,
+Fantasizr, the FanDuel sheet, fantasysurvivorgame.com — agree on the shape:
+individual immunity is the biggest weekly event, tribe wins are a fraction of it,
+the merge and the jury are milestones, and the finish is worth a few immunity wins.
+On top of that consensus the model adds what a fantasy sport needs to feel weekly:
+every rostered player can earn every episode (survive it, vote with the majority),
+and the finale is a championship week rather than the season.
+
+`src/lib/shows/survivor-model.test.ts` holds the model to those properties on
+Survivor 49 and 50: fantasy rank tracks placement at ρ > 0.9, the finale is 20–45%
+of the winner's points, and in random four-team snake drafts the team holding the
+Sole Survivor wins under 75% of leagues (it was 71–85% under the old, Big
+Brother-derived values, with the finale near half the winner's total). The finale
+changes the league leader in about a quarter of leagues. `scripts/simulate-league.ts`
+plays a league over any finished season through the real draft and scoring code
+and prints the week-by-week standings, then deletes the league.
+
 ### Rule sets
 
 Three ship for each show, selectable per league (a league can only pick a ruleset from

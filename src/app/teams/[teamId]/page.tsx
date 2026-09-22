@@ -9,6 +9,7 @@ import { StatStrip } from '@/components/StatStrip';
 import { ShowTheme } from '@/components/ShowTheme';
 import { Sticker } from '@/components/Sticker';
 import { getCurrentUser } from '@/lib/auth';
+import { eliminationLabel, lower } from '@/lib/shows/lexicon';
 import { formatPoints, pointsTone } from '@/lib/ui';
 import { canViewLeague, getTeamDetail } from '@/server/queries';
 
@@ -70,7 +71,7 @@ export default async function TeamPage({ params }: { params: { teamId: string } 
             { label: 'Total', value: `${score?.totalPoints ?? 0}` },
             { label: 'Rank', value: rank ? `#${rank}` : '—' },
             {
-              label: 'Last week',
+              label: `Last ${lower(lexicon.cycleSingular)}`,
               value: formatPoints(score?.lastCyclePoints ?? 0),
               tone: pointsTone(score?.lastCyclePoints ?? 0),
             },
@@ -99,7 +100,7 @@ export default async function TeamPage({ params }: { params: { teamId: string } 
                     <span className="mt-0.5 block text-2xs text-muted">
                       {player.isActive
                         ? lexicon.activeLabel
-                        : `${lexicon.eliminationVerb} · ${player.eliminatedLabel ?? '—'}`}
+                        : `${eliminationLabel(lexicon, player.metadata)} · ${player.eliminatedLabel ?? '—'}`}
                     </span>
                   </span>
                   <span className={`text-md font-semibold tabular-nums ${pointsTone(player.points)}`}>

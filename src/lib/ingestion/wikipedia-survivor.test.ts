@@ -59,6 +59,14 @@ describe('wikipediaSurvivorAdapter.parseSeason — a finished season', () => {
     expect(e1.immunity).toEqual([]);
   });
 
+  it('splits a tribe reward from an individual one', () => {
+    const e1 = done.weeks[0];
+    expect(e1.reward).toEqual([]);
+    expect(e1.tribalReward.length).toBeGreaterThan(0);
+    const e8 = done.weeks.find((w) => w.weekNumber === 8)!;
+    expect(e8.tribalReward).toEqual([]);
+  });
+
   it('reads individual immunity and reward winners after the merge', () => {
     const e8 = done.weeks.find((w) => w.weekNumber === 8)!;
     expect(e8.immunity.map((p) => p.externalId)).toEqual(['savannah-louie']);
@@ -154,6 +162,56 @@ describe('a season that has not premiered', () => {
   });
 });
 
+const returnees = wikipediaSurvivorAdapter.parseSeason(
+  fixture('wikipedia-survivor-50.html'),
+  'https://example.test/s50',
+);
+
+describe('a returnee season with a subtitle', () => {
+  it('reads the name off the first line, not the seasons listed under it', () => {
+    expect(returnees.seasonLabel).toBe('Survivor 50: In the Hands of the Fans');
+    expect(returnees.cast).toHaveLength(24);
+    const cirie = returnees.cast.find((c) => c.externalId === 'cirie-fields')!;
+    expect(cirie.name).toBe('Cirie Fields');
+    expect(returnees.cast.find((c) => c.placeLabel === 'Winner')?.externalId).toBe('aubry-bracco');
+  });
+
+  it('reads a double boot written as "Chrissy & Coach" in one cell', () => {
+    const e8 = returnees.weeks.find((w) => w.weekNumber === 8)!;
+    expect(e8.exits.map((e) => e.player.externalId).sort()).toEqual([
+      'benjamin-coach-wade',
+      'chrissy-hofbeck',
+    ]);
+  });
+
+  it('reads the jury tally in finalist order', () => {
+    expect(returnees.juryVotes.map((j) => [j.player.externalId, j.count])).toEqual([
+      ['aubry-bracco', 8],
+      ['jonathan-young', 3],
+      ['joe-hunter', 0],
+    ]);
+  });
+
+  it("finds every returnee's headshot, including a first name the network spells out", () => {
+    const withPhotos = wikipediaSurvivorAdapter.parseSeasonWithPhotos(
+      fixture('wikipedia-survivor-50.html'),
+      'https://example.test/s50',
+      fixture('paramount-survivor-50-cast.html'),
+    );
+    expect(withPhotos.cast.filter((c) => c.photoUrl)).toHaveLength(24);
+    expect(withPhotos.cast.find((c) => c.externalId === 'joe-hunter')?.photoUrl).toMatch(/image-37/);
+    expect(wikipediaSurvivorAdapter.castPhotosUrl('survivor-50')).toMatch(
+      /everything-we-know-about-survivor-50/,
+    );
+    expect(wikipediaSurvivorAdapter.castPhotosUrl('survivor-51')).toMatch(/survivor-season-51-cast/);
+  });
+
+  it('knows a switched-tribe phase as well as a swap', () => {
+    expect(returnees.mergeEpisode).toBe(6);
+    expect(returnees.weeks.every((w) => w.aired)).toBe(true);
+  });
+});
+
 describe('parseCastPhotos', () => {
   it('ignores images that are not castaway headshots', () => {
     const photos = parseCastPhotos(fixture('paramount-survivor-51-cast.html'));
@@ -175,8 +233,26 @@ describe('mapSurvivorSeason over the real season', () => {
     // Eighteen cast, seven gone before the merge in episode 7.
     expect(codes('MADE_MERGE')).toHaveLength(11);
     expect(codes('FIRE_MAKING_WIN')[0].player.externalId).toBe('savannah-louie');
-    expect(codes('FIRE_MAKING_LOSS')[0].player.externalId).toBe('rizo-velovic');
     expect(codes('ELIMINATED_INVOLUNTARY')[0].player.externalId).toBe('jake-latimer');
+  });
+
+  it('scores the final tribal council and every jury vote from the jury table', () => {
+    expect(
+      codes('MADE_FINAL_TRIBAL')
+        .map((c) => c.player.externalId)
+        .sort(),
+    ).toEqual(['sage-ahrens-nichols', 'savannah-louie', 'sophi-balerdi']);
+    const juryVotes = codes('JURY_VOTE_RECEIVED');
+    expect(juryVotes.filter((c) => c.player.externalId === 'savannah-louie')).toHaveLength(5);
+    expect(juryVotes.filter((c) => c.player.externalId === 'sophi-balerdi')).toHaveLength(2);
+    expect(juryVotes.filter((c) => c.player.externalId === 'sage-ahrens-nichols')).toHaveLength(1);
+  });
+
+  it('credits everyone who voted for the person who went home', () => {
+    // Episode 1: Nicole went 5–1; the five who voted Nicole voted with the majority.
+    const e1 = codes('VOTED_WITH_MAJORITY').filter((c) => c.weekNumber === 1);
+    expect(e1).toHaveLength(5);
+    expect(e1.map((c) => c.player.externalId)).not.toContain('nicole-mazullo');
   });
 
   it('gives every candidate a unique dedupe key', () => {

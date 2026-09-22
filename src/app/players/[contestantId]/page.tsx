@@ -9,7 +9,7 @@ import { ShowTheme } from '@/components/ShowTheme';
 import { Sticker } from '@/components/Sticker';
 import { getCurrentUser } from '@/lib/auth';
 import { absoluteUrl, breadcrumbList } from '@/lib/seo';
-import { lower } from '@/lib/shows/lexicon';
+import { eliminationLabel, lower } from '@/lib/shows/lexicon';
 import { formatPoints } from '@/lib/ui';
 import { getContestantLeaguesForViewer, getContestantProfile } from '@/server/queries';
 
@@ -24,7 +24,9 @@ export async function generateMetadata({ params }: { params: { contestantId: str
   const player = await loadPlayer(params.contestantId);
   if (!player) notFound();
 
-  const status = lower(player.isActive ? player.showLexicon.activeLabel : player.showLexicon.eliminationVerb);
+  const status = lower(
+    player.isActive ? player.showLexicon.activeLabel : eliminationLabel(player.showLexicon, player.metadata),
+  );
   return {
     title: `${player.name} — ${player.season.name} fantasy points`,
     description: `${player.name}'s Comp Beast fantasy scoring on ${player.season.name} (${player.season.show.name}): ${formatPoints(
@@ -72,7 +74,7 @@ export default async function PlayerPage({ params }: { params: { contestantId: s
               <Sticker tone={player.isActive ? 'mint' : 'ink'} size="sm">
                 {player.isActive
                   ? lexicon.activeLabel
-                  : `${lexicon.eliminationVerb} · ${player.eliminatedCycle?.label ?? '—'}`}
+                  : `${eliminationLabel(lexicon, player.metadata)} · ${player.eliminatedCycle?.label ?? '—'}`}
               </Sticker>
               <span className="truncate">
                 {player.season.show.name} · {player.season.name}

@@ -18,6 +18,14 @@ const CAST_PHOTOS_BASE = 'https://www.paramountplus.com/sneak-peak/';
 const USER_AGENT = 'CompBeastBot/0.1 (+https://github.com/gcarson1/CompBeast)';
 
 /**
+ * The network's cast articles mostly follow one URL shape, but not always;
+ * a season whose article is named differently is pinned here.
+ */
+const CAST_PHOTO_PAGES: Record<string, string> = {
+  'survivor-50': `${CAST_PHOTOS_BASE}everything-we-know-about-survivor-50-cast-release-date/`,
+};
+
+/**
  * Survivor, from the English Wikipedia season article.
  *
  * Each season's page carries three tables that between them say everything
@@ -51,6 +59,8 @@ function articleTitle(seasonExternalId: string): string {
 
 interface Cell {
   text: string;
+  /** The text before the cell's first line break — a name without what follows it. */
+  firstLine: string;
   /** True for the cell's top-left origin; a spanned copy is false. */
   origin: boolean;
 }
@@ -73,27 +83,34 @@ function expandTable($: cheerio.CheerioAPI, table: Element): Cell[][] {
           while (grid[r][c]) c += 1;
           const rowspan = Number.parseInt($(cell).attr('rowspan') ?? '1', 10) || 1;
           const colspan = Number.parseInt($(cell).attr('colspan') ?? '1', 10) || 1;
+          // A returnee's cell is their name, a line break, then their past
+          // seasons; the first line is the name. Taken from the markup before
+          // the breaks are folded into the running text below.
+          const firstLine = clean(cheerio.load(($(cell).html() ?? '').split(/<br/i)[0]).text());
           // Line breaks separate names in a list; footnote markers ([a], [1])
           // and the "[Name]" add-on notation for advantages are dropped.
           $(cell).find('br').replaceWith(', ');
           $(cell).find('sup').remove();
-          const text = $(cell)
-            .text()
-            .replace(/\[[^\]]*\]/g, '')
-            .replace(/\s+/g, ' ')
-            .replace(/\s*,\s*/g, ', ')
-            .replace(/(^,\s*|,\s*$)/g, '')
-            .trim();
+          const text = clean($(cell).text());
           for (let i = 0; i < rowspan; i += 1) {
             grid[r + i] = grid[r + i] ?? [];
             for (let j = 0; j < colspan; j += 1) {
-              grid[r + i][c + j] = { text, origin: i === 0 && j === 0 };
+              grid[r + i][c + j] = { text, firstLine, origin: i === 0 && j === 0 };
             }
           }
           c += colspan;
         });
     });
   return grid.filter((row) => row.length > 0);
+}
+
+function clean(text: string): string {
+  return text
+    .replace(/\[[^\]]*\]/g, '')
+    .replace(/\s+/g, ' ')
+    .replace(/\s*,\s*/g, ', ')
+    .replace(/(^,\s*|,\s*$)/g, '')
+    .trim();
 }
 
 function findTable($: cheerio.CheerioAPI, captionPattern: RegExp): Element | null {
@@ -207,7 +224,7 @@ function parseContestants($: cheerio.CheerioAPI): Contestant[] {
   const total = rows.length;
 
   return rows.map((row, index) => {
-    const full = row[nameCol].text;
+    const full = row[nameCol].firstLine || row[nameCol].text;
     const { first, nickname, last } = splitName(full);
     const placementText = row[placementCol]?.text ?? '';
     const placed = placementText.length > 0;
@@ -344,6 +361,28 @@ function parseVotingHistory($: cheerio.CheerioAPI): TribalColumn[] {
   return columns;
 }
 
+/**
+ * The final tribal council's tally. The table lists the finalists across
+ * the top and a single "5–2–1" cell under them, in the same order; the
+ * jurors' own rows carry only check marks.
+ */
+function parseJuryVotes($: cheerio.CheerioAPI): Array<{ name: string; count: number }> {
+  const table = $('table.wikitable')
+    .toArray()
+    .find((t) => /^jury vote/i.test($(t).find('tr').first().text().trim()));
+  if (!table) return [];
+  const grid = expandTable($, table);
+  const finalists = grid.find((row) => /^finalist/i.test(row[0]?.text ?? ''));
+  const votes = grid.find((row) => /^votes?$/i.test(row[0]?.text ?? ''));
+  if (!finalists || !votes) return [];
+  const names = finalists
+    .slice(1)
+    .filter((cell) => cell.origin)
+    .map((cell) => cell.text);
+  const tally = (votes[1]?.text ?? '').split(/[–—-]/).map((n) => Number.parseInt(n.trim(), 10));
+  return names.map((name, i) => ({ name, count: Number.isFinite(tally[i]) ? tally[i] : 0 }));
+}
+
 /** "original tribes" → "original"; "first switch" → "firstswitch"; "merged tribe" → "merged". */
 function phaseKey(phase: string): string {
   if (phase.startsWith('merge')) return 'merged';
@@ -393,7 +432,10 @@ function photoFor(photos: Map<string, string>, fullName: string): string | undef
   for (const [key, url] of photos) {
     if (key.includes(lastKey) && firstKeys.some((f) => key.includes(f))) return url;
   }
-  return undefined;
+  // "Joseph Hunter" for Wikipedia's "Joe Hunter": the surname alone will do
+  // when it names exactly one person on the page.
+  const bySurname = [...photos.entries()].filter(([key]) => key.includes(lastKey));
+  return bySurname.length === 1 ? bySurname[0][1] : undefined;
 }
 
 // ---------------------------------------------------------------------------
@@ -413,6 +455,8 @@ export const wikipediaSurvivorAdapter: SeasonSourceAdapter<SurvivorSeasonFacts> 
   },
 
   castPhotosUrl(seasonExternalId: string): string {
+    const pinned = CAST_PHOTO_PAGES[seasonExternalId];
+    if (pinned) return pinned;
     const number = articleTitle(seasonExternalId).replace('Survivor_', '');
     return `${CAST_PHOTOS_BASE}survivor-season-${number}-cast/`;
   },
@@ -488,12 +532,19 @@ export const wikipediaSurvivorAdapter: SeasonSourceAdapter<SurvivorSeasonFacts> 
 
       const exits: SurvivorExit[] = [];
       const voteCounts = new Map<Contestant, number>();
+      const correct = new Set<Contestant>();
       let fireWinner: Contestant | null = null;
       for (const tribal of tribals) {
-        // A tied vote is two columns with the same name; one departure.
-        const gone = resolver.resolve(tribal.eliminated);
-        if (gone && !exits.some((e) => e.player.externalId === gone.externalId)) {
-          exits.push({ player: ref(gone), how: exitKind(tribal.votesText, tribal.kind) });
+        // "Chrissy & Coach" is a double boot in one cell; a tied vote is two
+        // columns with the same name and one departure.
+        const gone = tribal.eliminated
+          .split(/,|&|\band\b/)
+          .map((part) => resolver.resolve(part))
+          .filter((m): m is Contestant => m !== null);
+        for (const member of gone) {
+          if (!exits.some((e) => e.player.externalId === member.externalId)) {
+            exits.push({ player: ref(member), how: exitKind(tribal.votesText, tribal.kind) });
+          }
         }
         const isFire = /challenge|fire/i.test(tribal.kind);
         for (const [voter, ballot] of tribal.ballots) {
@@ -504,7 +555,12 @@ export const wikipediaSurvivorAdapter: SeasonSourceAdapter<SurvivorSeasonFacts> 
             continue;
           }
           const target = resolver.resolve(ballot);
-          if (target) voteCounts.set(target, (voteCounts.get(target) ?? 0) + 1);
+          if (!target) continue;
+          voteCounts.set(target, (voteCounts.get(target) ?? 0) + 1);
+          if (gone.includes(target)) {
+            const who = resolver.resolve(voter);
+            if (who) correct.add(who);
+          }
         }
       }
 
@@ -529,12 +585,31 @@ export const wikipediaSurvivorAdapter: SeasonSourceAdapter<SurvivorSeasonFacts> 
         exits,
         immunity: immunity.individual.map(ref),
         tribalImmunity: immunity.tribal.map(ref),
-        reward: [...reward.individual, ...reward.tribal].map(ref),
+        reward: reward.individual.map(ref),
+        tribalReward: reward.tribal.map(ref),
         idolsPlayed: [],
         votes: [...voteCounts.entries()].map(([member, count]) => ({ player: ref(member), count })),
+        correctVoters: [...correct].map(ref),
         fireMakingWinner: fireWinner ? ref(fireWinner) : null,
       };
     });
+
+    // How each person left, for their status label; "voted" is the show's
+    // default word and needs no note.
+    const EXIT_LABEL: Record<SurvivorExit['how'], string | null> = {
+      voted: null,
+      fire: 'Lost fire-making',
+      evacuated: 'Evacuated',
+      quit: 'Quit',
+      unknown: null,
+    };
+    const exitByPlayer = new Map<string, string>();
+    for (const week of weeks) {
+      for (const exit of week.exits) {
+        const label = EXIT_LABEL[exit.how];
+        if (label) exitByPlayer.set(exit.player.externalId, label);
+      }
+    }
 
     const placements: RawPlacementEntry[] = cast
       .filter((m) => m.placeLabel)
@@ -568,9 +643,14 @@ export const wikipediaSurvivorAdapter: SeasonSourceAdapter<SurvivorSeasonFacts> 
           hometown: m.hometown,
           tribe: m.tribes.original ?? null,
           finish: m.finishText || null,
+          exit: exitByPlayer.get(m.externalId) ?? null,
         },
       })),
       mergeEpisode,
+      juryVotes: parseJuryVotes($).flatMap(({ name, count }) => {
+        const member = resolver.resolve(name);
+        return member ? [{ player: ref(member), count }] : [];
+      }),
       fetchedAt: new Date(),
     };
   },

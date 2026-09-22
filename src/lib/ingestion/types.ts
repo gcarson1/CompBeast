@@ -108,12 +108,16 @@ export interface SurvivorEpisodeResult extends RawCycleResult {
   immunity: RawPlayerRef[];
   /** Every member of a tribe that won immunity (pre-merge). */
   tribalImmunity: RawPlayerRef[];
-  /** Everyone who won or shared a reward. */
+  /** Individuals who won or were chosen for a reward. */
   reward: RawPlayerRef[];
+  /** Every member of a tribe that won a reward (pre-merge). */
+  tribalReward: RawPlayerRef[];
   /** Idols played at tribal, and whether each one actually cancelled votes. */
   idolsPlayed: Array<{ player: RawPlayerRef; negatedVotes: boolean }>;
   /** Votes received at tribal council, per player. */
   votes: Array<{ player: RawPlayerRef; count: number }>;
+  /** Everyone whose vote landed on someone who went home this episode. */
+  correctVoters: RawPlayerRef[];
   /** Who won the final-four fire-making challenge, when this episode had it. */
   fireMakingWinner: RawPlayerRef | null;
 }
@@ -121,6 +125,8 @@ export interface SurvivorEpisodeResult extends RawCycleResult {
 export interface SurvivorSeasonFacts extends RawSeasonFacts<SurvivorEpisodeResult> {
   /** The episode in which the tribes merged; null before it airs. */
   mergeEpisode: number | null;
+  /** Votes to win at the final tribal council, per finalist. Empty until the finale. */
+  juryVotes: Array<{ player: RawPlayerRef; count: number }>;
 }
 
 // ---------------------------------------------------------------------------

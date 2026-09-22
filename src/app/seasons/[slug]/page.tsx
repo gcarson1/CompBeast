@@ -11,7 +11,7 @@ import { Reveal } from '@/components/motion/Reveal';
 import { ShowTheme } from '@/components/ShowTheme';
 import { Sticker } from '@/components/Sticker';
 import { absoluteUrl, breadcrumbList, tvSeriesNode } from '@/lib/seo';
-import { lower, type ShowLexicon } from '@/lib/shows/lexicon';
+import { eliminationLabel, lower, type ShowLexicon } from '@/lib/shows/lexicon';
 import { formatPoints, pointsTone } from '@/lib/ui';
 import { getSeasonScoreboard } from '@/server/queries';
 
@@ -177,5 +177,5 @@ function describe(
     );
   }
   if (player.isActive) return meta?.occupation ?? lexicon.activeLabel;
-  return `${lexicon.eliminationVerb} · ${player.eliminatedLabel ?? '—'}`;
+  return `${eliminationLabel(lexicon, player.metadata)} · ${player.eliminatedLabel ?? '—'}`;
 }
