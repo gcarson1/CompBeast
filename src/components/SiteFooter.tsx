@@ -20,7 +20,7 @@ export function SiteFooter() {
   const who = operator();
 
   return (
-    <footer className="mx-auto w-full max-w-md px-5 pb-8 pt-10 text-2xs text-muted sm:max-w-lg lg:max-w-3xl">
+    <footer className="snap-section mx-auto w-full max-w-md px-5 pb-5 pt-8 text-2xs text-muted sm:max-w-lg lg:max-w-3xl">
       <nav aria-label="Site" className="flex flex-wrap gap-x-4 gap-y-1.5">
         {LINKS.map((link) => (
           <Link key={link.href} href={link.href} className="hover:text-ink">

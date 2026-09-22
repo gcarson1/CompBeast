@@ -5,7 +5,7 @@ import { BeastDoodle } from '@/components/doodles/BeastDoodle';
 import { Doodle } from '@/components/doodles/Doodle';
 import { JsonLd } from '@/components/JsonLd';
 import { premiereLabel } from '@/components/LiveSection';
-import { Reveal } from '@/components/motion/Reveal';
+import { Collapsible } from '@/components/Collapsible';
 import { ShowTheme } from '@/components/ShowTheme';
 import { Sticker } from '@/components/Sticker';
 import { DEFAULT_LOCK_OFFSET_MINUTES, MAX_LOCK_OFFSET_MINUTES } from '@/lib/cycles';
@@ -96,7 +96,7 @@ export function SignedOutLanding({
       <JsonLd data={applicationNode(facts)} />
       <JsonLd data={faqNode(faq)} />
 
-      <header className="relative">
+      <header className="snap-section relative">
         {/* Still a CSS entrance and still visible in the HTML — nothing in
             the hero may start at opacity 0 (see the `rise` keyframe). The
             eyebrow is now a sticker; the camera beside it is decoration. */}
@@ -362,11 +362,20 @@ export function SignedOutLanding({
       </Section>
 
       <Section id="faq" title="Frequently asked questions">
-        <ul className="mt-2 divide-y divide-hairline border-b border-hairline">
+        {/* An accordion: every answer is in the HTML for a crawler and the
+            FAQPage schema, and one question at a time for a person. */}
+        <ul className="divide-y divide-hairline border-b border-hairline">
           {faq.map((item) => (
-            <li key={item.question} className="py-5">
-              <h3 className="text-base font-semibold">{item.question}</h3>
-              <p className="mt-1.5 max-w-measure text-sm leading-relaxed text-muted">{item.answer}</p>
+            <li key={item.question} className="py-3">
+              <Collapsible
+                title={item.question}
+                titleClassName="text-base font-semibold"
+                headingLevel={3}
+                defaultOpen={false}
+                bodyClassName="pt-1.5"
+              >
+                <p className="max-w-measure pb-2 text-sm leading-relaxed text-muted">{item.answer}</p>
+              </Collapsible>
             </li>
           ))}
         </ul>
@@ -385,9 +394,11 @@ export function SignedOutLanding({
 }
 
 /**
- * A section is a heading, one paragraph that answers it, and the detail.
- * `aria-labelledby` rather than a bare `<section>`: only a labelled section
- * is a landmark, which is what lets a screen reader jump between them.
+ * A section is a heading, one paragraph that answers it, and the detail —
+ * and it folds, so the page reads as its headings first. Every section is
+ * open by default: this is the page a crawler reads, and a person who scrolls
+ * gets the whole argument without a tap. `Collapsible` labels the section by
+ * its heading, which is what makes it a landmark a screen reader can jump to.
  */
 function Section({
   id,
@@ -401,13 +412,10 @@ function Section({
   children: ReactNode;
 }) {
   return (
-    <Reveal as="section" className="mt-14" aria-labelledby={id}>
-      <h2 id={id} className="section-title">
-        {title}
-      </h2>
-      {lede && <p className="mt-3 max-w-measure text-sm leading-relaxed text-muted">{lede}</p>}
+    <Collapsible id={id} title={title} className="mt-12" bodyClassName="pt-1">
+      {lede && <p className="mt-2 max-w-measure text-sm leading-relaxed text-muted">{lede}</p>}
       {children}
-    </Reveal>
+    </Collapsible>
   );
 }
 

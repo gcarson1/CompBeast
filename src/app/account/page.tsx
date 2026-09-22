@@ -2,12 +2,13 @@ import Link from 'next/link';
 import { redirect } from 'next/navigation';
 import { Avatar } from '@/components/Avatar';
 import { BadgeShelf } from '@/components/BadgeShelf';
+import { Collapsible } from '@/components/Collapsible';
 import { DeleteAccountPanel } from '@/components/DeleteAccountPanel';
 import { EmailPreferences } from '@/components/EmailPreferences';
 import { FriendsPanel } from '@/components/FriendsPanel';
 import { PointHistoryChart } from '@/components/PointHistoryChart';
 import { Doodle, type DoodleKind } from '@/components/doodles/Doodle';
-import { Reveal, RevealGroup } from '@/components/motion/Reveal';
+import { RevealGroup } from '@/components/motion/Reveal';
 import { PushToggle } from '@/components/PushToggle';
 import { Sticker } from '@/components/Sticker';
 import { getCurrentUser } from '@/lib/auth';
@@ -109,28 +110,24 @@ export default async function AccountPage() {
       </section>
 
       <RevealGroup step={80}>
-        <Reveal as="section" className="mt-8" aria-labelledby="badges">
-          <div className="mb-3 flex items-baseline justify-between gap-3">
-            <h2 id="badges" className="section-title">
-              Badges
-            </h2>
-            <span className="text-2xs text-muted">
-              {earnedBadges(account.totalPoints).length} of {BADGES.length}
-            </span>
-          </div>
+        <Collapsible
+          title="Badges"
+          className="mt-8"
+          aside={`${earnedBadges(account.totalPoints).length} of ${BADGES.length}`}
+        >
           <BadgeShelf points={account.totalPoints} />
-        </Reveal>
+        </Collapsible>
 
         {current && (
-          <Reveal as="section" className="mt-8" aria-labelledby="current-run">
-            <div className="mb-3 flex items-baseline justify-between gap-3">
-              <h2 id="current-run" className="section-title">
-                This season
-              </h2>
-              <Link href={`/leagues/${current.leagueId}`} className="shrink-0 text-2xs text-brand-gold-deep">
+          <Collapsible
+            title="This season"
+            className="mt-8"
+            aside={
+              <Link href={`/leagues/${current.leagueId}`} className="text-brand-gold-deep">
                 {current.leagueName} →
               </Link>
-            </div>
+            }
+          >
             <div className="card p-4">
               <div className="mb-4 flex items-end justify-between gap-3">
                 <span className="min-w-0">
@@ -148,13 +145,10 @@ export default async function AccountPage() {
               </div>
               <PointHistoryChart history={current.history} caption={current.teamName} />
             </div>
-          </Reveal>
+          </Collapsible>
         )}
 
-        <Reveal as="section" className="mt-8" aria-labelledby="seasons">
-          <h2 id="seasons" className="eyebrow mb-3">
-            Season history
-          </h2>
+        <Collapsible title="Season history" titleClassName="eyebrow" className="mt-8">
           {account.rows.length === 0 ? (
             <div className="rounded-card border border-dashed border-hairline p-5">
               <p className="max-w-measure text-xs leading-relaxed text-muted">
@@ -177,44 +171,48 @@ export default async function AccountPage() {
               deleted later.
             </p>
           )}
-        </Reveal>
+        </Collapsible>
 
-        <Reveal as="section" className="mt-10" aria-labelledby="friends">
-          <h2 id="friends" className="eyebrow mb-1">
-            Friends
-          </h2>
+        <Collapsible
+          title="Friends"
+          titleClassName="eyebrow"
+          defaultOpen={false}
+          className="mt-8"
+          aside={`${friends.friends.length}${friends.incoming.length > 0 ? ` · ${friends.incoming.length} waiting` : ''}`}
+        >
           <p className="mb-4 max-w-measure text-2xs leading-relaxed text-muted">
             Friends can be invited into a league in one tap, and get an alert with the code already filled in.
           </p>
           <FriendsPanel overview={friends} />
-        </Reveal>
+        </Collapsible>
 
         {/* Hidden entirely when the deployment has no VAPID keys — like the
             email switches, a control that governs nothing is worse than none. */}
         {vapidKey && (
-          <Reveal as="section" className="mt-10" aria-labelledby="push-heading">
-            <h2 id="push-heading" className="eyebrow mb-1">
-              Push alerts
-            </h2>
+          <Collapsible title="Push alerts" titleClassName="eyebrow" defaultOpen={false} className="mt-8">
             <p className="mb-4 max-w-measure text-2xs leading-relaxed text-muted">
               The same alerts as the bell, delivered to this device even when Comp Beast is closed. Turn it on
               separately on each phone or computer you use.
             </p>
             <PushToggle publicKey={vapidKey} />
-          </Reveal>
+          </Collapsible>
         )}
 
-        {/* id="email" is the anchor every email footer links back to. */}
-        <Reveal as="section" className="mt-10 scroll-mt-6" id="email" aria-labelledby="email-heading">
-          <h2 id="email-heading" className="eyebrow mb-1">
-            Email alerts
-          </h2>
+        {/* id="email" is the anchor every email footer links back to; the
+            section opens itself when the page lands on that hash. */}
+        <Collapsible
+          id="email"
+          title="Email alerts"
+          titleClassName="eyebrow"
+          defaultOpen={false}
+          className="mt-8"
+        >
           <p className="mb-4 max-w-measure text-2xs leading-relaxed text-muted">
             Alerts always appear in the app. These decide which of them also reach{' '}
             <span className="text-ink">{user.email}</span>.
           </p>
           <EmailPreferences preferences={emailPreferences} />
-        </Reveal>
+        </Collapsible>
       </RevealGroup>
 
       <DeleteAccountPanel leaguesCommissioned={leaguesCommissioned} />

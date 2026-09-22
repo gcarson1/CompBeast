@@ -7,7 +7,7 @@ import { BeastDoodle } from '@/components/doodles/BeastDoodle';
 import { Doodle } from '@/components/doodles/Doodle';
 import { JsonLd } from '@/components/JsonLd';
 import { MotionCard } from '@/components/motion/MotionCard';
-import { Reveal } from '@/components/motion/Reveal';
+import { Collapsible } from '@/components/Collapsible';
 import { ShowTheme } from '@/components/ShowTheme';
 import { Sticker } from '@/components/Sticker';
 import { absoluteUrl, breadcrumbList, tvSeriesNode } from '@/lib/seo';
@@ -80,7 +80,7 @@ export default async function SeasonPage({ params }: { params: { slug: string } 
           ← Seasons
         </Link>
 
-        <header className="relative mt-4 pr-20 sm:pr-28">
+        <header className="snap-section relative mt-4 pr-20 sm:pr-28">
           <BeastDoodle
             mood={isArchived ? 'grin' : 'shock'}
             className="absolute -right-2 -top-3 h-20 w-20 rotate-6 sm:-right-3 sm:-top-5 sm:h-24 sm:w-24"
@@ -116,11 +116,8 @@ export default async function SeasonPage({ params }: { params: { slug: string } 
           </MotionCard>
         )}
 
-        <Reveal as="section" className="mt-10" aria-labelledby="scores-heading">
-          <h2 id="scores-heading" className="section-title">
-            Player scores
-          </h2>
-          <p className="mb-3 mt-2 text-2xs text-muted">
+        <Collapsible title="Player scores" className="mt-10" aside={`${players.length} ranked`}>
+          <p className="mb-3 text-2xs text-muted">
             Ranked by fantasy points, which is not the same as how they placed on the show.
           </p>
 
@@ -157,7 +154,7 @@ export default async function SeasonPage({ params }: { params: { slug: string } 
               ))}
             </ul>
           )}
-        </Reveal>
+        </Collapsible>
       </div>
     </ShowTheme>
   );

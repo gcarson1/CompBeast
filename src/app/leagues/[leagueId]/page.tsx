@@ -4,6 +4,7 @@ import { notFound } from 'next/navigation';
 import { cache } from 'react';
 import { SignInButton } from '@clerk/nextjs';
 import { Avatar, AvatarStack } from '@/components/Avatar';
+import { Collapsible } from '@/components/Collapsible';
 import { BeastDoodle } from '@/components/doodles/BeastDoodle';
 import { Doodle } from '@/components/doodles/Doodle';
 import { InviteCode } from '@/components/InviteCode';
@@ -121,7 +122,7 @@ export default async function LeaguePage({ params }: { params: { leagueId: strin
           )}
         </div>
 
-        <header className="relative mt-4 pr-20 sm:pr-32">
+        <header className="snap-section relative mt-4 pr-20 sm:pr-32">
           {/* The Beast, at the header's shoulder. Shocked while the draft is
             still open, grinning once the season is under way. */}
           <BeastDoodle
@@ -176,14 +177,12 @@ export default async function LeaguePage({ params }: { params: { leagueId: strin
         )}
 
         {(myRow || (currentCycle && lockState) || nearMiss || atRisk) && (
-          <section className="mt-8" aria-labelledby="glance-heading">
-            <h2 id="glance-heading" className="eyebrow">
-              At a glance
-            </h2>
+          <Collapsible title="At a glance" titleClassName="eyebrow" className="mt-8">
             {/* `auto-fit` so two tiles share the row and three split it, with
-              no hole when one of them is absent. */}
+              no hole when one of them is absent. `pt-3` makes room for the
+              stickers that overhang the tiles' top edges. */}
             <RevealGroup
-              className="mt-3 grid grid-cols-1 gap-4 sm:grid-cols-[repeat(auto-fit,minmax(14rem,1fr))]"
+              className="grid grid-cols-1 gap-4 pt-3 sm:grid-cols-[repeat(auto-fit,minmax(14rem,1fr))]"
               step={60}
             >
               {myTeam && myRow && (
@@ -264,35 +263,37 @@ export default async function LeaguePage({ params }: { params: { leagueId: strin
                 </Reveal>
               )}
             </RevealGroup>
-          </section>
+          </Collapsible>
         )}
 
-        <Reveal as="section" className="mt-10" aria-labelledby="standings-heading">
-          <div className="mb-3 flex items-end justify-between gap-3">
-            <h2 id="standings-heading" className="section-title">
-              Standings
-            </h2>
-            {myTeam && (
+        <Collapsible
+          title="Standings"
+          className="mt-10"
+          aside={
+            myTeam && (
               <Link href={`/teams/${myTeam.id}`} className="text-xs text-brand-gold-deep">
                 My team →
               </Link>
-            )}
-          </div>
+            )
+          }
+        >
           <Leaderboard rows={rows} myTeamId={myTeam?.id ?? null} />
-        </Reveal>
+        </Collapsible>
 
-        {/* Two short reference lists, paired once there is room. Eyebrow
-          headings: these are things to look up, not things to look at. */}
+        {/* Two short reference lists, paired once there is room, and folded
+          by default: these are things to look up, not things to look at. */}
         <div className="lg:grid lg:grid-cols-2 lg:gap-6">
-          <Reveal as="section" className="mt-10" aria-labelledby="managers-heading">
-            <div className="mb-3 flex items-baseline justify-between gap-3">
-              <h2 id="managers-heading" className="eyebrow">
+          <Collapsible
+            title={
+              <>
                 Managers <span className="ml-1 tracking-normal text-ink">{league.members.length}</span>
-              </h2>
-              <span className="text-2xs text-muted">
-                {openSeats === 0 ? 'Full' : `${openSeats} ${openSeats === 1 ? 'seat' : 'seats'} open`}
-              </span>
-            </div>
+              </>
+            }
+            titleClassName="eyebrow"
+            defaultOpen={false}
+            className="mt-8"
+            aside={openSeats === 0 ? 'Full' : `${openSeats} ${openSeats === 1 ? 'seat' : 'seats'} open`}
+          >
             <ul className="card divide-y divide-hairline">
               {league.members.map((member) => {
                 const team = league.teams.find((t) => t.owner?.id === member.user.id);
@@ -329,12 +330,9 @@ export default async function LeaguePage({ params }: { params: { leagueId: strin
                     openSeats === 1 ? 'seat is' : 'seats are'
                   } still open — tap the invite code to copy it, or show the QR code for someone to scan.`}
             </p>
-          </Reveal>
+          </Collapsible>
 
-          <Reveal as="section" className="mt-10" aria-labelledby="league-heading">
-            <h2 id="league-heading" className="eyebrow mb-3">
-              League
-            </h2>
+          <Collapsible title="League" titleClassName="eyebrow" defaultOpen={false} className="mt-8">
             <div className="card divide-y divide-hairline">
               <InviteCode code={league.inviteCode} leagueName={league.name} />
               <Row label="Scoring" value={league.scoringRuleset.name} href="/rules" />
@@ -350,7 +348,7 @@ export default async function LeaguePage({ params }: { params: { leagueId: strin
                 {league.scoringRuleset.description}
               </p>
             )}
-          </Reveal>
+          </Collapsible>
         </div>
 
         {isMember && league.draftStatus === 'NOT_STARTED' && (
@@ -459,11 +457,13 @@ function GearIcon() {
       strokeWidth="1.8"
       aria-hidden
     >
-      <circle cx="12" cy="12" r="3.2" />
+      {/* A cog: eight teeth around a hub. The previous glyph was a circle
+          with eight rays, which is a sun. */}
       <path
-        d="M12 2.5v2M12 19.5v2M21.5 12h-2M4.5 12h-2M18.7 5.3l-1.4 1.4M6.7 17.3l-1.4 1.4M18.7 18.7l-1.4-1.4M6.7 6.7 5.3 5.3"
-        strokeLinecap="round"
+        d="M19.3 9.9 L22.1 10.4 L22.1 13.6 L19.3 14.1 L18.6 15.7 L20.3 18.0 L18.0 20.3 L15.7 18.6 L14.1 19.3 L13.6 22.1 L10.4 22.1 L9.9 19.3 L8.3 18.6 L6.0 20.3 L3.7 18.0 L5.4 15.7 L4.7 14.1 L1.9 13.6 L1.9 10.4 L4.7 9.9 L5.4 8.3 L3.7 6.0 L6.0 3.7 L8.3 5.4 L9.9 4.7 L10.4 1.9 L13.6 1.9 L14.1 4.7 L15.7 5.4 L18.0 3.7 L20.3 6.0 L18.6 8.3Z"
+        strokeLinejoin="round"
       />
+      <circle cx="12" cy="12" r="3" />
     </svg>
   );
 }

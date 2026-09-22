@@ -3,8 +3,8 @@ import Link from 'next/link';
 import { notFound, redirect } from 'next/navigation';
 import { cache } from 'react';
 import { Avatar } from '@/components/Avatar';
+import { Collapsible } from '@/components/Collapsible';
 import { Doodle } from '@/components/doodles/Doodle';
-import { Reveal } from '@/components/motion/Reveal';
 import { StatStrip } from '@/components/StatStrip';
 import { ShowTheme } from '@/components/ShowTheme';
 import { Sticker } from '@/components/Sticker';
@@ -47,7 +47,7 @@ export default async function TeamPage({ params }: { params: { teamId: string } 
           ← League
         </Link>
 
-        <header className="relative mt-4 flex items-center gap-4">
+        <header className="snap-section relative mt-4 flex items-center gap-4">
           <span className="relative shrink-0">
             <Avatar name={team.ownerName ?? team.name} size={56} />
             {rank === 1 && <Doodle kind="crown" className="absolute -right-2.5 -top-2.5 h-7 w-7 rotate-12" />}
@@ -78,15 +78,7 @@ export default async function TeamPage({ params }: { params: { teamId: string } 
           ]}
         />
 
-        <Reveal as="section" className="mt-8" aria-labelledby="roster-heading">
-          <div className="mb-3 flex items-end justify-between gap-3">
-            <h2 id="roster-heading" className="section-title">
-              Roster
-            </h2>
-            <span className="text-2xs text-muted">
-              {stillIn}/{roster.length} still in
-            </span>
-          </div>
+        <Collapsible title="Roster" className="mt-8" aside={`${stillIn}/${roster.length} still in`}>
           <ul className="card divide-y divide-hairline">
             {roster.map((player) => (
               <li key={player.contestantId}>
@@ -110,13 +102,10 @@ export default async function TeamPage({ params }: { params: { teamId: string } 
               </li>
             ))}
           </ul>
-        </Reveal>
+        </Collapsible>
 
         {score && score.cycles.length > 0 && (
-          <Reveal as="section" className="mt-8" aria-labelledby="weeks-heading">
-            <h2 id="weeks-heading" className="eyebrow mb-3">
-              Week by week
-            </h2>
+          <Collapsible title="Week by week" titleClassName="eyebrow" className="mt-8">
             <div className="card divide-y divide-hairline">
               {/*
               Newest week first. Copied before reversing because `reverse()`
@@ -151,7 +140,7 @@ export default async function TeamPage({ params }: { params: { teamId: string } 
                 </details>
               ))}
             </div>
-          </Reveal>
+          </Collapsible>
         )}
       </div>
     </ShowTheme>

@@ -5,6 +5,7 @@ import { useEffect, useState } from 'react';
 import { useFormState, useFormStatus } from 'react-dom';
 import { toast } from 'sonner';
 import { Avatar } from '@/components/Avatar';
+import { Collapsible } from '@/components/Collapsible';
 import { Sticker } from '@/components/Sticker';
 import { inviteFriendAction, type ActionState } from '@/server/actions';
 import type { InvitableFriend } from '@/server/social';
@@ -31,10 +32,7 @@ export function InviteFriends({
 }) {
   if (friends.length === 0) {
     return (
-      <section className="mt-10" aria-labelledby="invite-heading">
-        <h2 id="invite-heading" className="eyebrow mb-3">
-          Invite friends
-        </h2>
+      <Collapsible title="Invite friends" titleClassName="eyebrow" defaultOpen={false} className="mt-8">
         <div className="rounded-card border border-dashed border-hairline p-4">
           <p className="max-w-measure text-xs leading-relaxed text-muted">
             Add friends and you can drop them into a league in one tap, instead of copying the invite code
@@ -44,20 +42,17 @@ export function InviteFriends({
             Find friends
           </Link>
         </div>
-      </section>
+      </Collapsible>
     );
   }
 
   return (
-    <section className="mt-10" aria-labelledby="invite-heading">
-      <div className="mb-3 flex items-baseline justify-between gap-3">
-        <h2 id="invite-heading" className="eyebrow">
-          Invite friends
-        </h2>
-        <span className="text-2xs text-muted">
-          {seatsLeft === 0 ? 'League full' : `${seatsLeft} ${seatsLeft === 1 ? 'seat' : 'seats'} left`}
-        </span>
-      </div>
+    <Collapsible
+      title="Invite friends"
+      titleClassName="eyebrow"
+      className="mt-8"
+      aside={seatsLeft === 0 ? 'League full' : `${seatsLeft} ${seatsLeft === 1 ? 'seat' : 'seats'} left`}
+    >
       <ul className="card divide-y divide-hairline">
         {friends.map((friend) => (
           <li key={friend.userId} className="flex items-center gap-3 p-3">
@@ -76,7 +71,7 @@ export function InviteFriends({
           </li>
         ))}
       </ul>
-    </section>
+    </Collapsible>
   );
 }
 

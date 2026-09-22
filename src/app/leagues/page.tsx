@@ -3,6 +3,7 @@ import Link from 'next/link';
 import { Suspense } from 'react';
 import { BeastDoodle } from '@/components/doodles/BeastDoodle';
 import { Doodle } from '@/components/doodles/Doodle';
+import { Collapsible } from '@/components/Collapsible';
 import { LeagueRail } from '@/components/LeagueRail';
 import { Reveal } from '@/components/motion/Reveal';
 import { LiveSection, type FeaturedCast, type LiveBlockData } from '@/components/LiveSection';
@@ -134,14 +135,16 @@ export default async function HomePage() {
         </div>
       </div>
 
-      <h2 className="section-title mt-6">Your leagues</h2>
-      <Suspense fallback={<RailSkeleton />}>
-        <HomeRail userId={user.id} />
-      </Suspense>
+      <Collapsible title="Your leagues" className="mt-6" snap={false}>
+        <Suspense fallback={<RailSkeleton />}>
+          <HomeRail userId={user.id} />
+        </Suspense>
+      </Collapsible>
 
       {/* Below the fold on a phone, so it rises in as it is reached; on a
-          tall screen it is simply there. */}
-      <Reveal className="mt-10">{live}</Reveal>
+          tall screen it is simply there. The block carries its own section
+          headings, so it snaps as one screen rather than folding. */}
+      <Reveal className="snap-section mt-10">{live}</Reveal>
     </div>
   );
 }

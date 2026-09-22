@@ -135,8 +135,15 @@ export default async function RootLayout({ children }: { children: React.ReactNo
               unreadCount={unreadCount}
             />
             {/* Framer's feature bundle, loaded once for every `m.*` tile below;
-                the children stay server-rendered. */}
-            <main id="main" className="mx-auto w-full max-w-md flex-1 px-5 pb-6 sm:max-w-lg lg:max-w-3xl">
+                the children stay server-rendered. `snap-section` on <main>
+                makes the top of the page a snap point: without one, the
+                browser's re-snap after any layout change — a section
+                folding, the page loading — pulled the page down to the first
+                section below the title. */}
+            <main
+              id="main"
+              className="snap-section mx-auto w-full max-w-md flex-1 px-5 pb-4 sm:max-w-lg lg:max-w-3xl"
+            >
               <MotionProvider>{children}</MotionProvider>
             </main>
             <SiteFooter />

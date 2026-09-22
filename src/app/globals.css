@@ -3,8 +3,33 @@
 @tailwind utilities;
 
 @layer base {
+  /*
+   * The page is the content, no more. Two rules make it feel bolted down:
+   *
+   * `overscroll-behavior-y: none` removes the rubber-band past the end of
+   * the document — on a phone that bounce drags the whole page, sticky
+   * bottom nav included, up off the bottom edge and lets it float back, which
+   * is exactly what read as flimsy. There is no pull-to-refresh to preserve
+   * (the leaderboard implements its own), so nothing is lost.
+   *
+   * `scroll-snap-type: y proximity` turns a scroll gesture that ends near the
+   * top of a section into one that settles on it, so each page reads as a
+   * stack of screens rather than a strip you can leave anywhere. Proximity,
+   * not mandatory: a mandatory snap on the document makes a section taller
+   * than the viewport a trap and a trackpad flick a jump, and it fights
+   * find-in-page and restored scroll positions. `scroll-padding-top` is the
+   * sticky header's height, so a snapped section lands just under it — and
+   * it doubles as the offset for anchor links (`/account#email`).
+   *
+   * Sections opt in with `.snap-section` (below) rather than every
+   * `<section>` snapping: the nested groups inside a settings panel are not
+   * screens.
+   */
   html {
     -webkit-tap-highlight-color: transparent;
+    overscroll-behavior-y: none;
+    scroll-snap-type: y proximity;
+    scroll-padding-top: 4.25rem;
   }
 
   /*
@@ -161,6 +186,55 @@
 
   .bento-tall {
     @apply lg:row-span-2;
+  }
+
+  /*
+   * A top-level block of a page: a scroll gesture that ends near its top
+   * settles on it (see the snap rules on `html`). The top-level sections and
+   * the page header get this; nested sections do not.
+   */
+  .snap-section {
+    scroll-snap-align: start;
+  }
+
+  /*
+   * A collapsible section's body, driven by <Collapsible>. The grid-rows
+   * trick is the one way to animate to and from an intrinsic height in CSS
+   * with no measuring: the wrapper interpolates between 0fr and 1fr, and the
+   * inner element (min-h-0, overflow hidden) follows. Opacity fades slightly
+   * behind the height so a closing section does not pop.
+   */
+  .collapse-body {
+    @apply grid transition-[grid-template-rows,opacity] duration-300 ease-soft;
+    grid-template-rows: 1fr;
+  }
+
+  .collapse-body[data-open='false'] {
+    grid-template-rows: 0fr;
+    opacity: 0;
+  }
+
+  .collapse-body > * {
+    @apply min-h-0 overflow-hidden;
+  }
+
+  /* At rest and open, nothing is clipped: stickers and the Beast overhang
+     the tiles inside on purpose. <Collapsible> flips this once the
+     transition has ended. */
+  .collapse-body[data-open='true'][data-settled='true'] > * {
+    overflow: visible;
+  }
+
+  /*
+   * The disclosure chevron on a collapsible heading. Rotates rather than
+   * swapping glyphs, so the eye can follow it.
+   */
+  .collapse-chevron {
+    @apply transition-transform duration-300 ease-soft;
+  }
+
+  [aria-expanded='false'] .collapse-chevron {
+    transform: rotate(-90deg);
   }
 
   /*

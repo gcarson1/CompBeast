@@ -1,6 +1,7 @@
 import type { Metadata } from 'next';
 import Link from 'next/link';
 import { cache } from 'react';
+import { Collapsible } from '@/components/Collapsible';
 import { Doodle } from '@/components/doodles/Doodle';
 import { JsonLd } from '@/components/JsonLd';
 import { Reveal, RevealGroup } from '@/components/motion/Reveal';
@@ -47,10 +48,7 @@ export default async function SeasonsPage() {
         Play along with a season that is still running, or look back at one that has wrapped.
       </p>
 
-      <section className="mt-8" aria-labelledby="open-heading">
-        <h2 id="open-heading" className="section-title mb-3">
-          Open for leagues
-        </h2>
+      <Collapsible title="Open for leagues" className="mt-8" snap={false} aside={`${open.length} open`}>
         {open.length === 0 ? (
           <p className="card p-4 text-xs text-muted">
             Nothing is airing right now. Check back when the next season starts.
@@ -99,12 +97,15 @@ export default async function SeasonsPage() {
             })}
           </RevealGroup>
         )}
-      </section>
+      </Collapsible>
 
-      <Reveal as="section" className="mt-10" aria-labelledby="archive-heading">
-        <h2 id="archive-heading" className="eyebrow mb-1">
-          Archive
-        </h2>
+      <Collapsible
+        title="Archive"
+        titleClassName="eyebrow"
+        defaultOpen={false}
+        className="mt-8"
+        aside={`${archived.length} finished`}
+      >
         <p className="mb-3 max-w-measure text-2xs leading-relaxed text-muted">
           Finished seasons are read-only — the whole cast is already known, so there is no game left to draft.
         </p>
@@ -134,7 +135,7 @@ export default async function SeasonsPage() {
             ))}
           </ul>
         )}
-      </Reveal>
+      </Collapsible>
     </div>
   );
 }

@@ -5,6 +5,7 @@ import { useFormState, useFormStatus } from 'react-dom';
 import { AnimatePresence, m, useReducedMotion } from 'framer-motion';
 import { toast } from 'sonner';
 import { Avatar } from '@/components/Avatar';
+import { Collapsible } from '@/components/Collapsible';
 import { useLeaguePulse } from '@/lib/live';
 import { relativeTime } from '@/lib/ui';
 import {
@@ -74,12 +75,11 @@ export function LeagueFeed({
   const over = remaining < 0;
 
   return (
-    <section className="mt-10" aria-labelledby="feed-heading">
-      <div className="mb-3 flex items-end justify-between">
-        <h2 id="feed-heading" className="section-title">
-          Trash talk
-        </h2>
-        <span className="flex items-center gap-1.5 text-2xs text-muted">
+    <Collapsible
+      title="Trash talk"
+      className="mt-10"
+      aside={
+        <span className="flex items-center gap-1.5">
           {/* No dot for a viewer who cannot poll — a signed-out reader of a
               public league. Claiming "live" there would be untrue, and
               claiming "reconnecting" would promise something not coming. */}
@@ -95,8 +95,8 @@ export function LeagueFeed({
               ? 'No posts yet'
               : `${messages.length} ${messages.length === 1 ? 'post' : 'posts'}`}
         </span>
-      </div>
-
+      }
+    >
       {canPost ? (
         <form
           ref={formRef}
@@ -194,7 +194,7 @@ export function LeagueFeed({
           </AnimatePresence>
         </ul>
       )}
-    </section>
+    </Collapsible>
   );
 }
 
