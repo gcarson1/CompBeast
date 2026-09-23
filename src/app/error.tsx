@@ -26,7 +26,7 @@ export default function Error({ error, reset }: { error: Error & { digest?: stri
   return (
     <div className="stage pt-10">
       {/* The broadcast's own word for it: off air, back shortly. */}
-      <div className="card-feature p-6">
+      <div className="card-feature p-5">
         <span className="flex items-center justify-between gap-3">
           <span className="icon-well">
             <AlertIcon size={22} />

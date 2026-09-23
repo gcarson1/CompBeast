@@ -36,6 +36,8 @@ export interface DraftRoomProps {
     name: string;
     photoUrl: string | null;
     occupation: string | null;
+    /** The Traitors: holding a cloak, once the broadcast has shown it. */
+    traitor?: boolean;
     /** False once they have been eliminated — still draftable, rarely wise. */
     isActive: boolean;
   }>;
@@ -190,15 +192,15 @@ export function DraftRoom(props: DraftRoomProps) {
               aria-label={`Search ${lower(props.lexicon.contestantPlural)}`}
             />
             {filtered.length === 0 ? (
-              <p className="card p-4 text-xs text-muted">
+              <p className="list-empty">
                 {props.available.length === 0
                   ? 'Everyone has been drafted.'
                   : `Nobody matches “${query.trim()}”.`}
               </p>
             ) : (
-              <ul className="card divide-y divide-hairline">
+              <ul className="list">
                 {filtered.map((contestant) => (
-                  <li key={contestant.id} className="flex items-center gap-3 p-3.5">
+                  <li key={contestant.id} className="flex items-center gap-3 py-3">
                     <Avatar
                       name={contestant.name}
                       photoUrl={contestant.photoUrl}
@@ -215,6 +217,11 @@ export function DraftRoom(props: DraftRoomProps) {
                         >
                           {contestant.name}
                         </span>
+                        {contestant.traitor && contestant.isActive && (
+                          <Tag tone="red" size="sm">
+                            Traitor
+                          </Tag>
+                        )}
                         {!contestant.isActive && (
                           <Tag tone="red" size="sm">
                             {lower(props.lexicon.eliminationVerb)}
@@ -267,17 +274,17 @@ export function DraftRoom(props: DraftRoomProps) {
             className="mt-3"
           >
             {props.picks.length === 0 ? (
-              <p className="card p-4 text-xs text-muted">No picks yet.</p>
+              <p className="list-empty">No picks yet.</p>
             ) : (
-              <ul className="card divide-y divide-hairline">
+              <ul className="list">
                 {/* Newest first: during a draft the question is always "what
                     just happened", never "what happened first". */}
                 {[...props.picks].reverse().map((pick) => (
                   <li
                     key={pick.pickNumber}
                     className={cn(
-                      'flex items-center gap-3 p-3.5',
-                      pick.teamId === props.myTeamId && 'bg-brand-gold-soft',
+                      'relative isolate flex items-center gap-3 py-3',
+                      pick.teamId === props.myTeamId && 'row-mine',
                     )}
                   >
                     <span className="w-10 text-2xs tabular-nums text-muted">
@@ -301,10 +308,10 @@ export function DraftRoom(props: DraftRoomProps) {
             animate={{ opacity: 1, y: 0 }}
             exit={{ opacity: 0, y: -6 }}
             transition={TAB_TRANSITION}
-            className="card mt-3 divide-y divide-hairline"
+            className="list mt-3"
           >
             {props.teams.map((team) => (
-              <li key={team.id} className="flex items-center gap-3 p-3.5">
+              <li key={team.id} className="flex items-center gap-3 py-3">
                 <span className="w-5 text-xs tabular-nums text-muted">{team.position ?? '—'}</span>
                 <Avatar name={team.ownerName ?? team.name} size={36} />
                 <span className="min-w-0 flex-1">

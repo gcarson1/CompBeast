@@ -147,6 +147,58 @@
   }
 
   /*
+   * A section, not a box. Standings, a cast, a rule book, a game log — any
+   * run of rows — sits straight on the page: hairlines above, between and
+   * below, and the rows flush with the section title over them, so the
+   * column reads as one page with parts rather than a stack of panes. A
+   * rounded tile is kept for a thing you can pick up (a league in the rail,
+   * an event in the ticker) and for the one action a page leads with.
+   */
+  .list {
+    @apply divide-y divide-hairline border-y border-hairline;
+  }
+
+  /*
+   * A row that is a link. The hover wash bleeds a few pixels past the
+   * column on both sides, so the row can stay flush with the text around it
+   * and still light up as a target.
+   */
+  .row-link {
+    @apply relative isolate transition-colors duration-200 ease-soft;
+  }
+
+  .row-link::before {
+    content: '';
+    @apply pointer-events-none absolute inset-y-0 -inset-x-3 -z-10 rounded-[6px] bg-white/[0.04] opacity-0
+      transition-opacity duration-200 ease-soft;
+  }
+
+  .row-link:hover::before {
+    @apply opacity-100;
+  }
+
+  /* Your own row in a list of everyone's: gold wash, gold edge. */
+  .row-mine::after {
+    content: '';
+    @apply pointer-events-none absolute inset-y-0 -inset-x-3 -z-10 rounded-[6px];
+    background: linear-gradient(90deg, rgba(245, 158, 11, 0.16), rgba(245, 158, 11, 0.03));
+    box-shadow: inset 3px 0 0 theme(colors.brand-gold.DEFAULT);
+  }
+
+  /* What a list says when it has no rows: in the list's own place. */
+  .list-empty {
+    @apply border-y border-hairline py-4 text-xs leading-relaxed text-muted;
+  }
+
+  /*
+   * Figures side by side — a team's total, rank and last episode — as a
+   * strip ruled into columns rather than a row of boxes.
+   */
+  .stat-row {
+    @apply grid divide-x divide-hairline border-y border-hairline py-3;
+  }
+
+  /*
    * Stage light: the glow a page's title stands in, in the show's colour on
    * a show's page and the site's gold everywhere else. It belongs to the
    * page's first block and scrolls away with it, so it is atmosphere for the
@@ -450,8 +502,19 @@
     @apply pill rounded-btn text-muted;
   }
 
+  /* A round icon control in the header: the bell, the admin feed. */
+  .icon-btn {
+    @apply relative grid h-9 w-9 shrink-0 place-items-center rounded-full bg-surface text-muted
+      ring-1 ring-inset ring-hairline transition duration-200 ease-soft hover:bg-surface-raised hover:text-ink;
+  }
+
+  /* BEAST in the wordmark: gold struck like the medals, lit from above. */
+  .wordmark-gold {
+    @apply bg-gradient-to-b from-[#fde68a] via-[#fbbf24] to-[#f59e0b] bg-clip-text text-transparent;
+  }
+
   .field {
-    @apply w-full rounded-2xl border border-hairline bg-canvas px-4 py-3 text-md text-ink
+    @apply w-full rounded-btn border border-hairline bg-canvas px-4 py-3 text-md text-ink
       outline-none transition placeholder:text-muted focus:border-brand-gold-deep focus:bg-surface;
   }
 
@@ -578,7 +641,9 @@
    * does. The plate is the same lean as `.tag`.
    */
   .rank-plate {
-    @apply relative isolate grid h-8 w-9 shrink-0 place-items-center font-display text-lg leading-none;
+    /* `mx-0.5`: the lean carries the plate's corners a few pixels past its
+       box, and in a list flush with the column that read as an overhang. */
+    @apply relative isolate mx-0.5 grid h-8 w-9 shrink-0 place-items-center font-display text-lg leading-none;
     color: var(--plate-ink, theme(colors.muted));
   }
 

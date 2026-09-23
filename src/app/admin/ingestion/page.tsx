@@ -6,6 +6,7 @@ import { Tag } from '@/components/Tag';
 import { getCurrentUser } from '@/lib/auth';
 import { prisma } from '@/lib/db';
 import { adaptersForShow } from '@/lib/ingestion/pipeline';
+import { lexiconFor, lower } from '@/lib/shows/lexicon';
 import { relativeTime } from '@/lib/ui';
 
 export const dynamic = 'force-dynamic';
@@ -32,8 +33,8 @@ export default async function IngestionPage() {
         <Link href="/leagues" className="text-xs text-muted">
           ← Leagues
         </Link>
-        <div className="card mt-6 p-6">
-          <h1 className="headline text-2xl">Admins only</h1>
+        <div className="mt-6">
+          <h1 className="headline text-4xl">Admins only</h1>
           <p className="mt-2 max-w-measure text-xs text-muted">
             Ingestion review rewrites scores across every league on a season.
           </p>
@@ -81,6 +82,8 @@ export default async function IngestionPage() {
         contestants: { orderBy: { name: 'asc' }, select: { id: true, name: true, isActive: true } },
         show: {
           select: {
+            slug: true,
+            lexicon: true,
             eventDefinitions: {
               where: { isPerCycleAward: false },
               orderBy: [{ category: 'asc' }, { points: 'desc' }],
@@ -105,6 +108,7 @@ export default async function IngestionPage() {
         season.cycles[0]?.id ??
         null,
       contestants: season.contestants,
+      contestantPlural: lower(lexiconFor(season.show.slug, season.show.lexicon).contestantPlural),
       events: season.show.eventDefinitions.map((d) => ({ ...d, points: Number(d.points) })),
     }));
 
@@ -165,13 +169,13 @@ export default async function IngestionPage() {
           Sources
         </h2>
         {seasons.length === 0 ? (
-          <p className="card p-4 text-xs text-muted">
+          <p className="list-empty">
             No season has been bootstrapped yet. Run{' '}
             <code className="text-2xs">npx tsx scripts/ingest.ts bootstrap &lt;slug&gt;</code> first.
           </p>
         ) : (
-          <div className="space-y-2">
-            {/* One card per season per source that covers its show. A season
+          <div className="list">
+            {/* One row per season per source that covers its show. A season
                 whose show has no adapter yet shows nothing here; its
                 candidates can still be reviewed above once something else
                 writes them. */}
@@ -196,8 +200,10 @@ export default async function IngestionPage() {
           Record events
         </h2>
         <p className="mb-3 max-w-measure text-2xs leading-relaxed text-muted">
-          What the results page never says — Have-Nots, the Blockbuster, twists, America&apos;s Favorite.
-          Lauren&apos;s Way scores these; every league on the season is rescored as soon as they land.
+          What the results page never says — on Big Brother the Have-Nots, the Blockbuster and America&apos;s
+          Favorite; on The Traitors the dagger, the seer and the Round Table showdowns; on every show the
+          alliances, the blowups and the episode title. Every league on the season is rescored as soon as they
+          land.
         </p>
         <RecordEvents seasons={recordableSeasons} />
       </section>
@@ -212,9 +218,9 @@ export default async function IngestionPage() {
           )}
         </h2>
         {candidates.length === 0 ? (
-          <p className="card p-4 text-xs text-muted">Nothing waiting. Everything parsed cleanly.</p>
+          <p className="list-empty">Nothing waiting. Everything parsed cleanly.</p>
         ) : (
-          <ul className="space-y-3">
+          <ul className="list">
             {candidates.map((candidate) => (
               <CandidateCard key={candidate.id} candidate={candidate} />
             ))}
@@ -227,11 +233,11 @@ export default async function IngestionPage() {
           Recent runs
         </h2>
         {runs.length === 0 ? (
-          <p className="card p-4 text-xs text-muted">No syncs have run yet.</p>
+          <p className="list-empty">No syncs have run yet.</p>
         ) : (
-          <ul className="card divide-y divide-hairline">
+          <ul className="list">
             {runs.map((run) => (
-              <li key={run.id} className="flex items-center justify-between gap-3 p-4">
+              <li key={run.id} className="flex items-center justify-between gap-3 py-3">
                 <span className="min-w-0">
                   <span className="block truncate text-sm font-medium">
                     {run.weeksParsed} weeks · {run.autoPublished} published

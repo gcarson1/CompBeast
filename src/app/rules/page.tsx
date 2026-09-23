@@ -1,4 +1,5 @@
 import type { Metadata } from 'next';
+import { ChevronRightIcon } from '@/components/icons';
 import { JsonLd } from '@/components/JsonLd';
 import { ShowTheme } from '@/components/ShowTheme';
 import { Tag } from '@/components/Tag';
@@ -11,7 +12,7 @@ export const dynamic = 'force-dynamic';
 export const metadata: Metadata = {
   title: 'Fantasy scoring rules',
   description:
-    'Every scored event and its point value for each show on Comp Beast, under the Classic, Balanced and Drama & Social rulesets, and Lauren’s Way for Big Brother — competition wins, idols, nominations, votes, eliminations, jury and finale placements.',
+    'Every scored event and its point value for each show on Comp Beast, under the Classic, Balanced and Drama & Social rulesets, and Lauren’s Way for Big Brother — competition wins, idols, shields, nominations, votes, murders, banishments, eliminations, jury and finale placements.',
   alternates: { canonical: absoluteUrl('/rules') },
 };
 
@@ -55,7 +56,9 @@ export default async function RulesPage() {
               </span>
             </div>
 
-            <div className="mt-4 space-y-4">
+            {/* The rulesets as one ruled section: each a row that opens in
+                place, no box around any of them. */}
+            <div className="list mt-4">
               {book.rulesets.map((ruleset) => {
                 const grouped = new Map<
                   string,
@@ -77,16 +80,12 @@ export default async function RulesPage() {
                 }
 
                 return (
-                  <details
-                    key={ruleset.id}
-                    className="disclosure card group overflow-hidden"
-                    open={ruleset.isDefault}
-                  >
+                  <details key={ruleset.id} className="disclosure group" open={ruleset.isDefault}>
                     {/* The ruleset name is a real heading, not a bold span: the
                         page outline (h1 Scoring → h2 show → h3 ruleset → h4
                         category) is what a screen reader navigates by and what
                         a crawler segments by. */}
-                    <summary className="flex cursor-pointer list-none items-start justify-between gap-3 p-4">
+                    <summary className="row-link flex cursor-pointer list-none items-start justify-between gap-3 py-4">
                       <div className="min-w-0">
                         <div className="flex items-center gap-2">
                           <h3 className="headline text-xl">{ruleset.name}</h3>
@@ -107,15 +106,19 @@ export default async function RulesPage() {
                         </div>
                         <p className="mt-1 text-2xs leading-relaxed text-muted">{ruleset.description}</p>
                       </div>
-                      <span className="shrink-0 text-2xs tabular-nums text-muted">
+                      <span className="flex shrink-0 items-center gap-1.5 text-2xs tabular-nums text-muted">
                         {ruleset.eventDefinitions.length} rules
+                        <ChevronRightIcon
+                          size={15}
+                          className="transition-transform duration-300 ease-soft group-open:rotate-90"
+                        />
                       </span>
                     </summary>
 
-                    <div className="border-t border-hairline">
+                    <div className="pb-4">
                       {[...grouped.entries()].map(([category, rules]) => (
-                        <div key={category}>
-                          <h4 className="eyebrow bg-canvas/60 px-4 py-2">
+                        <div key={category} className="mt-2 first:mt-0">
+                          <h4 className="eyebrow border-b border-hairline pb-2 pt-2 text-show-deep">
                             {CATEGORY_LABELS[category] ?? category}
                           </h4>
                           <ul className="divide-y divide-hairline">
@@ -131,7 +134,7 @@ export default async function RulesPage() {
                               .map((rule) => (
                                 <li
                                   key={rule.id}
-                                  className="flex items-center justify-between gap-3 px-4 py-2.5"
+                                  className="flex items-center justify-between gap-3 py-2.5"
                                 >
                                   <span className="min-w-0 flex-1">
                                     <span className="block truncate text-xs">{rule.label}</span>

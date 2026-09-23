@@ -100,7 +100,7 @@ export function InviteCode({ code, leagueName }: { code: string; leagueName: str
   };
 
   return (
-    <div className="flex items-center justify-between gap-3 p-4">
+    <div className="flex items-center justify-between gap-3 py-3">
       <span className="text-sm text-muted">Invite code</span>
 
       <div className="flex items-center gap-2">
@@ -166,7 +166,7 @@ export function InviteCode({ code, leagueName }: { code: string; leagueName: str
 
           {/* QR scanners need dark modules on a light field, so this tile
               stays white regardless of the app's dark surface. */}
-          <div className="mt-4 inline-block rounded-2xl bg-white p-3">
+          <div className="mt-4 inline-block rounded-nested bg-white p-3">
             {opened && joinUrl ? (
               <QRCodeSVG
                 value={joinUrl}

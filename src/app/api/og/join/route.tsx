@@ -1,6 +1,7 @@
 import { renderOgCard } from '@/lib/og/card';
 import { getLeagueInvite } from '@/server/queries';
 import { lower } from '@/lib/shows/lexicon';
+import { themeFor } from '@/lib/shows/registry';
 
 export const runtime = 'nodejs';
 export const dynamic = 'force-dynamic';
@@ -28,6 +29,7 @@ export async function GET(request: Request) {
 
   const seatsLeft = Math.max(0, invite.maxTeams - invite.teamCount);
   return renderOgCard({
+    theme: themeFor(invite.showSlug),
     eyebrow: invite.commissionerName ? `${invite.commissionerName} invited you to` : "You're invited to",
     title: invite.name,
     subtitle: `${invite.showName} · ${invite.seasonName} · ${invite.rosterSize} ${lower(invite.showLexicon.contestantPlural)} per team. Tap to create a free account and take a seat.`,

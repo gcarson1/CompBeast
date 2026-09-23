@@ -107,7 +107,6 @@ export function LeagueFeed({
             setBody('');
             formAction(formData);
           }}
-          className="card p-3"
         >
           <input type="hidden" name="leagueId" value={leagueId} />
           <label htmlFor="feed-body" className="sr-only">
@@ -122,7 +121,7 @@ export function LeagueFeed({
             maxLength={MAX_LENGTH}
             required
             placeholder="Call your shot, coordinate the draft, or gloat…"
-            className="field resize-none bg-canvas"
+            className="field resize-none"
           />
           <div className="mt-2 flex items-center justify-between gap-3">
             <span
@@ -135,13 +134,14 @@ export function LeagueFeed({
           </div>
         </form>
       ) : (
-        <p className="card p-4 text-xs text-muted">Join this league to post.</p>
+        <p className="list-empty">Join this league to post.</p>
       )}
 
       {messages.length === 0 ? (
         <p className="mt-3 text-center text-2xs text-muted">Somebody has to go first.</p>
       ) : (
-        <ul className="mt-3 space-y-2">
+        // A timeline, not a stack of cards: posts ruled off from each other.
+        <ul className="list mt-4">
           <AnimatePresence initial={false}>
             {messages.map((message) => (
               <m.li
@@ -151,7 +151,7 @@ export function LeagueFeed({
                 animate={{ opacity: 1, y: 0 }}
                 exit={reduceMotion ? undefined : { opacity: 0, height: 0 }}
                 transition={{ duration: 0.22 }}
-                className="card p-4"
+                className="py-3.5"
               >
                 <div className="flex items-start gap-3">
                   <Avatar name={message.authorName} photoUrl={message.authorAvatarUrl} size={32} />
@@ -236,7 +236,7 @@ function ReactionButton({
         // and the only other signal is a background tint.
         aria-pressed={active}
         aria-label={`${verb}${count > 0 ? ` (${count})` : ''}`}
-        className={`btn btn-sm ${active ? on : 'bg-canvas text-muted hover:text-ink'}`}
+        className={`btn btn-sm ${active ? on : 'bg-surface text-muted hover:text-ink'}`}
       >
         {kind === 'HYPE' ? <FlameIcon /> : <TargetIcon />}
         <span className="tabular-nums">{count > 0 ? count : verb}</span>

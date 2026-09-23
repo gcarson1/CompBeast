@@ -8,8 +8,9 @@ export interface StatItem {
 }
 
 /**
- * A row of two to four headline numbers in one tile — a team's total, rank
- * and last week; the admin page's published/pending/rejected counts. The
+ * A row of two to four headline numbers, ruled into columns on the page
+ * (`.stat-row`) — a team's total, rank and last week; the admin page's
+ * published/pending/rejected counts. The
  * values are set in the display face like every other big number in the
  * app, and it is a definition list so a screen reader hears each label with
  * its value rather than three numbers followed by three words.
@@ -17,7 +18,7 @@ export interface StatItem {
 export function StatStrip({ items, className }: { items: StatItem[]; className?: string }) {
   return (
     <dl
-      className={cn('card grid divide-x divide-hairline p-4 text-center', className)}
+      className={cn('stat-row text-center', className)}
       style={{ gridTemplateColumns: `repeat(${items.length}, minmax(0, 1fr))` }}
     >
       {items.map((item) => (

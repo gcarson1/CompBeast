@@ -11,6 +11,7 @@ import { SeasonPlate } from '@/components/SeasonPlate';
 import { ShowTheme } from '@/components/ShowTheme';
 import { RankPlate, Tag } from '@/components/Tag';
 import { absoluteUrl, breadcrumbList, tvSeriesNode } from '@/lib/seo';
+import { isTraitor } from '@/lib/shows/affiliation';
 import { eliminationLabel, lower, type ShowLexicon } from '@/lib/shows/lexicon';
 import { formatPoints, pointsTone } from '@/lib/ui';
 import { getSeasonScoreboard } from '@/server/queries';
@@ -109,7 +110,7 @@ export default async function SeasonPage({ params }: { params: { slug: string } 
           </header>
 
           {isArchived ? (
-            <p className="card mt-6 max-w-measure p-4 text-2xs leading-relaxed text-muted">
+            <p className="mt-6 max-w-measure border-l-2 border-show-accent/60 pl-3 text-2xs leading-relaxed text-muted">
               This season has wrapped, so it is view-only. Leagues can only be created for seasons that are
               still airing or yet to start.
             </p>
@@ -117,9 +118,9 @@ export default async function SeasonPage({ params }: { params: { slug: string } 
             <MotionCard tilt className="card-feature mt-8">
               <TallyMark className="absolute -bottom-5 -right-3 h-28 w-28 text-show-accent opacity-[0.12]" />
               <Link
-                href="/leagues/new"
+                href={`/leagues/new?season=${season.slug}`}
                 prefetch={false}
-                className="relative flex items-center gap-4 rounded-card p-5"
+                className="relative flex items-center gap-4 rounded-card p-4"
               >
                 <span className="icon-well">
                   <PlusIcon size={22} />
@@ -144,14 +145,14 @@ export default async function SeasonPage({ params }: { params: { slug: string } 
             </p>
 
             {players.length === 0 ? (
-              <p className="card p-4 text-xs text-muted">No players loaded for this season yet.</p>
+              <p className="list-empty">No players loaded for this season yet.</p>
             ) : (
-              <ul className="card divide-y divide-hairline">
+              <ul className="list">
                 {players.map((player, index) => (
                   <li key={player.contestantId}>
                     <Link
                       href={`/players/${player.contestantId}`}
-                      className="flex items-center gap-3 p-4 transition duration-200 ease-soft hover:bg-surface-raised"
+                      className="row-link flex items-center gap-3 py-3"
                     >
                       <RankPlate rank={index + 1} />
                       <Avatar
@@ -161,7 +162,14 @@ export default async function SeasonPage({ params }: { params: { slug: string } 
                         dimmed={isArchived ? false : !player.isActive}
                       />
                       <span className="min-w-0 flex-1">
-                        <span className="block truncate text-base font-semibold">{player.name}</span>
+                        <span className="flex items-center gap-2">
+                          <span className="truncate text-base font-semibold">{player.name}</span>
+                          {isTraitor(player.metadata) && (
+                            <Tag tone="red" size="sm">
+                              Traitor
+                            </Tag>
+                          )}
+                        </span>
                         <span className="mt-0.5 block truncate text-2xs text-muted">
                           {describe(player, isArchived, lexicon)}
                         </span>
@@ -189,9 +197,16 @@ function describe(
   const meta = player.metadata as { occupation?: string; sourcePlace?: string } | null;
 
   if (isArchived) {
+    const place = meta?.sourcePlace;
+    // How they went, ahead of where they finished — murdered or banished is
+    // the whole story of a Traitors exit, and evicted, voted out or
+    // evacuated is most of one anywhere else. The winner and the runner-up
+    // did not go out, so they get their title alone.
+    if (place && /^\d/.test(place) && player.eliminatedLabel) {
+      return `${eliminationLabel(lexicon, player.metadata)} · ${place}`;
+    }
     return (
-      meta?.sourcePlace ??
-      (player.eliminatedLabel ? `Out · ${player.eliminatedLabel}` : lexicon.contestantSingular)
+      place ?? (player.eliminatedLabel ? `Out · ${player.eliminatedLabel}` : lexicon.contestantSingular)
     );
   }
   if (player.isActive) return meta?.occupation ?? lexicon.activeLabel;

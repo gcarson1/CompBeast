@@ -1,4 +1,5 @@
 import type { ReactNode } from 'react';
+import { MARK_BARS } from '@/lib/brand';
 import { cn } from '@/lib/ui';
 
 /**
@@ -121,11 +122,20 @@ export function GearIcon(props: IconProps) {
  * like the logo's slate one. Purely decorative, and meant to be faint.
  */
 export function TallyMark({ className }: { className?: string }) {
+  const [short, middle, tall] = MARK_BARS;
   return (
-    <svg viewBox="0 0 46 44" fill="currentColor" aria-hidden className={cn('pointer-events-none', className)}>
-      <polygon points="7,24 14,24 7,44 0,44" opacity="0.55" />
-      <polygon points="22,12 29,12 21,44 14,44" />
-      <polygon points="37,0 45,0 35,44 27,44" />
+    <svg viewBox="0 0 48 44" fill="currentColor" aria-hidden className={cn('pointer-events-none', className)}>
+      <polygon points={short} opacity="0.55" />
+      <polygon points={middle} />
+      <polygon points={tall} />
     </svg>
+  );
+}
+
+export function ChevronRightIcon(props: IconProps) {
+  return (
+    <Svg {...props}>
+      <path d="m9 5 7 7-7 7" />
+    </Svg>
   );
 }

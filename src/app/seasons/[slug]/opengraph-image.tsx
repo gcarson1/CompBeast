@@ -1,5 +1,6 @@
 import { OG_SIZE, renderOgCard } from '@/lib/og/card';
 import { lower } from '@/lib/shows/lexicon';
+import { themeFor } from '@/lib/shows/registry';
 import { formatPoints } from '@/lib/ui';
 import { getSeasonScoreboard } from '@/server/queries';
 
@@ -17,8 +18,10 @@ export default async function Image({ params }: { params: { slug: string } }) {
   const lexicon = season.showLexicon;
   const live = season.status !== 'COMPLETED';
   const leader = players[0];
+  const status = season.status === 'ACTIVE' ? 'airing now' : live ? 'coming up' : 'finished';
   return renderOgCard({
-    eyebrow: `${season.showName} · ${season.year} · ${live ? 'airing now' : 'finished'}`,
+    theme: themeFor(season.showSlug),
+    eyebrow: `${season.showName} · ${season.year} · ${status}`,
     title: season.name,
     subtitle: `Every ${lower(lexicon.contestantSingular)} ranked by fantasy points${live ? ' as the season airs' : ', beside where they actually placed'}.`,
     stats: [
@@ -28,7 +31,7 @@ export default async function Image({ params }: { params: { slug: string } }) {
         : []),
       {
         value: String(players.filter((p) => p.isActive).length),
-        label: live ? lower(lexicon.activeLabel) : 'made the finale',
+        label: live ? lower(lexicon.activeLabel) : 'standing at the end',
       },
     ],
   });

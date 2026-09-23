@@ -104,7 +104,7 @@ export function PushToggle({ publicKey }: { publicKey: string }) {
   };
 
   return (
-    <div className="card p-4">
+    <div className="border-y border-hairline py-3.5">
       <div className="flex items-start justify-between gap-3">
         <div className="min-w-0">
           <p className="text-sm font-medium">Push notifications on this device</p>

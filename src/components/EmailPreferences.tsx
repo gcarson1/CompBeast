@@ -25,7 +25,7 @@ export function EmailPreferences({ preferences }: { preferences: Preferences }) 
   const keys = Object.keys(CATEGORIES) as EmailCategory[];
 
   return (
-    <div className="card divide-y divide-hairline">
+    <div className="divide-y divide-hairline border-y border-hairline">
       <Row
         scope="all"
         enabled={preferences.enabled}
@@ -48,7 +48,7 @@ export function EmailPreferences({ preferences }: { preferences: Preferences }) 
       ))}
 
       {!preferences.configured && (
-        <p className="p-4 text-2xs leading-relaxed text-muted">
+        <p className="py-3 text-2xs leading-relaxed text-muted">
           No mail provider is connected to this deployment yet, so nothing is being sent. These choices are
           saved and will apply the moment one is.
         </p>
@@ -79,7 +79,7 @@ function Row({
   }, [state.error]);
 
   return (
-    <form action={formAction} className="flex items-start gap-4 p-4">
+    <form action={formAction} className="flex items-start gap-4 py-3.5">
       <input type="hidden" name="scope" value={scope} />
       {/* The form posts the state being asked for, not the current one. */}
       <input type="hidden" name="enabled" value={enabled ? 'false' : 'true'} />

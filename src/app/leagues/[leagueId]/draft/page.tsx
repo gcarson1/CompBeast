@@ -4,6 +4,7 @@ import { DraftRoom } from '@/components/DraftRoom';
 import { ShowTheme } from '@/components/ShowTheme';
 import { getCurrentUser } from '@/lib/auth';
 import { buildDraftOrder } from '@/lib/draft/snake';
+import { isTraitor } from '@/lib/shows/affiliation';
 import { lexiconFor } from '@/lib/shows/lexicon';
 import { getDraftBoard, getLeagueOverview } from '@/server/queries';
 
@@ -71,6 +72,7 @@ export default async function DraftPage({ params }: { params: { leagueId: string
               name: c.name,
               photoUrl: c.photoUrl,
               occupation: (c.metadata as { occupation?: string } | null)?.occupation ?? null,
+              traitor: isTraitor(c.metadata),
               isActive: c.isActive,
             }))}
           lexicon={lexiconFor(show.slug, show.lexicon)}

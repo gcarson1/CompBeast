@@ -119,19 +119,18 @@ const config: Config = {
       },
       borderRadius: {
         /**
-         * Bento tile radius. Sits in the 16–32px band the tile system wants,
-         * and every nested corner is derived from it: `nested` is
-         * `card − 12px`, so a button, image slot or inner card inside a
-         * tile padded `p-3` (12px) shares the outer curve concentrically
-         * rather than fighting it. Tiles padded wider than that hold text,
-         * not nested boxes. The previous 10px was right for the hairline
-         * dark UI this grew out of; it is too tight for a colour block.
+         * Tile radius. A tile is now the exception — a thing you can pick up
+         * (a league in the rail, an event in the ticker, the one action on a
+         * page) — and lists, tables and stats are page sections with no box
+         * at all (`.list` in globals.css). What is left is cut tighter: 14px
+         * reads as broadcast furniture where the old 24px read as a bubble.
+         * `nested` is `card − 6px`, for a plate or button set into a tile
+         * padded `p-3`/`p-4`, so the inner curve follows the outer one.
          */
-        card: '24px',
-        nested: '12px',
-        // Tappable controls. Equal to `nested` on purpose — a button inside a
-        // tile is the most common nested corner, so the two stay concentric.
-        btn: '12px',
+        card: '14px',
+        nested: '8px',
+        // Tappable controls: level and rounded, never on the slant.
+        btn: '10px',
         // Non-tappable badges only (see `.pill` in globals.css).
         pill: '999px',
       },

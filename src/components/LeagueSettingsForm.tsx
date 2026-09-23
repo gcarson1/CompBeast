@@ -171,7 +171,7 @@ export function LeagueSettingsForm({
         </>
       )}
 
-      <label className="flex items-center gap-3 rounded-btn bg-surface p-4">
+      <label className="flex items-center gap-3 border-y border-hairline py-3.5">
         <input
           type="checkbox"
           name="isPublic"
@@ -258,7 +258,7 @@ export function DeleteLeaguePanel({
   const matches = typed.trim() === leagueName;
 
   return (
-    <section className="mt-10 rounded-card border border-danger/30 p-4">
+    <section className="mt-10 border-t-2 border-danger/50 pt-4">
       <h2 className="headline text-xl text-danger-deep">Delete this league</h2>
       <p className="mt-1 max-w-measure text-2xs leading-relaxed text-muted">
         Standings, rosters, draft results and the whole feed go with it, for all {memberCount}{' '}

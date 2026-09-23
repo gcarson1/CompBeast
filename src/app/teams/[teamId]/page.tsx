@@ -9,6 +9,7 @@ import { StatStrip } from '@/components/StatStrip';
 import { ShowTheme } from '@/components/ShowTheme';
 import { Tag, rankTone } from '@/components/Tag';
 import { getCurrentUser } from '@/lib/auth';
+import { isTraitor } from '@/lib/shows/affiliation';
 import { eliminationLabel, lower } from '@/lib/shows/lexicon';
 import { formatPoints, pointsTone } from '@/lib/ui';
 import { canViewLeague, getTeamDetail } from '@/server/queries';
@@ -98,9 +99,9 @@ export default async function TeamPage({ params }: { params: { teamId: string } 
             aside={roster.length > 0 ? `${stillIn}/${roster.length} still in` : undefined}
           >
             {roster.length === 0 ? (
-              // Before the draft a team is a name and a seat. An empty card here
+              // Before the draft a team is a name and a seat. An empty list here
               // read as a rendering fault; the draft room is the way to fill it.
-              <div className="rounded-card border border-dashed border-hairline p-5">
+              <div className="list-empty">
                 <p className="max-w-measure text-xs leading-relaxed text-muted">
                   No {lower(lexicon.contestantPlural)} yet — this team fills in as the draft is made.
                 </p>
@@ -113,12 +114,12 @@ export default async function TeamPage({ params }: { params: { teamId: string } 
                 </Link>
               </div>
             ) : (
-              <ul className="card divide-y divide-hairline">
+              <ul className="list">
                 {roster.map((player) => (
                   <li key={player.contestantId}>
                     <Link
                       href={`/players/${player.contestantId}`}
-                      className="flex items-center gap-3 p-4 transition duration-200 ease-soft hover:bg-surface-raised"
+                      className="row-link flex items-center gap-3 py-3"
                     >
                       <Avatar
                         name={player.name}
@@ -127,7 +128,14 @@ export default async function TeamPage({ params }: { params: { teamId: string } 
                         dimmed={!player.isActive}
                       />
                       <span className="min-w-0 flex-1">
-                        <span className="block truncate text-base font-semibold">{player.name}</span>
+                        <span className="flex items-center gap-2">
+                          <span className="truncate text-base font-semibold">{player.name}</span>
+                          {isTraitor(player.metadata) && (
+                            <Tag tone="red" size="sm">
+                              Traitor
+                            </Tag>
+                          )}
+                        </span>
                         <span className="mt-0.5 block text-2xs text-muted">
                           {player.isActive
                             ? lexicon.activeLabel
@@ -146,7 +154,7 @@ export default async function TeamPage({ params }: { params: { teamId: string } 
 
           {score && score.cycles.length > 0 && (
             <Collapsible title="Week by week" className="mt-10">
-              <div className="card divide-y divide-hairline">
+              <div className="list">
                 {/*
               Newest week first. Copied before reversing because `reverse()`
               mutates, and this same array is read elsewhere with `.at(-1)` to
@@ -156,7 +164,7 @@ export default async function TeamPage({ params }: { params: { teamId: string } 
             */}
                 {[...score.cycles].reverse().map((cycle) => (
                   <details key={cycle.cycleId} className="disclosure group">
-                    <summary className="flex cursor-pointer list-none items-center justify-between p-4 text-muted transition hover:text-ink">
+                    <summary className="row-link flex cursor-pointer list-none items-center justify-between py-3.5 text-muted hover:text-ink">
                       <span className="text-base font-medium text-ink">{cycle.label}</span>
                       <span className="flex items-center gap-2">
                         <span className={`text-base font-semibold tabular-nums ${pointsTone(cycle.points)}`}>
@@ -165,7 +173,7 @@ export default async function TeamPage({ params }: { params: { teamId: string } 
                         <ChevronIcon />
                       </span>
                     </summary>
-                    <ul className="space-y-1.5 border-t border-hairline bg-canvas/60 px-4 py-3">
+                    <ul className="mb-3.5 space-y-1.5 border-l-2 border-show-accent/50 pl-3">
                       {/* Lines arrive oldest-first by occurredAt; the last thing
                       that happened belongs at the top of the week too. */}
                       {[...cycle.lines].reverse().map((line) => (

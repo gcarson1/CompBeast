@@ -23,9 +23,9 @@ export function FriendsPanel({ overview }: { overview: FriendOverview }) {
       {incoming.length > 0 && (
         <section>
           <h3 className="eyebrow mb-2">Waiting on you ({incoming.length})</h3>
-          <ul className="card divide-y divide-hairline">
+          <ul className="divide-y divide-hairline border-y border-hairline">
             {incoming.map((request) => (
-              <li key={request.friendshipId} className="flex items-center gap-3 p-3">
+              <li key={request.friendshipId} className="flex items-center gap-3 py-3">
                 <Avatar name={request.name} photoUrl={request.avatarUrl} size={34} />
                 <span className="min-w-0 flex-1">
                   <span className="block truncate text-sm font-medium">{request.name}</span>
@@ -44,14 +44,14 @@ export function FriendsPanel({ overview }: { overview: FriendOverview }) {
       <section>
         <h3 className="eyebrow mb-2">Friends ({friends.length})</h3>
         {friends.length === 0 ? (
-          <p className="rounded-btn border border-dashed border-hairline p-4 text-2xs leading-relaxed text-muted">
+          <p className="list-empty text-2xs">
             No friends yet. Search above by name, handle, or their full email address — then you can invite
             them straight into a league.
           </p>
         ) : (
-          <ul className="card divide-y divide-hairline">
+          <ul className="divide-y divide-hairline border-y border-hairline">
             {friends.map((friend) => (
-              <li key={friend.userId} className="flex items-center gap-3 p-3">
+              <li key={friend.userId} className="flex items-center gap-3 py-3">
                 <Avatar name={friend.name} photoUrl={friend.avatarUrl} size={34} />
                 <span className="min-w-0 flex-1">
                   <span className="block truncate text-sm font-medium">{friend.name}</span>
@@ -69,9 +69,9 @@ export function FriendsPanel({ overview }: { overview: FriendOverview }) {
       {outgoing.length > 0 && (
         <section>
           <h3 className="eyebrow mb-2">Waiting on them ({outgoing.length})</h3>
-          <ul className="card divide-y divide-hairline">
+          <ul className="divide-y divide-hairline border-y border-hairline">
             {outgoing.map((request) => (
-              <li key={request.friendshipId} className="flex items-center gap-3 p-3">
+              <li key={request.friendshipId} className="flex items-center gap-3 py-3">
                 <Avatar name={request.name} photoUrl={request.avatarUrl} size={34} />
                 <span className="min-w-0 flex-1">
                   <span className="block truncate text-sm font-medium">{request.name}</span>
@@ -162,9 +162,9 @@ function FriendSearch() {
       </p>
 
       {results.length > 0 && (
-        <ul className="card mt-3 divide-y divide-hairline">
+        <ul className="mt-3 divide-y divide-hairline border-y border-hairline">
           {results.map((result) => (
-            <li key={result.userId} className="flex items-center gap-3 p-3">
+            <li key={result.userId} className="flex items-center gap-3 py-3">
               <Avatar name={result.name} photoUrl={result.avatarUrl} size={34} />
               <span className="min-w-0 flex-1">
                 <span className="block truncate text-sm font-medium">{result.name}</span>

@@ -93,13 +93,13 @@ function SummaryTab({ events }: { events: PlayerEvent[] }) {
   };
 
   if (events.length === 0) {
-    return <p className="card p-4 text-xs text-muted">No scoring events yet this season.</p>;
+    return <p className="list-empty">No scoring events yet this season.</p>;
   }
 
   return (
-    <div className="card divide-y divide-hairline">
+    <div className="list">
       {[...byCategory.entries()].map(([category, value]) => (
-        <div key={category} className="flex items-center justify-between p-4">
+        <div key={category} className="flex items-center justify-between py-3.5">
           <span>
             <span className="block text-sm font-medium">{labels[category] ?? category}</span>
             <span className="mt-0.5 block text-2xs text-muted">
@@ -127,22 +127,24 @@ function SummaryTab({ events }: { events: PlayerEvent[] }) {
  */
 function GameLogTab({ gameLog, events }: { gameLog: PlayerGameLogRow[]; events: PlayerEvent[] }) {
   if (gameLog.length === 0) {
-    return <p className="card p-4 text-xs text-muted">Nothing logged yet.</p>;
+    return <p className="list-empty">Nothing logged yet.</p>;
   }
 
   const newestFirst = [...gameLog].sort((a, b) => b.sequence - a.sequence);
 
+  // One ruled section per week: the week and its total, then what happened
+  // in it, hung off a rule in the show's colour.
   return (
-    <div className="space-y-3">
+    <div className="list">
       {newestFirst.map((row) => (
-        <div key={row.sequence} className="card overflow-hidden">
-          <div className="flex items-center justify-between border-b border-hairline px-4 py-3">
+        <section key={row.sequence} className="py-3.5">
+          <div className="flex items-center justify-between">
             <span className="text-sm font-semibold">{row.label}</span>
             <span className={`text-base font-semibold tabular-nums ${pointsTone(row.points)}`}>
               {formatPoints(row.points)}
             </span>
           </div>
-          <ul className="divide-y divide-hairline">
+          <ul className="mt-2 space-y-2 border-l-2 border-show-accent/50 pl-3">
             {events
               // Match on sequence, not the display label — two cycles can
               // carry the same text and would pool into one week.
@@ -151,7 +153,7 @@ function GameLogTab({ gameLog, events }: { gameLog: PlayerGameLogRow[]; events: 
               // happened belongs at the top of the week too, not the bottom.
               .reverse()
               .map((event) => (
-                <li key={event.id} className="flex items-center justify-between gap-3 px-4 py-2.5">
+                <li key={event.id} className="flex items-center justify-between gap-3">
                   <span className="min-w-0 flex-1">
                     <span className="block truncate text-xs">{event.label}</span>
                     {event.note && (
@@ -164,7 +166,7 @@ function GameLogTab({ gameLog, events }: { gameLog: PlayerGameLogRow[]; events: 
                 </li>
               ))}
           </ul>
-        </div>
+        </section>
       ))}
     </div>
   );
@@ -181,22 +183,22 @@ function LeaguesTab({
 }) {
   if (!signedIn) {
     return (
-      <p className="card p-4 text-xs text-muted">
+      <p className="list-empty">
         Sign in to see which of your leagues drafted this {lower(lexicon.contestantSingular)}.
       </p>
     );
   }
   if (leagues.length === 0) {
-    return <p className="card p-4 text-xs text-muted">Undrafted in every league you&apos;re in.</p>;
+    return <p className="list-empty">Undrafted in every league you&apos;re in.</p>;
   }
 
   return (
-    <ul className="card divide-y divide-hairline">
+    <ul className="list">
       {leagues.map((entry) => (
         <li key={entry.leagueId}>
           <Link
             href={`/leagues/${entry.leagueId}`}
-            className="flex items-center justify-between gap-3 p-4 transition hover:bg-surface-raised"
+            className="row-link flex items-center justify-between gap-3 py-3.5"
           >
             <span className="min-w-0">
               <span className="block truncate text-sm font-medium">{entry.leagueName}</span>

@@ -116,7 +116,7 @@ export function SignedOutLanding({
           <h1 className="mt-5 animate-rise font-display text-5xl leading-[0.92] tracking-wide [animation-delay:60ms] sm:text-[64px] lg:text-[76px]">
             DRAFT THE CAST.
             <br />
-            <span className="text-brand-gold">OWN THE LEADERBOARD.</span>
+            <span className="wordmark-gold box-decoration-clone">OWN THE LEADERBOARD.</span>
           </h1>
 
           {/* The lede sits on a measure, not on the container's width: the display
@@ -168,8 +168,8 @@ export function SignedOutLanding({
           {facts.shows.map((show) => (
             <li key={show.showSlug}>
               <ShowTheme showSlug={show.showSlug}>
-                <div className="card-feature card-lift flex h-full flex-col p-5">
-                  <TallyMark className="absolute -right-3 -top-4 h-28 w-28 text-show-accent opacity-[0.1]" />
+                <div className="card-feature card-lift flex h-full flex-col p-4">
+                  <TallyMark className="absolute -right-3 -top-4 h-24 w-24 text-show-accent opacity-[0.1]" />
                   <div className="relative flex items-start justify-between gap-3">
                     {show.season ? (
                       <SeasonPlate showSlug={show.showSlug} seasonSlug={show.season.slug} />
@@ -186,9 +186,9 @@ export function SignedOutLanding({
                       </Tag>
                     )}
                   </div>
-                  <h3 className="headline mt-4 text-3xl text-show-deep">{show.showName}</h3>
+                  <h3 className="headline mt-3 text-3xl text-show-deep">{show.showName}</h3>
                   <p className="mt-2 max-w-measure text-xs leading-relaxed text-muted">{show.pitch}</p>
-                  <dl className="relative mt-4 grid grid-cols-2 gap-3 border-t border-hairline pt-4 text-2xs">
+                  <dl className="relative mt-3 grid grid-cols-2 gap-3 border-t border-hairline pt-3 text-2xs">
                     <div>
                       <dt className="font-semibold uppercase tracking-wide text-muted">Season</dt>
                       <dd className="mt-0.5 text-sm font-semibold text-ink">{show.season?.name ?? '—'}</dd>
@@ -202,7 +202,7 @@ export function SignedOutLanding({
                       </dd>
                     </div>
                   </dl>
-                  <div className="relative mt-auto flex flex-wrap gap-2 pt-4">
+                  <div className="relative mt-auto flex flex-wrap gap-2 pt-3">
                     {show.season && (
                       <Link href={`/seasons/${show.season.slug}`} className="btn-ghost btn-sm">
                         Meet the cast
@@ -274,7 +274,7 @@ export function SignedOutLanding({
                         ruleset names are set in normal case with tight side
                         padding so "Balanced" fits and "Lauren's Way" wraps
                         between its words rather than through them. */}
-                    <div className="card overflow-hidden">
+                    <div className="border-y border-hairline">
                       <table className="w-full table-fixed text-xs">
                         <caption className="sr-only">
                           Point values for selected events on {show.showName} under each Comp Beast ruleset
@@ -286,10 +286,10 @@ export function SignedOutLanding({
                           ))}
                         </colgroup>
                         <thead>
-                          <tr className="bg-canvas/60 text-2xs text-muted">
+                          <tr className="border-b border-hairline text-2xs text-muted">
                             <th
                               scope="col"
-                              className="px-3 py-2.5 text-left font-semibold uppercase tracking-wide"
+                              className="py-2.5 pr-3 text-left font-semibold uppercase tracking-wide"
                             >
                               Event
                             </th>
@@ -297,7 +297,7 @@ export function SignedOutLanding({
                               <th
                                 key={column.id}
                                 scope="col"
-                                className="py-2.5 pl-0.5 pr-2 text-right align-bottom font-semibold leading-tight"
+                                className="py-2.5 pl-0.5 pr-2 text-right align-bottom font-semibold leading-tight last:pr-0"
                               >
                                 {column.name}
                               </th>
@@ -309,14 +309,14 @@ export function SignedOutLanding({
                             <tr key={row.label}>
                               <th
                                 scope="row"
-                                className="px-3 py-2.5 text-left font-medium leading-snug text-ink"
+                                className="py-2.5 pr-3 text-left font-medium leading-snug text-ink"
                               >
                                 {row.label}
                               </th>
                               {row.points.map((points, i) => (
                                 <td
                                   key={show.scoring!.columns[i].id}
-                                  className={`py-2.5 pl-0.5 pr-2 text-right font-semibold tabular-nums ${
+                                  className={`py-2.5 pl-0.5 pr-2 text-right font-semibold tabular-nums last:pr-0 ${
                                     points === null ? 'text-muted' : pointsTone(points)
                                   }`}
                                 >
@@ -347,12 +347,12 @@ export function SignedOutLanding({
       )}
 
       <Section id="league-setup" title="League sizes, drafts and roster locks" lede={facts.leagueSetup}>
-        {/* The numbers as one scoreboard: a single tile ruled into cells by
-            hairlines (the gap shows the tile's lighter backing through), so
+        {/* The numbers as one scoreboard ruled into cells by hairlines (the
+            gap shows the rule through), on the page rather than in a tile, so
             four figures read as one set of facts rather than four toys. */}
-        <dl className="mt-5 grid grid-cols-2 gap-px overflow-hidden rounded-card border border-hairline bg-white/[0.12] shadow-card sm:grid-cols-4">
+        <dl className="mt-5 grid grid-cols-2 gap-px border-y border-hairline bg-hairline sm:grid-cols-4">
           {facts.stats.map((stat) => (
-            <div key={stat.label} className="flex flex-col bg-surface p-4 sm:p-5">
+            <div key={stat.label} className="flex flex-col items-center bg-canvas px-2 py-5 text-center">
               <dd className="order-1 font-display text-4xl leading-none tracking-wide text-brand-gold-deep">
                 {stat.value}
               </dd>
@@ -372,7 +372,7 @@ export function SignedOutLanding({
         lede={facts.comparison}
         defaultOpen={false}
       >
-        <div className="card mt-5 overflow-hidden">
+        <div className="mt-5 border-y border-hairline">
           <table className="w-full table-fixed text-xs">
             <caption className="sr-only">
               Running a fantasy league on {SITE_NAME} compared with a spreadsheet and a group chat
@@ -383,14 +383,14 @@ export function SignedOutLanding({
               <col className="w-[32%]" />
             </colgroup>
             <thead>
-              <tr className="bg-canvas/60 text-2xs uppercase tracking-wide text-muted">
-                <th scope="col" className="px-3 py-2.5 text-left font-semibold">
+              <tr className="border-b border-hairline text-2xs uppercase tracking-wide text-muted">
+                <th scope="col" className="py-2.5 pr-3 text-left font-semibold">
                   <span className="sr-only">Feature</span>
                 </th>
                 <th scope="col" className="px-2 py-2.5 text-left font-semibold text-brand-gold-deep">
                   {SITE_NAME}
                 </th>
-                <th scope="col" className="px-2 py-2.5 text-left font-semibold">
+                <th scope="col" className="py-2.5 pl-2 text-left font-semibold">
                   Spreadsheet + group chat
                 </th>
               </tr>
@@ -398,11 +398,11 @@ export function SignedOutLanding({
             <tbody className="divide-y divide-hairline align-top">
               {facts.comparisonRows.map((row) => (
                 <tr key={row.feature}>
-                  <th scope="row" className="px-3 py-3 text-left font-medium leading-snug text-ink">
+                  <th scope="row" className="py-3 pr-3 text-left font-medium leading-snug text-ink">
                     {row.feature}
                   </th>
                   <td className="px-2 py-3 leading-snug text-ink">{row.compBeast}</td>
-                  <td className="px-2 py-3 leading-snug text-muted">{row.spreadsheet}</td>
+                  <td className="py-3 pl-2 leading-snug text-muted">{row.spreadsheet}</td>
                 </tr>
               ))}
             </tbody>

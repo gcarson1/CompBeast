@@ -61,8 +61,8 @@ export function SocialFeed({
         )}
 
         {buzz.posts.length === 0 ? (
-          <div className="rounded-card border border-dashed border-hairline p-5">
-            <p className="max-w-measure text-xs leading-relaxed text-muted">
+          <div className="list-empty">
+            <p className="max-w-measure">
               Couldn&apos;t reach the news feeds just now.
               {xSearchUrl && ' The conversation is still going on X.'}
             </p>

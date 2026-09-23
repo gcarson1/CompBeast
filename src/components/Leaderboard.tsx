@@ -126,11 +126,9 @@ export function Leaderboard({ rows, myTeamId }: { rows: LeaderboardRow[]; myTeam
       </div>
 
       {rows.length === 0 ? (
-        <p className="card p-4 text-xs text-muted">
-          No teams yet. Share the invite code to get your league going.
-        </p>
+        <p className="list-empty">No teams yet. Share the invite code to get your league going.</p>
       ) : (
-        <ul className="card divide-y divide-hairline overflow-hidden">
+        <ul className="list">
           {rows.map((row) => {
             const isMine = row.teamId === myTeamId;
             return (
@@ -138,11 +136,10 @@ export function Leaderboard({ rows, myTeamId }: { rows: LeaderboardRow[]; myTeam
                 <Link
                   href={`/teams/${row.teamId}`}
                   className={cn(
-                    'relative flex items-center gap-3 p-4 transition duration-200 ease-soft hover:bg-surface-raised motion-safe:active:scale-[0.99]',
-                    // Your own row: a wash of gold and a gold edge on the left,
-                    // so it is found without reading a single name.
-                    isMine &&
-                      'bg-gradient-to-r from-brand-gold/[0.14] to-brand-gold/[0.03] before:absolute before:inset-y-3 before:left-0 before:w-[3px] before:rounded-r-pill before:bg-brand-gold',
+                    'row-link flex items-center gap-3 py-3.5 motion-safe:active:scale-[0.99]',
+                    // Your own row: a wash of gold with a gold edge, so it is
+                    // found without reading a single name.
+                    isMine && 'row-mine',
                   )}
                 >
                   <RankPlate rank={row.rank} />

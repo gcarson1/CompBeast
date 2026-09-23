@@ -53,7 +53,7 @@ export function SeasonSourceCard({
   const error = syncState.error ?? bootstrapState.error;
 
   return (
-    <div className="card p-4">
+    <div className="py-3.5">
       <div className="flex items-center justify-between gap-3">
         <span className="min-w-0">
           <span className="block truncate text-sm font-semibold">{seasonName}</span>
@@ -87,7 +87,7 @@ export function CandidateCard({ candidate }: { candidate: PendingCandidate }) {
   const error = approveState.error ?? rejectState.error;
 
   return (
-    <li className="card p-4">
+    <li className="py-4">
       <div className="flex items-start justify-between gap-3">
         <div className="min-w-0">
           <p className="truncate text-base font-semibold">{candidate.playerName}</p>
@@ -112,7 +112,7 @@ export function CandidateCard({ candidate }: { candidate: PendingCandidate }) {
       </div>
 
       {candidate.reasons.length > 0 && (
-        <ul className="mt-3 space-y-1 rounded-2xl bg-canvas/70 p-3">
+        <ul className="mt-3 space-y-1 border-l-2 border-hairline pl-3">
           {candidate.reasons.map((reason) => (
             <li key={reason} className="text-2xs leading-relaxed text-muted">
               {reason}

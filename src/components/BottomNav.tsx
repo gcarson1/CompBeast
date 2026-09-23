@@ -4,7 +4,7 @@ import Link from 'next/link';
 import { usePathname } from 'next/navigation';
 import { cn } from '@/lib/ui';
 
-const TABS = [
+export const TABS = [
   { href: '/leagues', label: 'Leagues', icon: HomeIcon, owns: ['/leagues', '/teams'] },
   // Player pages are reached through a season, so they keep this tab lit.
   { href: '/seasons', label: 'Seasons', icon: BoxIcon, owns: ['/seasons', '/players'] },
@@ -14,16 +14,23 @@ const TABS = [
   { href: '/account', label: 'You', icon: PersonIcon, owns: ['/account', '/notifications'] },
 ];
 
+/** Whether `tab` owns the page at `pathname`, so it shows as the current one. */
+export function tabIsActive(tab: (typeof TABS)[number], pathname: string): boolean {
+  return tab.owns.some((prefix) => pathname === prefix || pathname.startsWith(`${prefix}/`));
+}
+
 export function BottomNav() {
   const pathname = usePathname();
 
   return (
     // Outside the scroller, at the foot of the app column, so it cannot be
     // carried up the screen: it is not in the flow of anything that scrolls.
-    <nav className="relative z-20 flex-none border-t border-hairline bg-surface px-4 pb-[max(0.25rem,env(safe-area-inset-bottom))] pt-2">
+    // A phone and tablet control: on a wide screen the same tabs sit in the
+    // header (<HeaderNav>), where a desktop reader looks for them.
+    <nav className="relative z-20 flex-none border-t border-hairline bg-surface px-4 pb-[max(0.25rem,env(safe-area-inset-bottom))] pt-2 lg:hidden">
       <ul className="mx-auto flex max-w-md items-center sm:max-w-lg lg:max-w-3xl justify-around">
         {TABS.map((tab) => {
-          const active = tab.owns.some((prefix) => pathname === prefix || pathname.startsWith(`${prefix}/`));
+          const active = tabIsActive(tab, pathname);
           const Icon = tab.icon;
           return (
             <li key={tab.href}>

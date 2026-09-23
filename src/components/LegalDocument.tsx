@@ -43,7 +43,7 @@ export function LegalDocument({
       </p>
       <div className="legal mt-4 max-w-measure text-sm leading-relaxed text-muted">{intro}</div>
 
-      <nav aria-label="On this page" className="card mt-6 p-4">
+      <nav aria-label="On this page" className="mt-6 border-y border-hairline py-4">
         <p className="eyebrow">On this page</p>
         <ol className="mt-2 columns-1 gap-x-6 text-xs sm:columns-2">
           {sections.map((section, i) => (
@@ -65,7 +65,7 @@ export function LegalDocument({
         </section>
       ))}
 
-      <section aria-labelledby="operator-title" className="card mt-12 p-5">
+      <section aria-labelledby="operator-title" className="mt-12 border-y border-hairline py-5">
         <h2 id="operator-title" className="eyebrow">
           Who runs this site
         </h2>

@@ -806,6 +806,18 @@ The one shape the app owns is the **slant** of the wordmark's three tally bars, 
 used for everything that *labels* something, the way a network's on-screen graphics do.
 Controls never lean: a button stays a rounded, level thing you press.
 
+- **The mark** (`src/lib/brand.ts`) — three bars on one lean (a quarter of their height,
+  about 14°) with a camera's red tally light over the tallest, in slate-to-gold gradients.
+  The header logo (`CompBeastLogo`, with the wordmark set on the same lean and BEAST in
+  struck gold), `<TallyMark>`, the Open Graph cards, `src/app/icon.svg` and the home-screen
+  PNGs (`npx tsx scripts/make-icons.ts`) all draw from those numbers.
+- **Sections, not boxes.** A run of rows — standings, a cast, a rule book, a game log, a
+  settings list — sits on the page between hairlines (`.list`, `.row-link` for a row that is
+  a link, `.list-empty`, `.stat-row` for figures side by side), flush with the section title
+  above it. A rounded tile (14px, `rounded-card`) is kept for things you pick up — a league
+  in the rail — and for the one action or number a page leads with. The live ticker is a
+  ruled crawl, not a row of cards.
+
 - **`<Tag>`** (`src/components/Tag.tsx`, `.tag` in `globals.css`) — a status, rank, points
   value or show, on a skewed backing so the text stays upright. Three sizes; fills for the
   show accent, gold/silver/bronze (`rankTone`), red (with `live` for the breathing on-air

@@ -78,28 +78,27 @@ export default async function AccountPage() {
           </div>
         </div>
 
-        {/* Career totals as a bento: the headline number on a gold block two
-          tiles wide, the three supporting counts beside it. */}
+        {/* Career totals: the headline number on the page's one gold block,
+          and the three supporting counts ruled into a strip beneath it
+          rather than boxed as three more tiles. */}
         <section className="mt-6" aria-labelledby="career">
           <h2 id="career" className="sr-only">
             Career totals
           </h2>
-          <dl className="grid grid-cols-2 gap-3 sm:grid-cols-5">
-            <Stat label="Total points" value={String(account.totalPoints)} lead className="col-span-2" />
+          <dl>
+            <Stat label="Total points" value={String(account.totalPoints)} lead />
+          </dl>
+          <dl className="stat-row mt-3 grid-cols-3">
             <Stat label="Leagues" value={String(account.leaguesPlayed)} />
             <Stat
               label="Best finish"
               value={account.bestRank ? `#${account.bestRank}` : '—'}
               valueClassName={account.bestRank === 1 ? 'text-brand-gold-deep' : undefined}
             />
-            {/* Full width on a phone so the row below the gold block is not a
-              lone tile; one column once the five fit on a line. */}
             <Stat
               label="Titles"
               value={String(account.titles)}
-              hint="Seasons won outright"
               valueClassName={account.titles > 0 ? 'text-brand-gold-deep' : undefined}
-              className="col-span-2 sm:col-span-1"
             />
           </dl>
         </section>
@@ -124,7 +123,7 @@ export default async function AccountPage() {
               </Link>
             }
           >
-            <div className="card p-4">
+            <div>
               <div className="mb-4 flex items-end justify-between gap-3">
                 <span className="min-w-0">
                   <span className="block truncate text-2xs text-muted">{current.teamName}</span>
@@ -146,8 +145,8 @@ export default async function AccountPage() {
 
         <Collapsible title="Season history" className="mt-10" aside={`${account.rows.length}`}>
           {account.rows.length === 0 ? (
-            <div className="rounded-card border border-dashed border-hairline p-5">
-              <p className="max-w-measure text-xs leading-relaxed text-muted">
+            <div className="list-empty">
+              <p className="max-w-measure">
                 You have not played a season yet. Join or create a league and your results will build up here.
               </p>
               <Link href="/leagues/new" prefetch={false} className="btn-primary btn-sm mt-3">
@@ -217,41 +216,38 @@ export default async function AccountPage() {
 
 /**
  * One career number. The `lead` one — lifetime points — is the page's one
- * block of gold, two tiles wide, with the wordmark's tally in its corner;
- * the rest are dark tiles, and a number worth celebrating (a title, a
+ * block of gold, with the wordmark's tally in its corner; the rest are
+ * cells in a ruled strip, and a number worth celebrating (a title, a
  * first-place finish) is picked out in gold type rather than a new colour.
  */
 function Stat({
   label,
   value,
-  hint,
   lead = false,
   valueClassName,
-  className,
 }: {
   label: string;
   value: string;
-  hint?: string;
   lead?: boolean;
   valueClassName?: string;
-  className?: string;
 }) {
+  if (!lead) {
+    return (
+      <div className="flex min-w-0 flex-col items-center px-1 text-center">
+        <dt className="order-2 mt-1.5 text-2xs font-bold uppercase tracking-[0.14em] text-muted">{label}</dt>
+        <dd className={cn('order-1 font-display text-3xl leading-none tracking-wide', valueClassName)}>
+          {value}
+        </dd>
+      </div>
+    );
+  }
   return (
-    <div className={cn(lead ? 'card-pop-gold overflow-hidden' : 'card', 'relative p-4', className)}>
-      {lead && (
-        <TallyMark className="absolute -bottom-5 -right-2 h-28 w-28 text-pop-gold-ink opacity-[0.09]" />
-      )}
+    <div className="card-pop-gold relative overflow-hidden p-4">
+      <TallyMark className="absolute -bottom-5 -right-2 h-28 w-28 text-pop-gold-ink opacity-[0.09]" />
       <dt className="text-2xs font-bold uppercase tracking-[0.14em] text-tile-muted">{label}</dt>
-      <dd
-        className={cn(
-          'relative mt-1.5 font-display leading-none tracking-wide',
-          lead ? 'text-6xl' : 'text-3xl',
-          valueClassName,
-        )}
-      >
+      <dd className={cn('relative mt-1.5 font-display text-6xl leading-none tracking-wide', valueClassName)}>
         {value}
       </dd>
-      {hint && <p className="mt-1.5 text-2xs leading-tight text-tile-muted">{hint}</p>}
     </div>
   );
 }

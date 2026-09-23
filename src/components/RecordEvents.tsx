@@ -12,6 +12,8 @@ export interface RecordableSeason {
   /** The cycle to start on: the latest one that has aired. */
   currentCycleId: string | null;
   contestants: Array<{ id: string; name: string; isActive: boolean }>;
+  /** The show's word for them, lower-cased: "houseguests", "players". */
+  contestantPlural: string;
   events: Array<{
     code: string;
     label: string;
@@ -29,10 +31,11 @@ const CATEGORY_LABELS: Record<string, string> = {
 
 /**
  * Records what a results page never says: the week's Have-Nots, who won the
- * Blockbuster, who was picked for a twist, America's Favorite Player — the
- * events Lauren's Way and Drama & Social score that no source publishes.
+ * Blockbuster, America's Favorite Player on Big Brother; the dagger or the
+ * seer on The Traitors; the alliances, blowups and episode titles every
+ * show's Drama & Social scores — the events no source publishes.
  *
- * One event, one week, any number of houseguests: the four Have-Nots of a
+ * One event, one cycle, any number of contestants: the four Have-Nots of a
  * week go in as one submission. It writes through the same ledger as the
  * ingestion pipeline (`/api/admin/events`), so every league on the season is
  * rescored at once, and the toast offers an undo that voids what was just
@@ -60,7 +63,7 @@ export function RecordEvents({ seasons }: { seasons: RecordableSeason[] }) {
   }, [season]);
 
   if (!season) {
-    return <p className="card p-4 text-xs text-muted">No season has any weeks yet.</p>;
+    return <p className="list-empty">No season has any weeks yet.</p>;
   }
 
   const event = season.events.find((e) => e.code === eventCode) ?? null;
@@ -142,7 +145,7 @@ export function RecordEvents({ seasons }: { seasons: RecordableSeason[] }) {
   };
 
   return (
-    <form onSubmit={submit} className="card space-y-4 p-4">
+    <form onSubmit={submit} className="space-y-4 border-y border-hairline py-4">
       <div className="grid grid-cols-2 gap-3">
         <label className="block">
           <span className="label">Season</span>
@@ -192,7 +195,7 @@ export function RecordEvents({ seasons }: { seasons: RecordableSeason[] }) {
             step="1"
             value={points}
             onChange={(e) => setPoints(e.target.value)}
-            placeholder="e.g. −16 for the first houseguest out"
+            placeholder="e.g. −16 for the first one out"
           />
         </label>
       )}
@@ -237,7 +240,11 @@ export function RecordEvents({ seasons }: { seasons: RecordableSeason[] }) {
       </label>
 
       <button type="submit" disabled={!ready || pending} aria-busy={pending} className="btn-primary w-full">
-        {pending ? 'Recording…' : picked.size > 1 ? `Record for ${picked.size} houseguests` : 'Record'}
+        {pending
+          ? 'Recording…'
+          : picked.size > 1
+            ? `Record for ${picked.size} ${season.contestantPlural}`
+            : 'Record'}
       </button>
     </form>
   );

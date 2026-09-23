@@ -7,9 +7,9 @@ import { JsonLd } from '@/components/JsonLd';
 import { PlayerTabs } from '@/components/PlayerTabs';
 import { ShowTheme } from '@/components/ShowTheme';
 import { Tag } from '@/components/Tag';
-import { TallyMark } from '@/components/icons';
 import { getCurrentUser } from '@/lib/auth';
 import { absoluteUrl, breadcrumbList } from '@/lib/seo';
+import { affiliationOf, isTraitor } from '@/lib/shows/affiliation';
 import { eliminationLabel, lower } from '@/lib/shows/lexicon';
 import { formatPoints } from '@/lib/ui';
 import { getContestantLeaguesForViewer, getContestantProfile } from '@/server/queries';
@@ -52,8 +52,7 @@ export default async function PlayerPage({ params }: { params: { contestantId: s
   // The viewer's own leagues only — this page is public and indexed.
   const leagues = await getContestantLeaguesForViewer(player.id, user?.id ?? null);
   const lexicon = player.showLexicon;
-  const affiliation = (player.metadata as { affiliation?: unknown } | null)?.affiliation;
-  const side = typeof affiliation === 'string' && affiliation.trim() ? affiliation.trim() : null;
+  const side = affiliationOf(player.metadata);
 
   return (
     <ShowTheme showSlug={player.season.show.slug}>
@@ -83,7 +82,7 @@ export default async function PlayerPage({ params }: { params: { contestantId: s
                 </Tag>
                 {/* The Traitors: which side they played on, once the source says. */}
                 {side && (
-                  <Tag tone={/traitor/i.test(side) ? 'red' : 'outline'} size="sm">
+                  <Tag tone={isTraitor(player.metadata) ? 'red' : 'outline'} size="sm">
                     {side}
                   </Tag>
                 )}
@@ -94,14 +93,15 @@ export default async function PlayerPage({ params }: { params: { contestantId: s
             </div>
           </header>
 
-          <div className="card-feature mt-6 p-5">
-            <TallyMark className="absolute -right-3 -top-4 h-28 w-28 text-show-accent opacity-[0.12]" />
+          {/* The one number, on the page rather than in a box: ruled off
+              above and below, with the facts that explain it underneath. */}
+          <div className="mt-6 border-y border-hairline py-4">
             <p className="eyebrow">Season points</p>
             <p className="mt-1.5 font-display text-6xl leading-none tracking-wide text-show-deep">
               {formatPoints(player.totalPoints)}
             </p>
             {facts.length > 0 && (
-              <dl className="mt-4 grid grid-cols-3 gap-3 border-t border-tile-line pt-4">
+              <dl className="mt-4 grid grid-cols-3 gap-3 border-t border-hairline pt-3">
                 {facts.map((fact) => (
                   <Fact key={fact.label} label={fact.label} value={fact.value} />
                 ))}
@@ -128,7 +128,7 @@ export default async function PlayerPage({ params }: { params: { contestantId: s
 function Fact({ label, value }: { label: string; value: string }) {
   return (
     <div className="min-w-0">
-      <dt className="text-2xs font-bold uppercase tracking-wide text-tile-muted">{label}</dt>
+      <dt className="text-2xs font-bold uppercase tracking-wide text-muted">{label}</dt>
       <dd className="mt-0.5 truncate text-sm font-semibold">{value}</dd>
     </div>
   );

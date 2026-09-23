@@ -9,7 +9,7 @@ export interface TickerCastMember {
   photoUrl: string;
 }
 
-/** Roughly 40px/s: a card is 272px with its gap, so one card every ~6.5s. */
+/** Roughly 40px/s: an item is 256px, so one every ~6.5s. */
 const SECONDS_PER_CARD = 6.5;
 /** The faces-only fallback runs at the cast marquee's old pace. */
 const SECONDS_PER_FACE = 2.6;
@@ -43,8 +43,11 @@ export function LiveTicker({
 }) {
   if (headlines.length > 0) {
     return (
+      // A crawl, the way a broadcast runs one along the bottom of the
+      // screen: one ruled strip, the items divided by slanted rules, rather
+      // than a row of boxes.
       <div
-        className="marquee-viewport no-scrollbar overflow-hidden pb-1"
+        className="marquee-viewport no-scrollbar overflow-hidden border-y border-hairline [mask-image:linear-gradient(90deg,transparent,#000_5%,#000_95%,transparent)]"
         style={{ ['--marquee-duration' as string]: `${headlines.length * SECONDS_PER_CARD}s` }}
       >
         <div className="marquee-track">
@@ -82,18 +85,24 @@ function HeadlineCopy({
   'aria-hidden'?: boolean;
 }) {
   return (
-    <ol className="marquee-copy flex shrink-0 gap-4 pr-4" aria-hidden={ariaHidden}>
+    <ol className="marquee-copy flex shrink-0" aria-hidden={ariaHidden}>
       {headlines.map((headline) => (
-        <li key={headline.id} className="w-64 shrink-0">
+        <li
+          key={headline.id}
+          className="relative w-64 shrink-0 after:absolute after:inset-y-3 after:right-0 after:w-px after:-skew-x-[14deg] after:bg-white/[0.12]"
+        >
           <Link
             href={`/seasons/${seasonSlug}`}
             tabIndex={ariaHidden ? -1 : undefined}
-            className="card relative flex h-full items-start gap-3 p-3 transition duration-200 ease-soft hover:bg-surface-raised"
+            className="flex h-full items-start gap-3 px-4 py-3 transition-colors duration-200 ease-soft hover:bg-white/[0.03]"
           >
-            <Avatar name={headline.contestantName} photoUrl={headline.contestantPhotoUrl} size={44} />
+            <Avatar name={headline.contestantName} photoUrl={headline.contestantPhotoUrl} size={40} />
             <span className="min-w-0 flex-1">
               <span className="block truncate text-sm font-semibold">{headline.contestantName}</span>
-              <span className="block truncate text-2xs text-muted">{headline.eventLabel}</span>
+              <span className="block truncate text-2xs text-muted">
+                {headline.eventLabel}
+                {headline.count > 1 && <span className="tabular-nums"> ×{headline.count}</span>}
+              </span>
               <time
                 dateTime={headline.occurredAt.toISOString()}
                 className="mt-1 block text-2xs font-medium text-show-deep"

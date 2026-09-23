@@ -199,14 +199,14 @@ function LiveSkeleton() {
           <div className="h-7 w-24 animate-pulse rounded-pill bg-surface" />
           <div className="h-4 w-28 animate-pulse rounded-pill bg-surface/70" />
         </div>
-        <div className="flex gap-4 overflow-hidden pt-2">
+        <div className="flex overflow-hidden border-y border-hairline">
           {[0, 1, 2].map((i) => (
-            <div key={i} className="card flex w-64 shrink-0 items-start gap-3 p-3">
-              <div className="h-11 w-11 shrink-0 animate-pulse rounded-full bg-canvas" />
+            <div key={i} className="flex w-64 shrink-0 items-start gap-3 px-4 py-3">
+              <div className="h-10 w-10 shrink-0 animate-pulse rounded-full bg-surface" />
               <div className="min-w-0 flex-1 space-y-2 py-0.5">
-                <div className="h-3.5 w-2/3 animate-pulse rounded-pill bg-canvas" />
-                <div className="h-3 w-5/6 animate-pulse rounded-pill bg-canvas/70" />
-                <div className="h-3 w-1/3 animate-pulse rounded-pill bg-canvas/70" />
+                <div className="h-3.5 w-2/3 animate-pulse rounded-pill bg-surface" />
+                <div className="h-3 w-5/6 animate-pulse rounded-pill bg-surface/70" />
+                <div className="h-3 w-1/3 animate-pulse rounded-pill bg-surface/70" />
               </div>
             </div>
           ))}
@@ -244,8 +244,8 @@ function RailSkeleton() {
 
 function EmptyLeagues() {
   return (
-    <div className="card-feature mt-2 p-5">
-      <TallyMark className="absolute -bottom-6 -right-4 h-36 w-36 text-brand-gold opacity-[0.1]" />
+    <div className="card-feature mt-2 p-4">
+      <TallyMark className="absolute -bottom-6 -right-4 h-32 w-32 text-brand-gold opacity-[0.1]" />
       <span className="icon-well">
         <PlusIcon size={22} />
       </span>

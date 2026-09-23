@@ -1,6 +1,8 @@
 import { readFile } from 'node:fs/promises';
 import path from 'node:path';
 import { ImageResponse } from 'next/og';
+import { MARK_BARS, markDataUrl } from '../brand';
+import { DEFAULT_THEME, type ShowTheme } from '../shows/registry';
 import { appBaseUrl } from '../site';
 
 /**
@@ -23,26 +25,22 @@ export interface OgCardProps {
   title: string;
   subtitle?: string;
   stats?: Array<{ value: string; label: string }>;
+  /**
+   * The show's colour (`themeFor(slug)`) on a show's own card — the eyebrow
+   * tag and the light behind the title. The site's gold everywhere else.
+   */
+  theme?: ShowTheme;
 }
 
 const CANVAS = '#0F172A';
 const SURFACE = '#1E293B';
 const INK = '#F8FAFC';
 const MUTED = '#94A3B8';
-const GOLD = '#F59E0B';
 const GOLD_DEEP = '#FBBF24';
 const ON_GOLD = '#1A1206';
 const HAIRLINE = 'rgba(248,250,252,0.10)';
 
-const MARK =
-  'data:image/svg+xml;base64,' +
-  Buffer.from(
-    '<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 64 64"><g transform="translate(4 10)">' +
-      '<polygon points="7,24 14,24 7,44 0,44" fill="#64748B"/>' +
-      '<polygon points="22,12 29,12 21,44 14,44" fill="#F59E0B"/>' +
-      '<polygon points="37,0 45,0 35,44 27,44" fill="#F59E0B"/>' +
-      '<circle cx="53" cy="7" r="4.5" fill="#EF4444"/></g></svg>',
-  ).toString('base64');
+const MARK = markDataUrl({ square: true });
 
 let fontsPromise: Promise<
   Array<{ name: string; data: ArrayBuffer; weight: 400 | 600; style: 'normal' }>
@@ -84,13 +82,13 @@ function loadFonts() {
 const TALLY =
   'data:image/svg+xml;base64,' +
   Buffer.from(
-    '<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 46 44" fill="#F59E0B">' +
-      '<polygon points="7,24 14,24 7,44 0,44" fill="#64748B"/>' +
-      '<polygon points="22,12 29,12 21,44 14,44"/>' +
-      '<polygon points="37,0 45,0 35,44 27,44"/></svg>',
+    '<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 48 44" fill="#F59E0B">' +
+      `<polygon points="${MARK_BARS[0]}" fill="#64748B"/>` +
+      `<polygon points="${MARK_BARS[1]}"/>` +
+      `<polygon points="${MARK_BARS[2]}"/></svg>`,
   ).toString('base64');
 
-function Card({ eyebrow, title, subtitle, stats = [] }: OgCardProps) {
+function Card({ eyebrow, title, subtitle, stats = [], theme = DEFAULT_THEME }: OgCardProps) {
   const host = appBaseUrl().replace(/^https?:\/\//, '');
   // "Draft the cast. Own the leaderboard." sets its second sentence in gold,
   // as the landing page does; a name is one colour.
@@ -110,7 +108,7 @@ function Card({ eyebrow, title, subtitle, stats = [] }: OgCardProps) {
         flexDirection: 'column',
         padding: '44px 64px 48px',
         backgroundColor: CANVAS,
-        backgroundImage: 'radial-gradient(55% 80% at 25% 20%, rgba(245,158,11,0.14), rgba(15,23,42,0) 70%)',
+        backgroundImage: `radial-gradient(55% 80% at 25% 20%, ${theme.accentSoft}, rgba(15,23,42,0) 70%)`,
         color: INK,
         fontFamily: 'Archivo',
       }}
@@ -119,7 +117,7 @@ function Card({ eyebrow, title, subtitle, stats = [] }: OgCardProps) {
       <img
         src={TALLY}
         width={600}
-        height={574}
+        height={550}
         alt=""
         style={{ position: 'absolute', right: -70, top: 40, opacity: 0.08 }}
       />
@@ -127,10 +125,28 @@ function Card({ eyebrow, title, subtitle, stats = [] }: OgCardProps) {
       <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
         <div style={{ display: 'flex', alignItems: 'center', gap: 16 }}>
           {/* eslint-disable-next-line @next/next/no-img-element */}
-          <img src={MARK} width={52} height={52} alt="" />
-          <div style={{ display: 'flex', fontFamily: 'Anton', fontSize: 38, letterSpacing: 2 }}>
+          <img src={MARK} width={56} height={56} alt="" />
+          {/* On the mark's lean, as in the header. */}
+          <div
+            style={{
+              display: 'flex',
+              fontFamily: 'Anton',
+              fontSize: 40,
+              letterSpacing: 1.5,
+              transform: 'skewX(-8deg)',
+            }}
+          >
             <span style={{ color: INK }}>COMP</span>
-            <span style={{ color: GOLD, marginLeft: 12 }}>BEAST</span>
+            <span
+              style={{
+                marginLeft: 10,
+                backgroundImage: 'linear-gradient(180deg, #FDE68A, #FBBF24 45%, #F59E0B)',
+                backgroundClip: 'text',
+                color: 'transparent',
+              }}
+            >
+              BEAST
+            </span>
           </div>
         </div>
         <div style={{ fontSize: 24, color: MUTED }}>{host}</div>
@@ -147,7 +163,7 @@ function Card({ eyebrow, title, subtitle, stats = [] }: OgCardProps) {
               right: 0,
               bottom: 0,
               borderRadius: 6,
-              backgroundColor: GOLD,
+              backgroundColor: theme.accent,
               transform: 'skewX(-12deg)',
             }}
           />
@@ -177,7 +193,18 @@ function Card({ eyebrow, title, subtitle, stats = [] }: OgCardProps) {
           }}
         >
           <span style={{ color: INK }}>{lead}</span>
-          {follow && <span style={{ color: GOLD }}>{follow}</span>}
+          {follow && (
+            // Struck gold, as BEAST is in the wordmark.
+            <span
+              style={{
+                backgroundImage: 'linear-gradient(180deg, #FDE68A, #FBBF24 45%, #F59E0B)',
+                backgroundClip: 'text',
+                color: 'transparent',
+              }}
+            >
+              {follow}
+            </span>
+          )}
         </div>
         {subtitle && (
           <div style={{ marginTop: 20, fontSize: 25, lineHeight: 1.4, color: MUTED, maxWidth: 960 }}>

@@ -1,5 +1,6 @@
 import { OG_SIZE, renderOgCard } from '@/lib/og/card';
 import { eliminationLabel } from '@/lib/shows/lexicon';
+import { themeFor } from '@/lib/shows/registry';
 import { formatPoints } from '@/lib/ui';
 import { getContestantProfile } from '@/server/queries';
 
@@ -14,6 +15,7 @@ export default async function Image({ params }: { params: { contestantId: string
     return renderOgCard({ eyebrow: 'Comp Beast', title: 'Player not found' });
   }
   return renderOgCard({
+    theme: themeFor(player.season.show.slug),
     eyebrow: `${player.season.show.name} · ${player.season.name}`,
     title: player.name,
     subtitle: player.isActive

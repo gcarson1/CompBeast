@@ -107,12 +107,12 @@ export default async function LeaguePage({ params }: { params: { leagueId: strin
         defaultOpen={false}
         aside={`${league.members.length} · ${openSeats === 0 ? 'full' : `${openSeats} open`}`}
       >
-        <ul className="card divide-y divide-hairline">
+        <ul className="divide-y divide-hairline border-t border-hairline">
           {league.members.map((member) => {
             const team = league.teams.find((t) => t.owner?.id === member.user.id);
             const isYou = member.user.id === user?.id;
             return (
-              <li key={member.user.id} className="flex items-center gap-3 p-4">
+              <li key={member.user.id} className="flex items-center gap-3 py-3">
                 <Avatar
                   name={member.user.name ?? member.user.handle ?? '?'}
                   photoUrl={member.user.avatarUrl}
@@ -140,7 +140,7 @@ export default async function LeaguePage({ params }: { params: { leagueId: strin
             );
           })}
         </ul>
-        <p className="mt-2 px-1 text-2xs leading-relaxed text-muted">
+        <p className="mt-2 text-2xs leading-relaxed text-muted">
           {openSeats === 0
             ? 'Every seat is taken — this league is full.'
             : `${openSeats} ${
@@ -154,7 +154,7 @@ export default async function LeaguePage({ params }: { params: { leagueId: strin
         defaultOpen={preDraft && openSeats > 0}
         aside={<span className="font-mono tracking-widest">{league.inviteCode}</span>}
       >
-        <div className="card divide-y divide-hairline">
+        <div className="divide-y divide-hairline border-t border-hairline">
           <InviteCode code={league.inviteCode} leagueName={league.name} />
           <Row label="Scoring" value={league.scoringRuleset.name} href="/rules" />
           <Row label="Draft" value={`${league.draftType.toLowerCase()} · ${league.rosterSize} rounds`} />
@@ -165,7 +165,7 @@ export default async function LeaguePage({ params }: { params: { leagueId: strin
           )}
         </div>
         {league.scoringRuleset.description && (
-          <p className="mt-2 px-1 text-2xs leading-relaxed text-muted">{league.scoringRuleset.description}</p>
+          <p className="mt-2 text-2xs leading-relaxed text-muted">{league.scoringRuleset.description}</p>
         )}
       </Collapsible>
       {isMember && preDraft && (
@@ -232,7 +232,7 @@ export default async function LeaguePage({ params }: { params: { leagueId: strin
               <Link
                 href={`/leagues/${league.id}/draft`}
                 prefetch={false}
-                className="relative flex flex-col gap-4 rounded-card p-5 sm:flex-row sm:items-center"
+                className="relative flex flex-col gap-4 rounded-card p-4 sm:flex-row sm:items-center"
               >
                 <span className="flex items-center justify-between gap-3 sm:contents">
                   <span className="icon-well">
@@ -271,7 +271,7 @@ export default async function LeaguePage({ params }: { params: { leagueId: strin
               {myTeam && myRow && (
                 <Reveal>
                   <MotionCard tilt className="relative h-full">
-                    <Link href={`/teams/${myTeam.id}`} className="flex h-full flex-col rounded-card p-5">
+                    <Link href={`/teams/${myTeam.id}`} className="flex h-full flex-col rounded-card p-4">
                       <span className="flex items-center justify-between gap-3">
                         <span className="eyebrow">My team</span>
                         <Tag tone={rankTone(myRow.rank)} size="sm">
@@ -280,8 +280,8 @@ export default async function LeaguePage({ params }: { params: { leagueId: strin
                         </Tag>
                       </span>
                       <span className="mt-2 block truncate text-base font-semibold">{myTeam.name}</span>
-                      <span className="mt-auto flex items-end justify-between gap-3 pt-4">
-                        <span className="font-display text-6xl leading-none tracking-wide">
+                      <span className="mt-auto flex items-end justify-between gap-3 pt-3">
+                        <span className="font-display text-5xl leading-none tracking-wide">
                           {myRow.totalPoints}
                         </span>
                         <span
@@ -302,7 +302,7 @@ export default async function LeaguePage({ params }: { params: { leagueId: strin
                 <Reveal
                   as="section"
                   aria-label={`This ${lower(lexicon.cycleSingular)}`}
-                  className={cn('relative overflow-hidden p-5', cycleLocked ? 'card' : 'card-pop-gold')}
+                  className={cn('relative overflow-hidden p-4', cycleLocked ? 'card' : 'card-pop-gold')}
                 >
                   {!cycleLocked && (
                     <TallyMark className="absolute -bottom-4 -right-2 h-24 w-24 text-pop-gold-ink opacity-[0.08]" />
@@ -331,9 +331,11 @@ export default async function LeaguePage({ params }: { params: { leagueId: strin
                 <Reveal
                   as="section"
                   aria-label="Heads up"
+                  // A ruled note, not a third box: the warning reads as a line
+                  // of commentary under the numbers.
                   className={cn(
-                    'card relative p-5 sm:col-span-2 lg:col-span-1',
-                    atRisk ? 'border-danger/40' : 'border-brand-gold/30',
+                    'relative border-l-2 py-1 pl-3 sm:col-span-2 lg:col-span-1 lg:self-center',
+                    atRisk ? 'border-danger' : 'border-brand-gold',
                   )}
                 >
                   <span
@@ -345,7 +347,7 @@ export default async function LeaguePage({ params }: { params: { leagueId: strin
                     <AlertIcon size={16} />
                     Heads up
                   </span>
-                  <div className="mt-3 space-y-2">
+                  <div className="mt-1.5 space-y-1.5">
                     {nearMiss && <p className="text-sm font-medium text-brand-gold-deep">{nearMiss}</p>}
                     {atRisk && <p className="text-sm font-medium text-danger-deep">{atRisk}</p>}
                   </div>
@@ -408,7 +410,7 @@ function PrivateLeagueGate({
           <h1 className="headline mt-3 text-5xl sm:text-6xl">{league.name}</h1>
         </header>
 
-        <section className="card-feature mt-8 p-5" aria-labelledby="private-heading">
+        <section className="card-feature mt-8 p-4" aria-labelledby="private-heading">
           <span className="flex items-center justify-between gap-3">
             <span className="icon-well">
               <LockIcon size={22} />
@@ -464,10 +466,10 @@ function Row({ label, value, href }: { label: string; value: string; href?: stri
     </>
   );
   return href ? (
-    <Link href={href} className="flex items-center justify-between p-4">
+    <Link href={href} className="row-link flex items-center justify-between py-3">
       {content}
     </Link>
   ) : (
-    <div className="flex items-center justify-between p-4">{content}</div>
+    <div className="flex items-center justify-between py-3">{content}</div>
   );
 }

@@ -16,7 +16,7 @@ export function BadgeShelf({ points }: { points: number }) {
 
   return (
     <div>
-      <ol className="grid grid-cols-3 gap-3 sm:grid-cols-6">
+      <ol className="grid grid-cols-3 gap-x-3 gap-y-5 border-y border-hairline py-5 sm:grid-cols-6">
         {BADGES.map((badge) => {
           const has = earned.has(badge.slug);
           return (
@@ -25,10 +25,7 @@ export function BadgeShelf({ points }: { points: number }) {
               // Same layout earned or not, so the ladder reads as one set of
               // slots. The medal carries the difference on its own; the words
               // under it say it again for anyone who cannot see the metal.
-              className={cn(
-                'card flex flex-col items-center px-2 pb-3 pt-4 text-center',
-                has && 'medal-earned border-white/10',
-              )}
+              className={cn('flex flex-col items-center px-1 text-center', has && 'medal-earned')}
               aria-label={`${badge.name}: ${has ? 'earned' : `locked, ${badge.threshold} points`}`}
             >
               <Medal badge={badge} earned={has} />
@@ -49,7 +46,7 @@ export function BadgeShelf({ points }: { points: number }) {
       </ol>
 
       {next ? (
-        <div className="mt-4 px-1">
+        <div className="mt-4">
           <div className="flex items-baseline justify-between gap-3 text-2xs text-muted">
             <span>
               <span className="font-semibold text-ink">{next.remaining.toLocaleString('en-US')}</span>{' '}

@@ -1053,6 +1053,8 @@ export interface SeasonHeadline {
   /** The headshot for the ticker card; null when the source has none. */
   contestantPhotoUrl: string | null;
   eventLabel: string;
+  /** How many times it happened, when repeats are folded into one item (three votes against). */
+  count: number;
   points: number;
   occurredAt: Date;
 }
@@ -1063,27 +1065,55 @@ export interface SeasonHeadline {
  * fabricated copy — whatever the ingestion pipeline or an admin has
  * actually recorded. Twelve by default: the ticker is a marquee now, and a
  * loop of eight cards came round too often to feel like a feed.
+ *
+ * The per-cycle awards — surviving the week or the episode — go to the
+ * back. Every player still in earns one at the end of every cycle, so they
+ * are always the newest rows, and ordered by time alone the ticker was a
+ * dozen "Survive the episode +2" in a row while the murder, the shield and
+ * the banishment that made the episode sat just out of reach. They still
+ * fill the ticker before anything else has happened.
  */
 export async function getRecentHeadlines(seasonId: string, limit = 12): Promise<SeasonHeadline[]> {
   const events = await prisma.scoredEvent.findMany({
     where: { isVoided: false, contestant: { seasonId }, eventDefinition: IN_DEFAULT_RULESET },
-    orderBy: { occurredAt: 'desc' },
-    take: limit,
+    orderBy: [{ eventDefinition: { isPerCycleAward: 'asc' } }, { occurredAt: 'desc' }],
+    // Enough to fold an episode's repeats and still fill the ticker; a
+    // Round Table is twenty-odd ballots.
+    take: limit * 8,
     select: {
       id: true,
       pointsAwarded: true,
       occurredAt: true,
+      cycleId: true,
+      contestantId: true,
+      eventDefinitionId: true,
       contestant: { select: { name: true, photoUrl: true } },
       eventDefinition: { select: { label: true, ...DEFAULT_RULESET_VALUE } },
     },
   });
 
-  return events.map((e) => ({
-    id: e.id,
-    contestantName: e.contestant.name,
-    contestantPhotoUrl: e.contestant.photoUrl,
-    eventLabel: e.eventDefinition.label,
-    points: defaultRulesetPoints(e.pointsAwarded, e.eventDefinition.scoringRulesetLinks),
-    occurredAt: e.occurredAt,
-  }));
+  // One item per person, event and cycle: a Round Table where eight votes
+  // went one way is "8 banishment votes", not eight identical items.
+  const headlines = new Map<string, SeasonHeadline>();
+  for (const e of events) {
+    const key = `${e.contestantId}:${e.eventDefinitionId}:${e.cycleId}`;
+    const points = defaultRulesetPoints(e.pointsAwarded, e.eventDefinition.scoringRulesetLinks);
+    const existing = headlines.get(key);
+    if (existing) {
+      existing.count += 1;
+      existing.points += points;
+      continue;
+    }
+    if (headlines.size === limit) continue;
+    headlines.set(key, {
+      id: e.id,
+      contestantName: e.contestant.name,
+      contestantPhotoUrl: e.contestant.photoUrl,
+      eventLabel: e.eventDefinition.label,
+      count: 1,
+      points,
+      occurredAt: e.occurredAt,
+    });
+  }
+  return [...headlines.values()];
 }

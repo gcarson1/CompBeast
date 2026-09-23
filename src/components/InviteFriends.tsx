@@ -33,8 +33,8 @@ export function InviteFriends({
   if (friends.length === 0) {
     return (
       <Collapsible variant="row" title="Invite friends" defaultOpen={false}>
-        <div className="rounded-card border border-dashed border-hairline p-4">
-          <p className="max-w-measure text-xs leading-relaxed text-muted">
+        <div className="list-empty">
+          <p className="max-w-measure">
             Add friends and you can drop them into a league in one tap, instead of copying the invite code
             into a message.
           </p>
@@ -55,9 +55,9 @@ export function InviteFriends({
       defaultOpen={seatsLeft > 0}
       aside={seatsLeft === 0 ? 'League full' : `${seatsLeft} ${seatsLeft === 1 ? 'seat' : 'seats'} left`}
     >
-      <ul className="card divide-y divide-hairline">
+      <ul className="divide-y divide-hairline border-t border-hairline">
         {friends.map((friend) => (
-          <li key={friend.userId} className="flex items-center gap-3 p-3">
+          <li key={friend.userId} className="flex items-center gap-3 py-3">
             <Avatar name={friend.name} photoUrl={friend.avatarUrl} size={34} />
             <span className="min-w-0 flex-1">
               <span className="block truncate text-sm font-medium">{friend.name}</span>

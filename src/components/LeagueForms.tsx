@@ -16,8 +16,12 @@ type CreateLeagueFields = z.input<typeof createLeagueSchema>;
 export function CreateLeagueForm({
   seasons,
   rulesets,
+  defaultSeasonId,
 }: {
+  /** In the order to offer them; consecutive seasons of one show are grouped under its name. */
   seasons: Array<{ id: string; name: string; showId: string; showName: string }>;
+  /** Preselected — the season whose page sent you here. The first season otherwise. */
+  defaultSeasonId?: string;
   rulesets: Array<{
     id: string;
     showId: string;
@@ -38,7 +42,14 @@ export function CreateLeagueForm({
     const own = rulesetsFor(showId);
     return own.find((r) => r.isDefault) ?? own[0];
   };
-  const firstShowId = seasons[0]?.showId;
+  const initialSeason = seasons.find((s) => s.id === defaultSeasonId) ?? seasons[0];
+  // One <optgroup> per show, in the order given.
+  const byShow: Array<{ showName: string; seasons: typeof seasons }> = [];
+  for (const season of seasons) {
+    const group = byShow.find((g) => g.showName === season.showName);
+    if (group) group.seasons.push(season);
+    else byShow.push({ showName: season.showName, seasons: [season] });
+  }
 
   // Reuses the server's own Zod schema (src/server/mutations.ts) so client-side
   // validation can never drift out of sync with what the server will accept.
@@ -51,11 +62,11 @@ export function CreateLeagueForm({
     resolver: zodResolver(createLeagueSchema),
     mode: 'onChange',
     defaultValues: {
-      seasonId: seasons[0]?.id ?? '',
+      seasonId: initialSeason?.id ?? '',
       rosterSize: 4,
       maxTeams: 8,
       isPublic: false,
-      scoringRulesetId: defaultFor(firstShowId)?.id ?? '',
+      scoringRulesetId: defaultFor(initialSeason?.showId)?.id ?? '',
     },
   });
 
@@ -120,10 +131,14 @@ export function CreateLeagueForm({
           Season
         </label>
         <select id="seasonId" className="field" required {...register('seasonId')}>
-          {seasons.map((season) => (
-            <option key={season.id} value={season.id}>
-              {season.showName} — {season.name}
-            </option>
+          {byShow.map((group) => (
+            <optgroup key={group.showName} label={group.showName}>
+              {group.seasons.map((season) => (
+                <option key={season.id} value={season.id}>
+                  {season.name}
+                </option>
+              ))}
+            </optgroup>
           ))}
         </select>
         <FieldError id="seasonId-error" message={errors.seasonId?.message} />
@@ -185,7 +200,7 @@ export function CreateLeagueForm({
         </div>
       </div>
 
-      <label className="flex items-center gap-3 rounded-2xl bg-surface p-4">
+      <label className="flex items-center gap-3 border-y border-hairline py-3.5">
         <input type="checkbox" className="h-5 w-5 accent-brand-gold" {...register('isPublic')} />
         <span>
           <span className="block text-sm font-medium">Public league</span>

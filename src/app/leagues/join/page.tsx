@@ -90,7 +90,7 @@ export default async function JoinLeaguePage({ searchParams }: Params) {
       {user ? (
         <div className="mt-5">
           {invite && invite.draftStatus !== 'NOT_STARTED' && (
-            <p className="mb-4 rounded-card border border-hairline bg-surface/60 p-3 text-2xs leading-relaxed text-muted">
+            <p className="mb-4 max-w-measure border-l-2 border-brand-gold/60 pl-3 text-2xs leading-relaxed text-muted">
               This league has already started its draft, so it is not taking new teams. Ask the commissioner
               about the next season.
             </p>

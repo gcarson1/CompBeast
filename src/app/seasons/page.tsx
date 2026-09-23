@@ -2,7 +2,7 @@ import type { Metadata } from 'next';
 import Link from 'next/link';
 import { cache } from 'react';
 import { Collapsible } from '@/components/Collapsible';
-import { LockIcon } from '@/components/icons';
+import { ChevronRightIcon, LockIcon } from '@/components/icons';
 import { JsonLd } from '@/components/JsonLd';
 import { Reveal, RevealGroup } from '@/components/motion/Reveal';
 import { SeasonPlate } from '@/components/SeasonPlate';
@@ -38,8 +38,33 @@ const STATUS: Record<string, { label: string; tone: TagTone; live?: boolean }> =
   COMPLETED: { label: 'Finished', tone: 'ink' },
 };
 
+type SeasonRow = Awaited<ReturnType<typeof getSeasonsByStatus>>['open'][number];
+
+/**
+ * "22 players · 3 leagues", with the show's name in front only when the
+ * season's own name does not already say it ("Survivor 51" does; a demo
+ * season does not). The league count only once there is one to count.
+ */
+function seasonMeta(season: SeasonRow, contestants: string): string {
+  const parts = [`${season._count.contestants} ${contestants}`];
+  if (!season.name.toLowerCase().includes(season.show.name.toLowerCase())) parts.unshift(season.show.name);
+  const leagues = season._count.leagues;
+  if (leagues > 0) parts.push(`${leagues} ${leagues === 1 ? 'league' : 'leagues'}`);
+  return parts.join(' · ');
+}
+
+// On air first, then what is coming; the demo seasons a local or preview
+// database carries go to the bottom of each group.
+const STATUS_ORDER: Record<string, number> = { ACTIVE: 0, UPCOMING: 1 };
+const isDemo = (season: SeasonRow) => season.slug.startsWith('demo-');
+
 export default async function SeasonsPage() {
-  const { open, archived } = await loadSeasons();
+  const seasons = await loadSeasons();
+  const archived = seasons.archived;
+  const open = [...seasons.open].sort(
+    (a, b) =>
+      (STATUS_ORDER[a.status] ?? 2) - (STATUS_ORDER[b.status] ?? 2) || Number(isDemo(a)) - Number(isDemo(b)),
+  );
 
   return (
     <div className="pt-2">
@@ -54,43 +79,33 @@ export default async function SeasonsPage() {
 
         <Collapsible title="Open for leagues" className="mt-6" panel={false} aside={`${open.length} open`}>
           {open.length === 0 ? (
-            <p className="card p-4 text-xs text-muted">
-              Nothing is airing right now. Check back when the next season starts.
-            </p>
+            <p className="list-empty">Nothing is airing right now. Check back when the next season starts.</p>
           ) : (
-            // Two-up from `sm`, so a pair of open seasons sits side by side
-            // rather than as two full-width bars with nothing to their right.
-            <RevealGroup as="ul" className="grid grid-cols-1 gap-3 sm:grid-cols-2" step={60}>
+            <RevealGroup as="ul" className="list" step={40}>
               {open.map((season) => {
                 const status = STATUS[season.status] ?? STATUS.UPCOMING;
                 const lexicon = lexiconFor(season.show.slug, season.show.lexicon);
                 return (
                   <ShowTheme key={season.id} showSlug={season.show.slug}>
-                    <Reveal as="li" className="card card-lift relative">
-                      <span
-                        aria-hidden
-                        className="absolute inset-x-6 top-0 h-[2px] rounded-b-pill bg-show-accent"
-                      />
+                    <Reveal as="li">
                       <Link
                         href={`/seasons/${season.slug}`}
-                        className="flex h-full flex-col rounded-card p-4"
+                        className="row-link group flex items-center gap-3.5 py-3.5"
                       >
-                        <span className="flex items-start justify-between gap-3">
-                          <SeasonPlate showSlug={season.show.slug} seasonSlug={season.slug} />
-                          <Tag tone={status.tone} live={status.live} size="sm">
-                            {status.label}
-                          </Tag>
-                        </span>
-                        <span className="mt-3 block truncate text-lg font-semibold">{season.name}</span>
-                        <span className="mb-4 mt-0.5 block truncate text-2xs text-muted">
-                          {season.show.name} · {season._count.contestants} {lower(lexicon.contestantPlural)}
-                        </span>
-                        <span className="mt-auto flex items-center justify-between border-t border-hairline pt-3">
-                          <span className="text-2xs text-muted">
-                            {season._count.leagues} {season._count.leagues === 1 ? 'league' : 'leagues'}
+                        <SeasonPlate showSlug={season.show.slug} seasonSlug={season.slug} />
+                        <span className="min-w-0 flex-1">
+                          <span className="block truncate text-md font-semibold">{season.name}</span>
+                          <span className="mt-1.5 flex items-center gap-2.5 text-2xs text-muted">
+                            <Tag tone={status.tone} live={status.live} size="sm">
+                              {status.label}
+                            </Tag>
+                            <span className="truncate">{seasonMeta(season, lower(lexicon.contestantPlural))}</span>
                           </span>
-                          <span className="text-2xs font-medium text-show-deep">View season →</span>
                         </span>
+                        <ChevronRightIcon
+                          size={16}
+                          className="-mr-1 shrink-0 text-muted transition-transform duration-200 ease-soft group-hover:translate-x-0.5 group-hover:text-show-deep"
+                        />
                       </Link>
                     </Reveal>
                   </ShowTheme>
@@ -109,22 +124,24 @@ export default async function SeasonsPage() {
             draft.
           </p>
           {archived.length === 0 ? (
-            <p className="card p-4 text-xs text-muted">No finished seasons yet.</p>
+            <p className="list-empty">No finished seasons yet.</p>
           ) : (
-            <ul className="card divide-y divide-hairline">
+            <ul className="list">
               {archived.map((season) => (
                 <li key={season.id}>
                   <ShowTheme showSlug={season.show.slug}>
                     <Link
                       href={`/seasons/${season.slug}`}
-                      className="flex items-center gap-3 p-4 transition duration-200 ease-soft hover:bg-surface-raised"
+                      className="row-link flex items-center gap-3.5 py-3.5"
                     >
-                      <SeasonPlate showSlug={season.show.slug} seasonSlug={season.slug} archived size="sm" />
+                      <SeasonPlate showSlug={season.show.slug} seasonSlug={season.slug} archived />
                       <span className="min-w-0 flex-1">
-                        <span className="block truncate text-base font-semibold">{season.name}</span>
+                        <span className="block truncate text-md font-semibold">{season.name}</span>
                         <span className="mt-0.5 block truncate text-2xs text-muted">
-                          {season.show.name} · {season._count.contestants}{' '}
-                          {lower(lexiconFor(season.show.slug, season.show.lexicon).contestantPlural)}
+                          {seasonMeta(
+                            season,
+                            lower(lexiconFor(season.show.slug, season.show.lexicon).contestantPlural),
+                          )}
                         </span>
                       </span>
                       <LockIcon size={18} className="text-muted" />

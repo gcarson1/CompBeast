@@ -21,7 +21,7 @@ const PAD_Y = 10;
 export function PointHistoryChart({ history, caption }: { history: PointHistoryPoint[]; caption: string }) {
   if (history.length === 0) {
     return (
-      <p className="rounded-btn border border-dashed border-hairline p-4 text-2xs text-muted">
+      <p className="list-empty text-2xs">
         Nothing has been scored yet. The chart fills in as the season airs.
       </p>
     );

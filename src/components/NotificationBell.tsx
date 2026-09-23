@@ -68,7 +68,7 @@ export function NotificationBell({ initialCount }: { initialCount: number }) {
       href="/notifications"
       prefetch={false}
       aria-label={label}
-      className="relative grid h-9 w-9 place-items-center rounded-full bg-surface text-muted transition hover:text-ink"
+      className="icon-btn"
     >
       <BellIcon />
       {count > 0 && (

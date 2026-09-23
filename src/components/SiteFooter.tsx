@@ -1,4 +1,5 @@
 import Link from 'next/link';
+import { CompBeastLogo } from '@/components/AppHeader';
 import { AFFILIATION_DISCLAIMER, operator } from '@/lib/legal';
 import { SITE_NAME } from '@/lib/seo';
 
@@ -23,6 +24,7 @@ export function SiteFooter() {
     // The last thing in the scroller. With no bottom nav (signed out) it is
     // also the last thing above the home indicator, hence the safe area.
     <footer className="app-footer mx-auto w-full max-w-md border-t border-hairline px-5 pb-[calc(env(safe-area-inset-bottom)+1.25rem)] pt-6 text-2xs text-muted sm:max-w-lg lg:max-w-3xl">
+      <CompBeastLogo id="footer-logo" size="sm" className="mb-4" />
       <nav aria-label="Site" className="flex flex-wrap gap-x-4 gap-y-1.5">
         {LINKS.map((link) => (
           <Link key={link.href} href={link.href} className="hover:text-ink">

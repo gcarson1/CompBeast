@@ -120,7 +120,7 @@ function LeagueCard({ league }: { league: HomeLeagueCard }) {
       <MotionCard tilt className="relative h-full">
         <span aria-hidden className="absolute inset-x-6 top-0 h-[2px] rounded-b-pill bg-show-accent" />
 
-        <Link href={`/leagues/${league.leagueId}`} className="flex h-full flex-col rounded-card p-4">
+        <Link href={`/leagues/${league.leagueId}`} className="flex h-full flex-col rounded-card p-3.5">
           <span className="flex items-start justify-between gap-3">
             <span aria-hidden className="plate h-11 w-11 font-display text-xl leading-none">
               {league.leagueName.slice(0, 1).toUpperCase()}
@@ -136,7 +136,7 @@ function LeagueCard({ league }: { league: HomeLeagueCard }) {
           </p>
 
           {league.teamId ? (
-            <div className="mt-4 flex items-end justify-between gap-2">
+            <div className="mt-3 flex items-end justify-between gap-2">
               <span className="min-w-0">
                 <span className="block truncate text-2xs text-muted">{league.teamName}</span>
                 <span className="mt-1 block font-display text-4xl leading-none tracking-wide">
@@ -160,12 +160,12 @@ function LeagueCard({ league }: { league: HomeLeagueCard }) {
               </span>
             </div>
           ) : (
-            <p className="mt-4 text-xs text-muted">You have no team in this league yet.</p>
+            <p className="mt-3 text-xs text-muted">You have no team in this league yet.</p>
           )}
 
           {/* mt-auto pins the footer to the bottom so cards of different heights
               still line their footers up across the rail. */}
-          <div className="mt-auto pt-4">
+          <div className="mt-auto pt-3">
             {alert && <p className={`mb-2 line-clamp-2 text-2xs font-medium ${alertTone}`}>{alert}</p>}
 
             {league.currentCycleLabel && league.locksAt && (
@@ -192,8 +192,8 @@ function LeagueCard({ league }: { league: HomeLeagueCard }) {
 /** Always the last card, so the rail never dead-ends without an action. */
 function AddLeagueCard() {
   return (
-    <div className="card-feature card-lift flex h-full flex-col p-4">
-      <TallyMark className="absolute -bottom-4 -right-3 h-28 w-28 text-brand-gold opacity-[0.1]" />
+    <div className="card-feature card-lift flex h-full flex-col p-3.5">
+      <TallyMark className="absolute -bottom-4 -right-3 h-24 w-24 text-brand-gold opacity-[0.1]" />
       <span className="icon-well">
         <PlusIcon size={22} />
       </span>
