@@ -107,7 +107,7 @@ function Switch({ enabled, disabled, label }: { enabled: boolean; disabled: bool
       aria-label={label}
       disabled={disabled || pending}
       className={cn(
-        'relative mt-0.5 h-6 w-11 shrink-0 rounded-pill transition-colors duration-200',
+        'relative mt-0.5 h-6 w-11 shrink-0 transition-colors duration-200',
         'focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-brand-gold',
         // The off track has to be visible against the card or the control has
         // only one state you can see. `surface-raised` measured 1.2:1 here —
@@ -124,7 +124,7 @@ function Switch({ enabled, disabled, label }: { enabled: boolean; disabled: bool
           // static position — centred, because buttons centre their content —
           // so both translations landed it at the right-hand end and an off
           // switch was indistinguishable from an on one.
-          'switch-knob absolute left-0 top-1 h-4 w-4 rounded-pill shadow-[0_1px_2px_rgba(0,0,0,0.35)]',
+          'switch-knob absolute left-0 top-1 h-4 w-4 shadow-[0_1px_2px_rgba(0,0,0,0.35)]',
           // Gold is a light fill; white on it is 2:1. Same rule as every other
           // gold surface in the app (see the `on-gold` token).
           enabled ? 'translate-x-6 bg-on-gold' : 'translate-x-1 bg-ink',

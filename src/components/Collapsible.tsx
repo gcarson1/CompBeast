@@ -171,7 +171,7 @@ export function Collapsible({
           // colour and tracking, and resets only text-transform, which is
           // put back. A 44px hit height without changing the heading's line:
           // negative vertical margin absorbs the padding.
-          className="-my-2 flex min-h-[44px] max-w-full items-center gap-2 rounded-btn py-2 pr-1 text-left [text-transform:inherit] transition hover:text-ink"
+          className="-my-2 flex min-h-[44px] max-w-full items-center gap-2 py-2 pr-1 text-left [text-transform:inherit] transition hover:text-ink"
         >
           {/* Wraps rather than truncates: a heading cut off with an ellipsis
               reads as a layout that ran out of room. */}

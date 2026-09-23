@@ -86,7 +86,7 @@ export function SocialFeed({
                     href={post.url}
                     target="_blank"
                     rel="noopener noreferrer"
-                    className="block rounded-btn px-1 py-3.5 transition hover:bg-surface/60"
+                    className="block px-1 py-3.5 transition hover:bg-surface/60"
                   >
                     <p className="max-w-measure text-sm font-medium leading-snug text-ink">{post.title}</p>
                     <p className="mt-1 flex items-center gap-1.5 text-2xs text-muted">

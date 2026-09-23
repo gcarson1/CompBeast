@@ -307,7 +307,7 @@ function SeasonRow({ row }: { row: SeasonHistoryRow }) {
     <li>
       <Link
         href={`/teams/${row.teamId}`}
-        className="flex items-center gap-3 rounded-btn px-1 py-4 transition hover:bg-surface/60"
+        className="flex items-center gap-3 px-1 py-4 transition hover:bg-surface/60"
       >
         {body}
       </Link>

@@ -23,18 +23,18 @@
 export function PageSkeleton() {
   return (
     <div className="pt-2" role="status" aria-label="Loading">
-      <div className="h-8 w-40 animate-pulse rounded-pill bg-surface" />
-      <div className="mt-2 h-4 w-56 animate-pulse rounded-pill bg-surface/70" />
+      <div className="h-8 w-40 animate-pulse bg-surface" />
+      <div className="mt-2 h-4 w-56 animate-pulse bg-surface/70" />
 
       <div className="list mt-6">
         {[0, 1, 2, 3].map((i) => (
           <div key={i} className="flex items-center gap-3 py-3.5">
             <div className="h-10 w-10 shrink-0 animate-pulse rounded-full bg-surface" />
             <div className="min-w-0 flex-1 space-y-2">
-              <div className="h-4 w-1/2 animate-pulse rounded-pill bg-surface" />
-              <div className="h-3 w-2/3 animate-pulse rounded-pill bg-surface/70" />
+              <div className="h-4 w-1/2 animate-pulse bg-surface" />
+              <div className="h-3 w-2/3 animate-pulse bg-surface/70" />
             </div>
-            <div className="h-5 w-10 shrink-0 animate-pulse rounded-pill bg-surface" />
+            <div className="h-5 w-10 shrink-0 animate-pulse bg-surface" />
           </div>
         ))}
       </div>

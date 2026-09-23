@@ -3,6 +3,18 @@ import type { Config } from 'tailwindcss';
 const config: Config = {
   content: ['./src/**/*.{ts,tsx}'],
   theme: {
+    /**
+     * Square corners, everywhere. The app's shapes are the broadcast's: level
+     * rectangles for tiles, controls and fields, the slant for labels, and a
+     * circle for a face or a dot — never a rounded rectangle. Replacing the
+     * scale (not extending it) is what holds that: `rounded-lg` and friends
+     * no longer exist, so a stray one does nothing rather than soften a
+     * corner. `full` stays for circles; `none` for undoing a third party's.
+     */
+    borderRadius: {
+      none: '0',
+      full: '9999px',
+    },
     extend: {
       colors: {
         // Dark "Outlaw/Competitor" arena palette. Semantic names are kept
@@ -116,23 +128,6 @@ const config: Config = {
         // arbitrary pairing — Anton reads as a condensed cut of the same idea.
         display: ['var(--font-display)', 'system-ui', 'sans-serif'],
         sans: ['var(--font-text)', 'ui-sans-serif', '-apple-system', 'system-ui', 'sans-serif'],
-      },
-      borderRadius: {
-        /**
-         * Tile radius. A tile is now the exception — a thing you can pick up
-         * (a league in the rail, an event in the ticker, the one action on a
-         * page) — and lists, tables and stats are page sections with no box
-         * at all (`.list` in globals.css). What is left is cut tighter: 14px
-         * reads as broadcast furniture where the old 24px read as a bubble.
-         * `nested` is `card − 6px`, for a plate or button set into a tile
-         * padded `p-3`/`p-4`, so the inner curve follows the outer one.
-         */
-        card: '14px',
-        nested: '8px',
-        // Tappable controls: level and rounded, never on the slant.
-        btn: '10px',
-        // Non-tappable badges only (see `.pill` in globals.css).
-        pill: '999px',
       },
       // Named scale in rem, replacing ~200 one-off `text-[13px]`-style values.
       // rem matters for more than tidiness: px ignores the reader's browser

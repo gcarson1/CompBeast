@@ -196,17 +196,17 @@ function LiveSkeleton() {
     <div className="space-y-6" role="status" aria-label="Loading live updates">
       <div>
         <div className="mb-3 flex items-center justify-between">
-          <div className="h-7 w-24 animate-pulse rounded-pill bg-surface" />
-          <div className="h-4 w-28 animate-pulse rounded-pill bg-surface/70" />
+          <div className="h-7 w-24 animate-pulse bg-surface" />
+          <div className="h-4 w-28 animate-pulse bg-surface/70" />
         </div>
         <div className="flex overflow-hidden border-y border-hairline">
           {[0, 1, 2].map((i) => (
             <div key={i} className="flex w-64 shrink-0 items-start gap-3 px-4 py-3">
               <div className="h-10 w-10 shrink-0 animate-pulse rounded-full bg-surface" />
               <div className="min-w-0 flex-1 space-y-2 py-0.5">
-                <div className="h-3.5 w-2/3 animate-pulse rounded-pill bg-surface" />
-                <div className="h-3 w-5/6 animate-pulse rounded-pill bg-surface/70" />
-                <div className="h-3 w-1/3 animate-pulse rounded-pill bg-surface/70" />
+                <div className="h-3.5 w-2/3 animate-pulse bg-surface" />
+                <div className="h-3 w-5/6 animate-pulse bg-surface/70" />
+                <div className="h-3 w-1/3 animate-pulse bg-surface/70" />
               </div>
             </div>
           ))}
@@ -215,8 +215,8 @@ function LiveSkeleton() {
       <div className="divide-y divide-hairline border-y border-hairline">
         {[0, 1, 2, 3].map((i) => (
           <div key={i} className="space-y-2 px-1 py-3.5">
-            <div className="h-4 w-11/12 animate-pulse rounded-pill bg-surface" />
-            <div className="h-3 w-1/3 animate-pulse rounded-pill bg-surface/70" />
+            <div className="h-4 w-11/12 animate-pulse bg-surface" />
+            <div className="h-3 w-1/3 animate-pulse bg-surface/70" />
           </div>
         ))}
       </div>
@@ -230,14 +230,14 @@ function RailSkeleton() {
       <div className="flex gap-3 overflow-hidden">
         {[0, 1].map((i) => (
           <div key={i} className="card w-72 shrink-0 p-4">
-            <div className="h-4 w-2/3 animate-pulse rounded-pill bg-canvas" />
-            <div className="mt-2 h-3 w-1/2 animate-pulse rounded-pill bg-canvas/70" />
-            <div className="mt-5 h-8 w-20 animate-pulse rounded-pill bg-canvas" />
-            <div className="mt-4 h-3 w-full animate-pulse rounded-pill bg-canvas/70" />
+            <div className="h-4 w-2/3 animate-pulse bg-canvas" />
+            <div className="mt-2 h-3 w-1/2 animate-pulse bg-canvas/70" />
+            <div className="mt-5 h-8 w-20 animate-pulse bg-canvas" />
+            <div className="mt-4 h-3 w-full animate-pulse bg-canvas/70" />
           </div>
         ))}
       </div>
-      <div className="mt-2 h-3 w-32 animate-pulse rounded-pill bg-surface/70" />
+      <div className="mt-2 h-3 w-32 animate-pulse bg-surface/70" />
     </div>
   );
 }

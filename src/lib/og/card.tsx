@@ -162,7 +162,6 @@ function Card({ eyebrow, title, subtitle, stats = [], theme = DEFAULT_THEME }: O
               top: 0,
               right: 0,
               bottom: 0,
-              borderRadius: 6,
               backgroundColor: theme.accent,
               transform: 'skewX(-12deg)',
             }}
@@ -223,7 +222,6 @@ function Card({ eyebrow, title, subtitle, stats = [], theme = DEFAULT_THEME }: O
                 alignItems: 'baseline',
                 gap: 12,
                 padding: '12px 20px',
-                borderRadius: 14,
                 backgroundColor: SURFACE,
                 border: `1px solid ${HAIRLINE}`,
               }}

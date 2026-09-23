@@ -54,7 +54,8 @@ export const clerkAppearance: ClerkAppearance = {
     colorDanger: '#F87171',
     colorSuccess: '#6EE7B7',
     colorWarning: '#FB923C',
-    borderRadius: '10px',
+    // Square, like every other rectangle in the app (tailwind.config.ts).
+    borderRadius: '0px',
     fontFamily: 'var(--font-text), ui-sans-serif, -apple-system, system-ui, sans-serif',
     fontFamilyButtons: 'var(--font-text), ui-sans-serif, -apple-system, system-ui, sans-serif',
   },

@@ -804,7 +804,13 @@ the browser supports `interpolate-size`, and open as before where it does not.
 
 The one shape the app owns is the **slant** of the wordmark's three tally bars, and it is
 used for everything that *labels* something, the way a network's on-screen graphics do.
-Controls never lean: a button stays a rounded, level thing you press.
+Controls never lean: a button stays a square, level thing you press.
+
+**No rounded rectangles.** Every rectangle — tile, button, field, tag, plate, toast, Clerk's
+sign-in card, the emails, the share cards — has square corners; a face or a dot is a circle.
+`tailwind.config.ts` replaces the radius scale with `none` and `full` only, so a stray
+`rounded-lg` generates nothing, and `globals.css` zeroes the corners browsers add to form
+controls themselves.
 
 - **The mark** (`src/lib/brand.ts`) — three bars on one lean (a quarter of their height,
   about 14°) with a camera's red tally light over the tallest, in slate-to-gold gradients.
@@ -814,8 +820,8 @@ Controls never lean: a button stays a rounded, level thing you press.
 - **Sections, not boxes.** A run of rows — standings, a cast, a rule book, a game log, a
   settings list — sits on the page between hairlines (`.list`, `.row-link` for a row that is
   a link, `.list-empty`, `.stat-row` for figures side by side), flush with the section title
-  above it. A rounded tile (14px, `rounded-card`) is kept for things you pick up — a league
-  in the rail — and for the one action or number a page leads with. The live ticker is a
+  above it. A tile is kept for things you pick up — a league in the rail — and for the one
+  action or number a page leads with. The live ticker is a
   ruled crawl, not a row of cards.
 
 - **`<Tag>`** (`src/components/Tag.tsx`, `.tag` in `globals.css`) — a status, rank, points

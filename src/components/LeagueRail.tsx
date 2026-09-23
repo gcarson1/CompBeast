@@ -118,9 +118,9 @@ function LeagueCard({ league }: { league: HomeLeagueCard }) {
       {/* The motion frame carries the tile chrome; the link inside it is the
           control, so the focus ring lands on what the keyboard operates. */}
       <MotionCard tilt className="relative h-full">
-        <span aria-hidden className="absolute inset-x-6 top-0 h-[2px] rounded-b-pill bg-show-accent" />
+        <span aria-hidden className="absolute inset-x-6 top-0 h-[2px] bg-show-accent" />
 
-        <Link href={`/leagues/${league.leagueId}`} className="flex h-full flex-col rounded-card p-3.5">
+        <Link href={`/leagues/${league.leagueId}`} className="flex h-full flex-col p-3.5">
           <span className="flex items-start justify-between gap-3">
             <span aria-hidden className="plate h-11 w-11 font-display text-xl leading-none">
               {league.leagueName.slice(0, 1).toUpperCase()}

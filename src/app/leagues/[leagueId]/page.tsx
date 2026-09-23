@@ -205,7 +205,7 @@ export default async function LeaguePage({ params }: { params: { leagueId: strin
                 prefetch={false}
                 aria-label="League settings"
                 title="League settings"
-                className="grid h-11 w-11 shrink-0 place-items-center rounded-btn border border-hairline bg-surface text-muted transition duration-200 ease-spring hover:bg-surface-raised hover:text-ink motion-safe:hover:scale-105 motion-safe:active:scale-95"
+                className="grid h-11 w-11 shrink-0 place-items-center border border-hairline bg-surface text-muted transition duration-200 ease-spring hover:bg-surface-raised hover:text-ink motion-safe:hover:scale-105 motion-safe:active:scale-95"
               >
                 <GearIcon />
               </Link>
@@ -232,7 +232,7 @@ export default async function LeaguePage({ params }: { params: { leagueId: strin
               <Link
                 href={`/leagues/${league.id}/draft`}
                 prefetch={false}
-                className="relative flex flex-col gap-4 rounded-card p-4 sm:flex-row sm:items-center"
+                className="relative flex flex-col gap-4 p-4 sm:flex-row sm:items-center"
               >
                 <span className="flex items-center justify-between gap-3 sm:contents">
                   <span className="icon-well">
@@ -271,7 +271,7 @@ export default async function LeaguePage({ params }: { params: { leagueId: strin
               {myTeam && myRow && (
                 <Reveal>
                   <MotionCard tilt className="relative h-full">
-                    <Link href={`/teams/${myTeam.id}`} className="flex h-full flex-col rounded-card p-4">
+                    <Link href={`/teams/${myTeam.id}`} className="flex h-full flex-col p-4">
                       <span className="flex items-center justify-between gap-3">
                         <span className="eyebrow">My team</span>
                         <Tag tone={rankTone(myRow.rank)} size="sm">

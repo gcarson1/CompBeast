@@ -120,7 +120,7 @@ export default async function SeasonPage({ params }: { params: { slug: string } 
               <Link
                 href={`/leagues/new?season=${season.slug}`}
                 prefetch={false}
-                className="relative flex items-center gap-4 rounded-card p-4"
+                className="relative flex items-center gap-4 p-4"
               >
                 <span className="icon-well">
                   <PlusIcon size={22} />

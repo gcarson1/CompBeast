@@ -38,7 +38,7 @@ export function BottomNav() {
                 href={tab.href}
                 aria-current={active ? 'page' : undefined}
                 className={cn(
-                  'relative flex w-16 flex-col items-center gap-1 rounded-btn py-2 transition duration-200 ease-spring motion-safe:active:scale-90 sm:w-20',
+                  'relative flex w-16 flex-col items-center gap-1 py-2 transition duration-200 ease-spring motion-safe:active:scale-90 sm:w-20',
                   active ? 'text-ink' : 'text-muted hover:text-ink',
                 )}
               >
@@ -47,7 +47,7 @@ export function BottomNav() {
                 <span
                   aria-hidden
                   className={cn(
-                    'absolute -top-2 h-[3px] w-8 -skew-x-[20deg] rounded-b-[2px] bg-brand-gold transition-[opacity,transform] duration-300 ease-soft',
+                    'absolute -top-2 h-[3px] w-8 -skew-x-[20deg] bg-brand-gold transition-[opacity,transform] duration-300 ease-soft',
                     active ? 'opacity-100' : 'scale-x-0 opacity-0',
                   )}
                 />
