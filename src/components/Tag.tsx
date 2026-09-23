@@ -27,7 +27,7 @@ const SIZE_CLASS = { sm: 'tag-sm', md: '', lg: 'tag-lg' } as const;
  * value, a show. Cut on the wordmark's angle, like a network's on-screen
  * graphics, and level — the lean is in the shape, never in the placement.
  *
- * A tag is never a control. Anything you can press is a level `.btn`; a
+ * A tag is never a control. Anything you can press is a rounded `.btn`; a
  * tag only ever says what something is.
  *
  * `live` adds the on-air dot, for the one thing on a page that is happening

@@ -103,9 +103,10 @@ export function DraftRoom(props: DraftRoomProps) {
 
   return (
     <div>
-      {/* Your turn lights the clock in the show's colour; anyone else's
-          turn is a plain tile, so the page itself says whose move it is. */}
-      <div className={cn('mt-5 p-4', myTurn ? 'card-feature' : 'card')}>
+      {/* Your turn lights the clock in the show's colour (a callout); anyone
+          else's turn is a plain ruled section, so the page itself says whose
+          move it is. */}
+      <div className={cn('mt-5', myTurn ? 'callout' : 'border-y border-hairline py-4')}>
         {props.draftStatus === 'NOT_STARTED' ? (
           <StartDraftPanel leagueId={props.leagueId} isCommissioner={props.isCommissioner} />
         ) : props.draftStatus === 'COMPLETED' ? (

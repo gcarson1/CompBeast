@@ -5,22 +5,11 @@ import { cache } from 'react';
 import { SignInButton } from '@clerk/nextjs';
 import { Avatar, AvatarStack } from '@/components/Avatar';
 import { Collapsible, RowGroup } from '@/components/Collapsible';
-import {
-  AlertIcon,
-  ArrowRightIcon,
-  BoardIcon,
-  CrownIcon,
-  GearIcon,
-  LockIcon,
-  LockOpenIcon,
-  TallyMark,
-} from '@/components/icons';
+import { AlertIcon, ArrowRightIcon, CrownIcon, GearIcon, LockIcon, LockOpenIcon } from '@/components/icons';
 import { InviteCode } from '@/components/InviteCode';
 import { InviteFriends } from '@/components/InviteFriends';
 import { Leaderboard } from '@/components/Leaderboard';
 import { LeagueFeed } from '@/components/LeagueFeed';
-import { MotionCard } from '@/components/motion/MotionCard';
-import { Reveal, RevealGroup } from '@/components/motion/Reveal';
 import { ShowTheme } from '@/components/ShowTheme';
 import { Tag, rankTone } from '@/components/Tag';
 import { getCurrentUser } from '@/lib/auth';
@@ -205,7 +194,7 @@ export default async function LeaguePage({ params }: { params: { leagueId: strin
                 prefetch={false}
                 aria-label="League settings"
                 title="League settings"
-                className="grid h-11 w-11 shrink-0 place-items-center border border-hairline bg-surface text-muted transition duration-200 ease-spring hover:bg-surface-raised hover:text-ink motion-safe:hover:scale-105 motion-safe:active:scale-95"
+                className="grid h-11 w-11 shrink-0 place-items-center rounded-btn border border-hairline bg-surface text-muted transition duration-200 ease-spring hover:bg-surface-raised hover:text-ink motion-safe:hover:scale-105 motion-safe:active:scale-95"
               >
                 <GearIcon />
               </Link>
@@ -225,135 +214,121 @@ export default async function LeaguePage({ params }: { params: { leagueId: strin
           </header>
 
           {drafting && (
-            // The one thing to do while the draft is open, so it gets the full
-            // width and a button-shaped call to action inside the tile.
-            <MotionCard tilt className="card-feature mt-8">
-              <TallyMark className="absolute -bottom-5 -right-3 h-32 w-32 text-show-accent opacity-[0.12]" />
-              <Link
-                href={`/leagues/${league.id}/draft`}
-                prefetch={false}
-                className="relative flex flex-col gap-4 p-4 sm:flex-row sm:items-center"
-              >
-                <span className="flex items-center justify-between gap-3 sm:contents">
-                  <span className="icon-well">
-                    <BoardIcon size={22} />
+            // The one thing to do while the draft is open: a callout, not a
+            // panel — the whole section is the link.
+            <Link
+              href={`/leagues/${league.id}/draft`}
+              prefetch={false}
+              className="callout group mt-8 flex flex-col gap-3 sm:flex-row sm:items-center sm:gap-4"
+            >
+              <span className="min-w-0 flex-1">
+                <span className="flex flex-wrap items-center gap-x-3 gap-y-1.5">
+                  <span className="headline text-2xl">
+                    {preDraft ? 'Draft not started' : 'Draft in progress'}
                   </span>
-                  <Tag tone={preDraft ? 'outline' : 'show'} live={!preDraft} className="sm:hidden">
+                  <Tag tone={preDraft ? 'outline' : 'show'} live={!preDraft} size="sm">
                     {preDraft ? 'Pre-draft' : 'Live'}
                   </Tag>
                 </span>
-                <span className="min-w-0 flex-1">
-                  <span className="headline block text-2xl">
-                    {preDraft ? 'Draft not started' : 'Draft in progress'}
-                  </span>
-                  <span className="mt-1 block text-xs text-muted">
-                    {league.teams.length} {league.teams.length === 1 ? 'team' : 'teams'} · {league.rosterSize}{' '}
-                    picks each · {league.draftType.toLowerCase()} order
-                  </span>
+                <span className="mt-1 block text-xs text-muted">
+                  {league.teams.length} {league.teams.length === 1 ? 'team' : 'teams'} · {league.rosterSize}{' '}
+                  picks each · {league.draftType.toLowerCase()} order
                 </span>
-                <span className="btn btn-sm shrink-0 bg-show-accent text-on-gold shadow-[inset_0_1px_0_rgba(255,255,255,0.35)] hover:brightness-110">
-                  {preDraft && isCommissioner ? 'Start the draft' : 'Open the draft room'}
-                  <ArrowRightIcon size={16} />
-                </span>
-              </Link>
-            </MotionCard>
+              </span>
+              <span className="btn btn-sm shrink-0 self-start bg-show-accent text-on-gold shadow-[inset_0_1px_0_rgba(255,255,255,0.35)] group-hover:brightness-110 sm:self-auto">
+                {preDraft && isCommissioner ? 'Start the draft' : 'Open the draft room'}
+                <ArrowRightIcon size={16} />
+              </span>
+            </Link>
           )}
         </div>
 
         {(myRow || (currentCycle && lockState) || nearMiss || atRisk) && (
           <Collapsible title="At a glance" titleClassName="eyebrow" className="mt-10">
-            {/* `auto-fit` so two tiles share the row and three split it, with
-              no hole when one of them is absent. */}
-            <RevealGroup
-              className="grid grid-cols-1 gap-3 sm:grid-cols-[repeat(auto-fit,minmax(14rem,1fr))]"
-              step={60}
-            >
-              {myTeam && myRow && (
-                <Reveal>
-                  <MotionCard tilt className="relative h-full">
-                    <Link href={`/teams/${myTeam.id}`} className="flex h-full flex-col p-4">
-                      <span className="flex items-center justify-between gap-3">
-                        <span className="eyebrow">My team</span>
-                        <Tag tone={rankTone(myRow.rank)} size="sm">
-                          {myRow.rank === 1 && <CrownIcon size={13} className="-ml-0.5" />}#{myRow.rank} of{' '}
-                          {rows.length}
-                        </Tag>
-                      </span>
-                      <span className="mt-2 block truncate text-base font-semibold">{myTeam.name}</span>
-                      <span className="mt-auto flex items-end justify-between gap-3 pt-3">
-                        <span className="font-display text-5xl leading-none tracking-wide">
-                          {myRow.totalPoints}
-                        </span>
-                        <span
-                          className={cn(
-                            'pb-1 text-xs font-semibold tabular-nums',
-                            pointsTone(myRow.lastCyclePoints),
-                          )}
-                        >
-                          {formatPoints(myRow.lastCyclePoints)} last {lower(lexicon.cycleSingular)}
-                        </span>
-                      </span>
-                    </Link>
-                  </MotionCard>
-                </Reveal>
-              )}
-
-              {currentCycle && lockState && (
-                <Reveal
-                  as="section"
-                  aria-label={`This ${lower(lexicon.cycleSingular)}`}
-                  className={cn('relative overflow-hidden p-4', cycleLocked ? 'card' : 'card-pop-gold')}
-                >
-                  {!cycleLocked && (
-                    <TallyMark className="absolute -bottom-4 -right-2 h-24 w-24 text-pop-gold-ink opacity-[0.08]" />
-                  )}
-                  <span className="flex items-center justify-between gap-3">
-                    <span className="text-2xs font-bold uppercase tracking-[0.18em] text-tile-muted">
-                      This {lower(lexicon.cycleSingular)}
-                    </span>
-                    <span className="flex items-center gap-1.5 text-2xs font-bold uppercase tracking-wide">
-                      {cycleLocked ? <LockIcon size={15} /> : <LockOpenIcon size={15} />}
-                      {cycleLocked ? 'Locked' : 'Open'}
-                    </span>
-                  </span>
-                  <h3 className="headline mt-2 text-2xl">{currentCycle.label}</h3>
-                  <p className="mt-2 text-xs text-tile-muted">
-                    {!lockState.showLockAt
-                      ? 'Rosters are closed'
-                      : cycleLocked
-                        ? `Locked ${relativeTime(lockState.lockAt)}`
-                        : `Rosters lock ${relativeTime(lockState.lockAt)}`}
-                  </p>
-                </Reveal>
-              )}
-
-              {(nearMiss || atRisk) && (
-                <Reveal
-                  as="section"
-                  aria-label="Heads up"
-                  // A ruled note, not a third box: the warning reads as a line
-                  // of commentary under the numbers.
-                  className={cn(
-                    'relative border-l-2 py-1 pl-3 sm:col-span-2 lg:col-span-1 lg:self-center',
-                    atRisk ? 'border-danger' : 'border-brand-gold',
-                  )}
-                >
-                  <span
-                    className={cn(
-                      'flex items-center gap-2 text-2xs font-bold uppercase tracking-[0.18em]',
-                      atRisk ? 'text-danger-deep' : 'text-brand-gold-deep',
-                    )}
+            {/* Your team and this week, side by side in one ruled strip —
+              figures on the page, not two boxes. One of them alone takes the
+              whole width. */}
+            {((myTeam && myRow) || (currentCycle && lockState)) && (
+              <div
+                className={cn(
+                  'grid border-y border-hairline',
+                  myTeam && myRow && currentCycle && lockState && 'grid-cols-2 divide-x divide-hairline',
+                )}
+              >
+                {myTeam && myRow && (
+                  <Link
+                    href={`/teams/${myTeam.id}`}
+                    className={cn('row-link flex min-w-0 flex-col py-4', currentCycle && lockState && 'pr-4')}
                   >
-                    <AlertIcon size={16} />
-                    Heads up
-                  </span>
-                  <div className="mt-1.5 space-y-1.5">
-                    {nearMiss && <p className="text-sm font-medium text-brand-gold-deep">{nearMiss}</p>}
-                    {atRisk && <p className="text-sm font-medium text-danger-deep">{atRisk}</p>}
-                  </div>
-                </Reveal>
-              )}
-            </RevealGroup>
+                    <span className="eyebrow">My team</span>
+                    <span className="mt-1.5 block truncate text-sm font-semibold">{myTeam.name}</span>
+                    <span className="mt-2 flex flex-wrap items-center gap-x-2.5 gap-y-1">
+                      <span className="font-display text-5xl leading-none tracking-wide">
+                        {myRow.totalPoints}
+                      </span>
+                      <Tag tone={rankTone(myRow.rank)} size="sm">
+                        {myRow.rank === 1 && <CrownIcon size={13} className="-ml-0.5" />}#{myRow.rank} of{' '}
+                        {rows.length}
+                      </Tag>
+                    </span>
+                    <span
+                      className={cn(
+                        'mt-auto pt-2 text-2xs font-semibold tabular-nums',
+                        pointsTone(myRow.lastCyclePoints),
+                      )}
+                    >
+                      {formatPoints(myRow.lastCyclePoints)} last {lower(lexicon.cycleSingular)}
+                    </span>
+                  </Link>
+                )}
+
+                {currentCycle && lockState && (
+                  <section
+                    aria-label={`This ${lower(lexicon.cycleSingular)}`}
+                    className={cn('flex min-w-0 flex-col py-4', myTeam && myRow && 'pl-4')}
+                  >
+                    <span className="eyebrow">This {lower(lexicon.cycleSingular)}</span>
+                    <span className="mt-1.5 flex flex-wrap items-center gap-x-2.5 gap-y-1">
+                      <h3 className="headline text-3xl">{currentCycle.label}</h3>
+                      <Tag tone={cycleLocked ? 'outline' : 'gold'} size="sm">
+                        {cycleLocked ? <LockIcon size={13} /> : <LockOpenIcon size={13} />}
+                        {cycleLocked ? 'Locked' : 'Open'}
+                      </Tag>
+                    </span>
+                    <p className="mt-auto pt-2 text-xs text-muted">
+                      {!lockState.showLockAt
+                        ? 'Rosters are closed'
+                        : cycleLocked
+                          ? `Locked ${relativeTime(lockState.lockAt)}`
+                          : `Rosters lock ${relativeTime(lockState.lockAt)}`}
+                    </p>
+                  </section>
+                )}
+              </div>
+            )}
+
+            {(nearMiss || atRisk) && (
+              <section
+                aria-label="Heads up"
+                // A ruled note, not a third box: the warning reads as a line
+                // of commentary under the numbers.
+                className={cn('mt-4 border-l-2 py-1 pl-3', atRisk ? 'border-danger' : 'border-brand-gold')}
+              >
+                <span
+                  className={cn(
+                    'flex items-center gap-2 text-2xs font-bold uppercase tracking-[0.18em]',
+                    atRisk ? 'text-danger-deep' : 'text-brand-gold-deep',
+                  )}
+                >
+                  <AlertIcon size={16} />
+                  Heads up
+                </span>
+                <div className="mt-1.5 space-y-1.5">
+                  {nearMiss && <p className="text-sm font-medium text-brand-gold-deep">{nearMiss}</p>}
+                  {atRisk && <p className="text-sm font-medium text-danger-deep">{atRisk}</p>}
+                </div>
+              </section>
+            )}
           </Collapsible>
         )}
 
@@ -410,16 +385,16 @@ function PrivateLeagueGate({
           <h1 className="headline mt-3 text-5xl sm:text-6xl">{league.name}</h1>
         </header>
 
-        <section className="card-feature mt-8 p-4" aria-labelledby="private-heading">
-          <span className="flex items-center justify-between gap-3">
-            <span className="icon-well">
-              <LockIcon size={22} />
-            </span>
-            <Tag tone="outline">Private</Tag>
+        <section className="callout mt-8" aria-labelledby="private-heading">
+          <span className="flex flex-wrap items-center gap-x-3 gap-y-1.5">
+            <h2 id="private-heading" className="headline text-2xl">
+              This league is members only
+            </h2>
+            <Tag tone="outline" size="sm">
+              <LockIcon size={13} />
+              Private
+            </Tag>
           </span>
-          <h2 id="private-heading" className="headline mt-4 text-2xl">
-            This league is members only
-          </h2>
           <p className="mt-2 max-w-measure text-sm leading-relaxed text-muted">
             {signedIn
               ? 'Standings, rosters and the feed are visible to the people in it. If you were invited, join with the invite code and this page opens up.'

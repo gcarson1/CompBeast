@@ -127,9 +127,9 @@ export function renderShell(input: ShellInput): string {
 
   <tr><td style="padding:0 4px 20px 4px;">${wordmark()}</td></tr>
 
-  <tr><td style="background-color:${BRAND.surface};border:1px solid ${BRAND.hairline};">
+  <tr><td style="background-color:${BRAND.surface};border:1px solid ${BRAND.hairline};border-radius:8px;">
     <table role="presentation" cellpadding="0" cellspacing="0" border="0" width="100%">
-      <tr><td style="height:3px;line-height:3px;font-size:3px;background-color:${accent.rule};">&nbsp;</td></tr>
+      <tr><td style="height:3px;line-height:3px;font-size:3px;background-color:${accent.rule};border-radius:8px 8px 0 0;">&nbsp;</td></tr>
       <tr><td style="padding:28px 28px 30px 28px;">
         <p style="margin:0 0 10px 0;font-family:${TEXT_STACK};font-size:11px;font-weight:700;letter-spacing:1.2px;text-transform:uppercase;color:${accent.eyebrow};">${escapeHtml(eyebrow)}</p>
         <h1 style="margin:0;font-family:${TEXT_STACK};font-size:23px;line-height:30px;font-weight:700;color:${BRAND.ink};">${escapeHtml(headline)}</h1>
@@ -166,7 +166,7 @@ export function renderShell(input: ShellInput): string {
 /** Ascending tally plus the red pip — the app's mark, in table cells. */
 function wordmark(): string {
   const bar = (height: number, color: string) =>
-    `<td valign="bottom" style="padding-right:4px;"><table role="presentation" cellpadding="0" cellspacing="0" border="0"><tr><td style="width:5px;height:${height}px;line-height:${height}px;font-size:1px;background-color:${color};">&nbsp;</td></tr></table></td>`;
+    `<td valign="bottom" style="padding-right:4px;"><table role="presentation" cellpadding="0" cellspacing="0" border="0"><tr><td style="width:5px;height:${height}px;line-height:${height}px;font-size:1px;background-color:${color};border-radius:1px;">&nbsp;</td></tr></table></td>`;
 
   return `<table role="presentation" cellpadding="0" cellspacing="0" border="0"><tr>
   <td valign="bottom" style="padding-right:10px;">
@@ -187,7 +187,7 @@ function wordmark(): string {
  */
 function button(label: string, url: string, accent: Accent): string {
   return `<table role="presentation" cellpadding="0" cellspacing="0" border="0" style="margin-top:22px;"><tr>
-    <td align="center" style="background-color:${accent.fill};">
+    <td align="center" style="background-color:${accent.fill};border-radius:8px;">
       <a href="${escapeHtml(url)}" style="display:inline-block;padding:12px 22px;font-family:${TEXT_STACK};font-size:14px;font-weight:700;line-height:18px;color:${accent.ink};text-decoration:none;">${escapeHtml(label)}</a>
     </td>
   </tr></table>`;

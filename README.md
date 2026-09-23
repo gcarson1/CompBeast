@@ -804,13 +804,7 @@ the browser supports `interpolate-size`, and open as before where it does not.
 
 The one shape the app owns is the **slant** of the wordmark's three tally bars, and it is
 used for everything that *labels* something, the way a network's on-screen graphics do.
-Controls never lean: a button stays a square, level thing you press.
-
-**No rounded rectangles.** Every rectangle — tile, button, field, tag, plate, toast, Clerk's
-sign-in card, the emails, the share cards — has square corners; a face or a dot is a circle.
-`tailwind.config.ts` replaces the radius scale with `none` and `full` only, so a stray
-`rounded-lg` generates nothing, and `globals.css` zeroes the corners browsers add to form
-controls themselves.
+Controls never lean: a button stays a rounded, level thing you press.
 
 - **The mark** (`src/lib/brand.ts`) — three bars on one lean (a quarter of their height,
   about 14°) with a camera's red tally light over the tallest, in slate-to-gold gradients.
@@ -820,10 +814,12 @@ controls themselves.
 - **Sections, not boxes.** A run of rows — standings, a cast, a rule book, a game log, a
   settings list — sits on the page between hairlines (`.list`, `.row-link` for a row that is
   a link, `.list-empty`, `.stat-row` for figures side by side), flush with the section title
-  above it. A tile is kept for things you pick up — a league in the rail — and for the one
-  action or number a page leads with. The live ticker is a
-  ruled crawl, not a row of cards.
-
+  above it. A page's lead action (open the draft room, start a league) is a `.callout`: a
+  ruled section with a tally bar in the show's colour down its edge, not a panel, and a
+  headline number (season points, lifetime points) is set large on the page. The live
+  ticker is a ruled crawl. A tile — softly rounded, `rounded-card` (10px) — is kept only
+  for a thing you pick up, a league card in the rail, and the QR dialog; controls and fields
+  are `rounded-btn` (8px). Never a bubble, never a hard square.
 - **`<Tag>`** (`src/components/Tag.tsx`, `.tag` in `globals.css`) — a status, rank, points
   value or show, on a skewed backing so the text stays upright. Three sizes; fills for the
   show accent, gold/silver/bronze (`rankTone`), red (with `live` for the breathing on-air
@@ -834,10 +830,10 @@ controls themselves.
   wherever seasons are listed. The chip it replaced printed the year, which put "26" on
   every season airing this year.
 - **Medals** — the badge shelf (see [Badges](#badges)).
-- **`.card-feature`** — the one thing to do on a page (open the draft room, start a
-  league), lit from its corner in the show's colour with the tally mark (`<TallyMark>`)
-  riding faintly in it. Solid colour blocks (`.card-pop-*`) are kept for the single number
-  a page is about — lifetime points, an open week.
+- **`.callout`** — the one thing to do on a page (open the draft room, start a league):
+  ruled above and below, a slanted tally bar in the show's colour down its left edge, and
+  the show's light fading in from that side. The rail's "Start or join" card is the one
+  feature tile left (`.card-feature`), because it sits among league cards.
 - **`.stage`** — a page title's glow, in the show's colour on a show's pages and gold
   elsewhere; the section title's bar is a tally bar in the same colour.
 - **Icons** (`src/components/icons.tsx`) — one 24px grid and 1.8px stroke, placed where

@@ -138,7 +138,7 @@ function CastCopy({
           <Link
             href={`/seasons/${seasonSlug}`}
             tabIndex={ariaHidden ? -1 : undefined}
-            className="flex flex-col items-center gap-1.5 py-1"
+            className="flex flex-col items-center gap-1.5 rounded-card py-1"
           >
             <Avatar name={member.name} photoUrl={member.photoUrl} size={56} />
             <span className="w-full truncate text-center text-2xs text-muted">

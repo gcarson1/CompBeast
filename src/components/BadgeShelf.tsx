@@ -60,7 +60,7 @@ export function BadgeShelf({ points }: { points: number }) {
           {/* The bar measures from the previous tier, not from zero — otherwise
               the last stretch of every ladder would look nearly full for years. */}
           <div
-            className="mt-1.5 h-2 overflow-hidden bg-canvas shadow-[inset_0_0_0_1px_rgba(248,250,252,0.08)]"
+            className="mt-1.5 h-2 overflow-hidden rounded-pill bg-canvas shadow-[inset_0_0_0_1px_rgba(248,250,252,0.08)]"
             role="progressbar"
             aria-valuemin={0}
             aria-valuemax={100}
@@ -68,7 +68,7 @@ export function BadgeShelf({ points }: { points: number }) {
             aria-label={`Progress to ${next.badge.name}`}
           >
             <div
-              className="h-full bg-gradient-to-r from-brand-gold to-brand-gold-deep shadow-[inset_0_1px_0_rgba(255,255,255,0.45)] transition-[width] duration-700 ease-soft"
+              className="h-full rounded-pill bg-gradient-to-r from-brand-gold to-brand-gold-deep shadow-[inset_0_1px_0_rgba(255,255,255,0.45)] transition-[width] duration-700 ease-soft"
               style={{ width: `${Math.max(2, next.fraction * 100)}%` }}
             />
           </div>

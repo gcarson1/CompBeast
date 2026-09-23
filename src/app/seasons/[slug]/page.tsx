@@ -3,9 +3,8 @@ import Link from 'next/link';
 import { notFound } from 'next/navigation';
 import { cache } from 'react';
 import { Avatar } from '@/components/Avatar';
-import { ArrowRightIcon, PlusIcon, TallyMark } from '@/components/icons';
+import { ArrowRightIcon } from '@/components/icons';
 import { JsonLd } from '@/components/JsonLd';
-import { MotionCard } from '@/components/motion/MotionCard';
 import { Collapsible } from '@/components/Collapsible';
 import { SeasonPlate } from '@/components/SeasonPlate';
 import { ShowTheme } from '@/components/ShowTheme';
@@ -115,26 +114,21 @@ export default async function SeasonPage({ params }: { params: { slug: string } 
               still airing or yet to start.
             </p>
           ) : (
-            <MotionCard tilt className="card-feature mt-8">
-              <TallyMark className="absolute -bottom-5 -right-3 h-28 w-28 text-show-accent opacity-[0.12]" />
-              <Link
-                href={`/leagues/new?season=${season.slug}`}
-                prefetch={false}
-                className="relative flex items-center gap-4 p-4"
-              >
-                <span className="icon-well">
-                  <PlusIcon size={22} />
-                </span>
-                <span className="min-w-0 flex-1">
-                  <span className="headline block text-2xl">Start a league</span>
-                  <span className="mt-1 block text-xs text-muted">This season is still in play</span>
-                </span>
-                <span className="btn btn-sm shrink-0 bg-show-accent text-on-gold shadow-[inset_0_1px_0_rgba(255,255,255,0.35)] hover:brightness-110">
-                  Create
-                  <ArrowRightIcon size={16} />
-                </span>
-              </Link>
-            </MotionCard>
+            // The one thing to do here, as a callout: the whole section is the link.
+            <Link
+              href={`/leagues/new?season=${season.slug}`}
+              prefetch={false}
+              className="callout group mt-8 flex items-center gap-4"
+            >
+              <span className="min-w-0 flex-1">
+                <span className="headline block text-2xl">Start a league</span>
+                <span className="mt-1 block text-xs text-muted">This season is still in play</span>
+              </span>
+              <span className="btn btn-sm shrink-0 bg-show-accent text-on-gold shadow-[inset_0_1px_0_rgba(255,255,255,0.35)] group-hover:brightness-110">
+                Create
+                <ArrowRightIcon size={16} />
+              </span>
+            </Link>
           )}
         </div>
 

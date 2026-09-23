@@ -21,7 +21,7 @@ export function AppHeader({
     // `data-scrolled` on the root, set by the scroller.
     <header className="app-header relative z-20 flex-none border-b border-transparent bg-canvas pb-2.5 pl-[max(1.25rem,env(safe-area-inset-left))] pr-[max(1.25rem,env(safe-area-inset-right))] pt-[calc(env(safe-area-inset-top)+0.875rem)] transition-[border-color,box-shadow] duration-200">
       <div className="mx-auto flex max-w-md items-center gap-4 sm:max-w-lg lg:max-w-3xl">
-        <Link href="/leagues" aria-label="Comp Beast home" className="shrink-0">
+        <Link href="/leagues" aria-label="Comp Beast home" className="shrink-0 rounded-btn">
           <CompBeastLogo />
         </Link>
         <HeaderNav signedIn={signedIn} />

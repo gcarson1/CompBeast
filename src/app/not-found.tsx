@@ -10,8 +10,9 @@ import { Tag } from '@/components/Tag';
 export default function NotFound() {
   return (
     <div className="stage pt-10">
-      <div className="card-feature p-5">
-        <TallyMark className="absolute -bottom-6 -right-4 h-40 w-40 text-brand-gold opacity-[0.08]" />
+      {/* On the page, not in a panel: the tally faint behind the number. */}
+      <TallyMark className="absolute -right-2 top-6 h-40 w-40 text-brand-gold opacity-[0.07]" />
+      <div className="relative">
         <Tag tone="red">Eliminated</Tag>
         <p aria-hidden className="mt-4 font-display text-[88px] leading-none tracking-wide text-brand-gold">
           404

@@ -123,7 +123,7 @@ function index(baseUrl: string): string {
   section{margin-bottom:28px;}
   h2{font-size:12px;letter-spacing:1px;text-transform:uppercase;color:#94A3B8;margin:0 0 8px;}
   h2 small{color:#475569;text-transform:none;letter-spacing:0;margin-left:8px;}
-  iframe{width:100%;max-width:660px;height:560px;border:1px solid #2A3A52;background:#0F172A;}
+  iframe{width:100%;max-width:660px;height:560px;border:1px solid #2A3A52;border-radius:8px;background:#0F172A;}
 </style></head><body>
 <h1>Email templates</h1>
 <p class="status">${status}</p>

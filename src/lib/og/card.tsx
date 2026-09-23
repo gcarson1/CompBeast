@@ -33,7 +33,6 @@ export interface OgCardProps {
 }
 
 const CANVAS = '#0F172A';
-const SURFACE = '#1E293B';
 const INK = '#F8FAFC';
 const MUTED = '#94A3B8';
 const GOLD_DEEP = '#FBBF24';
@@ -162,6 +161,7 @@ function Card({ eyebrow, title, subtitle, stats = [], theme = DEFAULT_THEME }: O
               top: 0,
               right: 0,
               bottom: 0,
+              borderRadius: 4,
               backgroundColor: theme.accent,
               transform: 'skewX(-12deg)',
             }}
@@ -213,17 +213,24 @@ function Card({ eyebrow, title, subtitle, stats = [], theme = DEFAULT_THEME }: O
       </div>
 
       {stats.length > 0 && (
-        <div style={{ display: 'flex', gap: 14, marginTop: 28 }}>
-          {stats.slice(0, 4).map((stat) => (
+        // The figures ruled into a strip, as the app sets them — not chips.
+        <div
+          style={{
+            display: 'flex',
+            marginTop: 28,
+            borderTop: `1px solid ${HAIRLINE}`,
+            borderBottom: `1px solid ${HAIRLINE}`,
+          }}
+        >
+          {stats.slice(0, 4).map((stat, i) => (
             <div
               key={stat.label}
               style={{
                 display: 'flex',
                 alignItems: 'baseline',
                 gap: 12,
-                padding: '12px 20px',
-                backgroundColor: SURFACE,
-                border: `1px solid ${HAIRLINE}`,
+                padding: i === 0 ? '14px 28px 14px 0' : '14px 28px',
+                borderLeft: i === 0 ? 'none' : `1px solid ${HAIRLINE}`,
               }}
             >
               <div style={{ fontFamily: 'Anton', fontSize: 34, lineHeight: 1, color: GOLD_DEEP }}>

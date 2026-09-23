@@ -32,7 +32,7 @@ export function HeaderNav({ signedIn }: { signedIn: boolean }) {
             href={tab.href}
             aria-current={active ? 'page' : undefined}
             className={cn(
-              'relative px-3 py-2 text-sm font-semibold transition-colors duration-200',
+              'relative rounded-btn px-3 py-2 text-sm font-semibold transition-colors duration-200',
               active ? 'text-ink' : 'text-muted hover:text-ink',
             )}
           >
@@ -40,7 +40,7 @@ export function HeaderNav({ signedIn }: { signedIn: boolean }) {
             <span
               aria-hidden
               className={cn(
-                'absolute inset-x-3 -bottom-[11px] h-[3px] -skew-x-[20deg] bg-brand-gold transition-[opacity,transform] duration-300 ease-soft',
+                'absolute inset-x-3 -bottom-[11px] h-[3px] -skew-x-[20deg] rounded-t-[2px] bg-brand-gold transition-[opacity,transform] duration-300 ease-soft',
                 active ? 'opacity-100' : 'scale-x-0 opacity-0',
               )}
             />

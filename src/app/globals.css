@@ -42,16 +42,6 @@
   }
 
   /*
-   * Square corners (see `borderRadius` in tailwind.config.ts) — including
-   * the ones browsers add on their own: Safari on iOS rounds fields, selects
-   * and buttons unless told otherwise. `:where` keeps this at zero
-   * specificity, so a circle (`rounded-full`) still wins.
-   */
-  :where(button, input, select, textarea) {
-    border-radius: 0;
-  }
-
-  /*
    * One visible focus treatment for every interactive element, defined once.
    * The app previously had none at all — `.field` even set `outline-none`
    * without a replacement — which left keyboard and switch-control users with
@@ -81,39 +71,18 @@
 
 @layer components {
   /*
-   * The tile. Every tile — the dark default and the gold block below —
-   * sets the same three custom properties so that whatever is drawn inside
-   * can say `text-tile-ink` / `text-tile-muted` / `border-tile-line` and be
-   * right on any of them (the `tile` colours in tailwind.config.ts read
-   * these). `--lift-glow` is the colour `.card-lift` blooms in on hover.
+   * The tile — kept only for a thing you pick up: a league card in the rail
+   * (and the dialog). Everything else is a section on the page (`.list`,
+   * `.stat-row`, `.callout` below). It sets the three custom properties that
+   * `text-tile-ink` / `text-tile-muted` / `border-tile-line` read, and
+   * `--lift-glow`, the colour `.card-lift` blooms in on hover.
    */
   .card {
-    @apply border border-hairline bg-surface text-ink shadow-card;
+    @apply rounded-card border border-hairline bg-surface text-ink shadow-card;
     --tile-ink: theme(colors.ink);
     --tile-muted: theme(colors.muted);
     --tile-line: theme(colors.hairline);
     --lift-glow: rgba(245, 158, 11, 0.32);
-  }
-
-  /*
-   * The gold block: the one number a page is about (lifetime points, a week
-   * that is still open), as a solid tile of the brand colour. Gold is a light
-   * fill, so `ink` here is the tone's dark ink, not the app's near-white. The
-   * subtle top-edge highlight and bottom shade are what stop a flat block
-   * from reading as a flat block — a bevel at a tenth of a button's.
-   *
-   * `border-transparent`, not the hairline: a light block does not need an
-   * edge to separate it from the canvas, and a white hairline on gold reads
-   * as a rendering artefact.
-   */
-  .card-pop-gold {
-    @apply border border-transparent bg-pop-gold
-      shadow-[inset_0_1px_0_rgba(255,255,255,0.35),inset_0_-2px_0_rgba(0,0,0,0.08)];
-    color: var(--tile-ink);
-    --tile-ink: theme(colors.pop-gold.ink);
-    --tile-muted: theme(colors.pop-gold.muted);
-    --tile-line: rgba(0, 0, 0, 0.12);
-    --lift-glow: theme(colors.pop-gold.glow);
   }
 
   /*
@@ -134,14 +103,13 @@
   }
 
   /*
-   * The feature tile: the one thing to do on a page — open the draft room,
-   * start a league — lit from its top corner in the show's colour. A dark
-   * tile with a coloured edge and a spot of light, rather than a solid
-   * block of colour, so it leads the page without shouting over the numbers
-   * around it; the wordmark's tally rides in the corner (<TallyMark>).
+   * The rail's "Start or join" card: a tile like the league cards beside it,
+   * lit from its top corner in the show's colour so it reads as the action
+   * at the end of the row. Anywhere else, a page's lead action is a
+   * `.callout`, not a tile.
    */
   .card-feature {
-    @apply relative overflow-hidden border text-ink shadow-card;
+    @apply relative overflow-hidden rounded-card border text-ink shadow-card;
     border-color: color-mix(in srgb, var(--show-accent) 38%, transparent);
     background:
       radial-gradient(
@@ -161,9 +129,7 @@
    * run of rows — sits straight on the page: hairlines above, between and
    * below, and the rows flush with the section title over them, so the
    * column reads as one page with parts rather than a stack of panes. A
-   * tile is kept for a thing you can pick up (a league in the rail) and for
-   * the one action or number a page leads with — square-cornered, like every
-   * other rectangle in the app (see `borderRadius` in tailwind.config.ts).
+   * tile is kept only for a thing you can pick up — a league in the rail.
    */
   .list {
     @apply divide-y divide-hairline border-y border-hairline;
@@ -180,7 +146,7 @@
 
   .row-link::before {
     content: '';
-    @apply pointer-events-none absolute inset-y-0 -inset-x-3 -z-10 bg-white/[0.04] opacity-0
+    @apply pointer-events-none absolute inset-y-0 -inset-x-3 -z-10 rounded-[4px] bg-white/[0.04] opacity-0
       transition-opacity duration-200 ease-soft;
   }
 
@@ -191,9 +157,31 @@
   /* Your own row in a list of everyone's: gold wash, gold edge. */
   .row-mine::after {
     content: '';
-    @apply pointer-events-none absolute inset-y-0 -inset-x-3 -z-10;
+    @apply pointer-events-none absolute inset-y-0 -inset-x-3 -z-10 rounded-[4px];
     background: linear-gradient(90deg, rgba(245, 158, 11, 0.16), rgba(245, 158, 11, 0.03));
     box-shadow: inset 3px 0 0 theme(colors.brand-gold.DEFAULT);
+  }
+
+  /*
+   * The one thing to do on a page — open the draft room, start a league —
+   * as a section rather than a box: ruled off above and below, a tally bar
+   * in the show's colour leaning down its left edge, and the show's light
+   * falling in from that side and gone before the far edge. It leads the
+   * page without drawing a panel around it.
+   */
+  .callout {
+    @apply relative isolate border-y border-hairline py-4 pl-5;
+  }
+
+  .callout::before {
+    content: '';
+    @apply absolute bottom-4 left-0.5 top-4 w-[4px] -skew-x-[8deg] rounded-[2px] bg-show-accent;
+  }
+
+  .callout::after {
+    content: '';
+    @apply pointer-events-none absolute inset-y-0 left-0 -z-10 w-3/4;
+    background: linear-gradient(90deg, color-mix(in srgb, var(--show-accent) 11%, transparent), transparent);
   }
 
   /* What a list says when it has no rows: in the list's own place. */
@@ -402,7 +390,7 @@
 
   .section-title {
     @apply headline flex items-center gap-3 text-2xl text-ink
-      before:h-6 before:w-[7px] before:shrink-0 before:-skew-x-[16deg]
+      before:h-6 before:w-[7px] before:shrink-0 before:-skew-x-[16deg] before:rounded-[2px]
       before:bg-show-accent before:content-[''];
   }
 
@@ -439,7 +427,7 @@
   /* Non-interactive status badge. Buttons deliberately do not build on this —
      they need a touch target, and a badge must not look tappable. */
   .pill {
-    @apply inline-flex items-center justify-center px-3 py-1.5 text-sm font-medium;
+    @apply inline-flex items-center justify-center rounded-pill px-3 py-1.5 text-sm font-medium;
   }
 
   /*
@@ -449,7 +437,7 @@
    * young and dextrous.
    */
   .btn {
-    @apply inline-flex min-h-[44px] items-center justify-center gap-2 px-5
+    @apply inline-flex min-h-[44px] items-center justify-center gap-2 rounded-btn px-5
       text-sm font-semibold transition duration-200 ease-spring
       motion-safe:hover:scale-[1.03] motion-safe:active:scale-[0.95]
       disabled:pointer-events-none disabled:opacity-50;
@@ -499,13 +487,18 @@
     animation: btn-spin 600ms linear infinite;
   }
 
-  /* A tab switcher's buttons: a badge's sizing, a control's behaviour. */
+  /*
+   * These are real <button> elements (a tab switcher), not status badges, so
+   * they get the tighter button radius even though they otherwise share
+   * `.pill`'s sizing — `rounded-btn` after `pill` wins on specificity order,
+   * not because `.pill`'s own rounding changed.
+   */
   .tab-active {
-    @apply pill bg-show-accent text-on-gold;
+    @apply pill rounded-btn bg-show-accent text-on-gold;
   }
 
   .tab-idle {
-    @apply pill text-muted;
+    @apply pill rounded-btn text-muted;
   }
 
   /* A round icon control in the header: the bell, the admin feed. */
@@ -520,7 +513,7 @@
   }
 
   .field {
-    @apply w-full border border-hairline bg-canvas px-4 py-3 text-md text-ink
+    @apply w-full rounded-btn border border-hairline bg-canvas px-4 py-3 text-md text-ink
       outline-none transition placeholder:text-muted focus:border-brand-gold-deep focus:bg-surface;
   }
 
@@ -536,7 +529,7 @@
    * a rank, a points value, a show — is cut on the same angle, like the
    * graphics package of a broadcast: a tag reads as part of the show's
    * on-screen furniture rather than as a sticker slapped on a tile. Controls
-   * never lean; a button stays a square, level thing you can press.
+   * never lean; a button stays a rounded, level thing you can press.
    *
    * The lean is a `skewX` on a pseudo-element behind the text, so the label
    * itself stays upright and crisp, and `isolate` keeps that backing layer
@@ -550,7 +543,7 @@
 
   .tag::before {
     content: '';
-    @apply absolute inset-0 -z-10;
+    @apply absolute inset-0 -z-10 rounded-[3px];
     background: var(--tag-fill, theme(colors.surface-raised));
     box-shadow: var(--tag-edge, inset 0 0 0 1px rgba(248, 250, 252, 0.1));
     transform: skewX(-12deg);
@@ -655,7 +648,7 @@
 
   .rank-plate::before {
     content: '';
-    @apply absolute inset-0 -z-10;
+    @apply absolute inset-0 -z-10 rounded-[4px];
     background: var(--plate-fill, transparent);
     box-shadow: var(--plate-edge, inset 0 0 0 1px rgba(248, 250, 252, 0.12));
     transform: skewX(-12deg);
@@ -814,7 +807,7 @@
    * puts on screen. Used wherever a season is listed.
    */
   .plate {
-    @apply relative grid shrink-0 place-content-center gap-0.5 overflow-hidden text-center text-on-gold;
+    @apply relative grid shrink-0 place-content-center gap-0.5 overflow-hidden rounded-nested text-center text-on-gold;
     background: linear-gradient(
       160deg,
       color-mix(in srgb, var(--show-accent) 55%, white) 0%,
@@ -834,12 +827,12 @@
   }
 
   /*
-   * An icon set into a tile: a small square well in the tile's own accent.
+   * An icon set into a tile: a small rounded well in the tile's own accent.
    * Replaces the moulded "clay" chips — the same job, without pretending to
    * be a toy.
    */
   .icon-well {
-    @apply grid h-11 w-11 shrink-0 place-items-center;
+    @apply grid h-11 w-11 shrink-0 place-items-center rounded-nested;
     background: color-mix(in srgb, var(--show-accent) 18%, transparent);
     color: var(--show-accent-deep);
     box-shadow: inset 0 0 0 1px color-mix(in srgb, var(--show-accent) 30%, transparent);

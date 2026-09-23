@@ -26,15 +26,13 @@ export default function Error({ error, reset }: { error: Error & { digest?: stri
   return (
     <div className="stage pt-10">
       {/* The broadcast's own word for it: off air, back shortly. */}
-      <div className="card-feature p-5">
-        <span className="flex items-center justify-between gap-3">
-          <span className="icon-well">
-            <AlertIcon size={22} />
-          </span>
-          <Tag tone="red">Off air</Tag>
-        </span>
+      <div>
+        <Tag tone="red">
+          <AlertIcon size={14} />
+          Off air
+        </Tag>
 
-        <h1 className="headline mt-5 text-3xl">We&apos;ll be right back</h1>
+        <h1 className="headline mt-4 text-3xl">We&apos;ll be right back</h1>
         <p className="mt-2 max-w-sm text-sm leading-relaxed text-muted">
           Something went wrong on our side. Your leagues and scores are safe — this was just the page failing
           to build.

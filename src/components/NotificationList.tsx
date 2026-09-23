@@ -156,7 +156,7 @@ function MarkReadOnVisit({
           keepalive: true,
         }).catch(() => {});
       }}
-      className="block px-1 transition hover:bg-surface/60"
+      className="block rounded-btn px-1 transition hover:bg-surface/60"
     >
       {children}
       {notification.readAt === null && <span className="sr-only">Unread</span>}

@@ -156,7 +156,7 @@ export function InviteCode({ code, leagueName }: { code: string; leagueName: str
             e.clientX < box.left || e.clientX > box.right || e.clientY < box.top || e.clientY > box.bottom;
           if (outside) e.currentTarget.close();
         }}
-        className="border border-hairline bg-surface p-0 text-ink shadow-card backdrop:bg-black/70 backdrop:backdrop-blur-sm"
+        className="rounded-card border border-hairline bg-surface p-0 text-ink shadow-card backdrop:bg-black/70 backdrop:backdrop-blur-sm"
       >
         <div className="w-[min(20rem,calc(100vw-2.5rem))] p-5 text-center">
           <h2 className="headline text-2xl">Scan to join</h2>
@@ -166,7 +166,7 @@ export function InviteCode({ code, leagueName }: { code: string; leagueName: str
 
           {/* QR scanners need dark modules on a light field, so this tile
               stays white regardless of the app's dark surface. */}
-          <div className="mt-4 inline-block bg-white p-3">
+          <div className="mt-4 inline-block rounded-nested bg-white p-3">
             {opened && joinUrl ? (
               <QRCodeSVG
                 value={joinUrl}
@@ -218,7 +218,7 @@ function CopyIcon() {
       strokeWidth="1.8"
       aria-hidden
     >
-      <rect x="9" y="9" width="11" height="11" />
+      <rect x="9" y="9" width="11" height="11" rx="2.5" />
       <path
         d="M15 5.5A2.5 2.5 0 0 0 12.5 3h-6A3.5 3.5 0 0 0 3 6.5v6A2.5 2.5 0 0 0 5.5 15"
         strokeLinecap="round"
@@ -254,9 +254,9 @@ function QrIcon() {
       strokeWidth="1.8"
       aria-hidden
     >
-      <rect x="3" y="3" width="7" height="7" />
-      <rect x="14" y="3" width="7" height="7" />
-      <rect x="3" y="14" width="7" height="7" />
+      <rect x="3" y="3" width="7" height="7" rx="1.5" />
+      <rect x="14" y="3" width="7" height="7" rx="1.5" />
+      <rect x="3" y="14" width="7" height="7" rx="1.5" />
       <path d="M14 14h3v3h-3zM20 14v3M14 20h3M20 20h1" strokeLinecap="round" />
     </svg>
   );

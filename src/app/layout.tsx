@@ -121,7 +121,7 @@ export default async function RootLayout({ children }: { children: React.ReactNo
           <a
             href="#main"
             className="sr-only focus:not-sr-only focus:fixed focus:left-4 focus:top-4 focus:z-50
-              focus:bg-brand-gold focus:px-4 focus:py-2 focus:text-sm
+              focus:rounded-pill focus:bg-brand-gold focus:px-4 focus:py-2 focus:text-sm
               focus:font-semibold focus:text-on-gold"
           >
             Skip to content
@@ -152,14 +152,7 @@ export default async function RootLayout({ children }: { children: React.ReactNo
             </AppScroller>
             {user && <BottomNav />}
           </div>
-          <Toaster
-            theme="dark"
-            position="top-center"
-            richColors
-            closeButton
-            // Square, like everything else; Sonner rounds its toasts by default.
-            toastOptions={{ style: { borderRadius: 0 } }}
-          />
+          <Toaster theme="dark" position="top-center" richColors closeButton />
           <ServiceWorkerRegistrar />
           <ErrorReporting />
           {/* Vercel's field analytics and Core Web Vitals. Both are inert until

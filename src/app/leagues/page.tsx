@@ -1,7 +1,6 @@
 import type { Metadata } from 'next';
 import Link from 'next/link';
 import { Suspense } from 'react';
-import { PlusIcon, TallyMark } from '@/components/icons';
 import { LeagueRail } from '@/components/LeagueRail';
 import { LiveSection, type FeaturedCast, type LiveBlockData } from '@/components/LiveSection';
 import { getSocialBuzz } from '@/lib/social-feed';
@@ -196,17 +195,17 @@ function LiveSkeleton() {
     <div className="space-y-6" role="status" aria-label="Loading live updates">
       <div>
         <div className="mb-3 flex items-center justify-between">
-          <div className="h-7 w-24 animate-pulse bg-surface" />
-          <div className="h-4 w-28 animate-pulse bg-surface/70" />
+          <div className="h-7 w-24 animate-pulse rounded-pill bg-surface" />
+          <div className="h-4 w-28 animate-pulse rounded-pill bg-surface/70" />
         </div>
         <div className="flex overflow-hidden border-y border-hairline">
           {[0, 1, 2].map((i) => (
             <div key={i} className="flex w-64 shrink-0 items-start gap-3 px-4 py-3">
               <div className="h-10 w-10 shrink-0 animate-pulse rounded-full bg-surface" />
               <div className="min-w-0 flex-1 space-y-2 py-0.5">
-                <div className="h-3.5 w-2/3 animate-pulse bg-surface" />
-                <div className="h-3 w-5/6 animate-pulse bg-surface/70" />
-                <div className="h-3 w-1/3 animate-pulse bg-surface/70" />
+                <div className="h-3.5 w-2/3 animate-pulse rounded-pill bg-surface" />
+                <div className="h-3 w-5/6 animate-pulse rounded-pill bg-surface/70" />
+                <div className="h-3 w-1/3 animate-pulse rounded-pill bg-surface/70" />
               </div>
             </div>
           ))}
@@ -215,8 +214,8 @@ function LiveSkeleton() {
       <div className="divide-y divide-hairline border-y border-hairline">
         {[0, 1, 2, 3].map((i) => (
           <div key={i} className="space-y-2 px-1 py-3.5">
-            <div className="h-4 w-11/12 animate-pulse bg-surface" />
-            <div className="h-3 w-1/3 animate-pulse bg-surface/70" />
+            <div className="h-4 w-11/12 animate-pulse rounded-pill bg-surface" />
+            <div className="h-3 w-1/3 animate-pulse rounded-pill bg-surface/70" />
           </div>
         ))}
       </div>
@@ -230,31 +229,27 @@ function RailSkeleton() {
       <div className="flex gap-3 overflow-hidden">
         {[0, 1].map((i) => (
           <div key={i} className="card w-72 shrink-0 p-4">
-            <div className="h-4 w-2/3 animate-pulse bg-canvas" />
-            <div className="mt-2 h-3 w-1/2 animate-pulse bg-canvas/70" />
-            <div className="mt-5 h-8 w-20 animate-pulse bg-canvas" />
-            <div className="mt-4 h-3 w-full animate-pulse bg-canvas/70" />
+            <div className="h-4 w-2/3 animate-pulse rounded-pill bg-canvas" />
+            <div className="mt-2 h-3 w-1/2 animate-pulse rounded-pill bg-canvas/70" />
+            <div className="mt-5 h-8 w-20 animate-pulse rounded-pill bg-canvas" />
+            <div className="mt-4 h-3 w-full animate-pulse rounded-pill bg-canvas/70" />
           </div>
         ))}
       </div>
-      <div className="mt-2 h-3 w-32 animate-pulse bg-surface/70" />
+      <div className="mt-2 h-3 w-32 animate-pulse rounded-pill bg-surface/70" />
     </div>
   );
 }
 
 function EmptyLeagues() {
   return (
-    <div className="card-feature mt-2 p-4">
-      <TallyMark className="absolute -bottom-6 -right-4 h-32 w-32 text-brand-gold opacity-[0.1]" />
-      <span className="icon-well">
-        <PlusIcon size={22} />
-      </span>
-      <h2 className="headline mt-4 text-2xl">You&apos;re not in a league yet</h2>
+    <div className="callout mt-2">
+      <h2 className="headline text-2xl">You&apos;re not in a league yet</h2>
       <p className="mt-2 max-w-measure text-xs leading-relaxed text-muted">
         Start one for any season that is still open, or join a friend&apos;s with their invite code — they can
         show you a QR code to scan instead.
       </p>
-      <div className="relative mt-5 flex flex-wrap gap-2">
+      <div className="mt-4 flex flex-wrap gap-2">
         <Link href="/leagues/new" prefetch={false} className="btn-primary">
           Create a league
         </Link>

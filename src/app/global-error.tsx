@@ -38,6 +38,7 @@ export default function GlobalError({
               background: '#F59E0B',
               color: '#1A1206',
               border: 0,
+              borderRadius: 8,
               padding: '12px 20px',
               fontWeight: 600,
               fontSize: 14,

@@ -7,7 +7,7 @@ import { DeleteAccountPanel } from '@/components/DeleteAccountPanel';
 import { EmailPreferences } from '@/components/EmailPreferences';
 import { FriendsPanel } from '@/components/FriendsPanel';
 import { PointHistoryChart } from '@/components/PointHistoryChart';
-import { CrownIcon, TallyMark } from '@/components/icons';
+import { CrownIcon } from '@/components/icons';
 import { RevealGroup } from '@/components/motion/Reveal';
 import { PushToggle } from '@/components/PushToggle';
 import { Tag, rankTone } from '@/components/Tag';
@@ -78,17 +78,17 @@ export default async function AccountPage() {
           </div>
         </div>
 
-        {/* Career totals: the headline number on the page's one gold block,
-          and the three supporting counts ruled into a strip beneath it
-          rather than boxed as three more tiles. */}
-        <section className="mt-6" aria-labelledby="career">
+        {/* Career totals as one ruled section: the headline number large
+          and gold, the three supporting counts in a strip beneath it — on
+          the page, the way a player's season points are, not in a block. */}
+        <section className="mt-6 border-y border-hairline" aria-labelledby="career">
           <h2 id="career" className="sr-only">
             Career totals
           </h2>
-          <dl>
+          <dl className="py-4">
             <Stat label="Total points" value={String(account.totalPoints)} lead />
           </dl>
-          <dl className="stat-row mt-3 grid-cols-3">
+          <dl className="grid grid-cols-3 divide-x divide-hairline border-t border-hairline py-3">
             <Stat label="Leagues" value={String(account.leaguesPlayed)} />
             <Stat
               label="Best finish"
@@ -215,10 +215,10 @@ export default async function AccountPage() {
 }
 
 /**
- * One career number. The `lead` one — lifetime points — is the page's one
- * block of gold, with the wordmark's tally in its corner; the rest are
- * cells in a ruled strip, and a number worth celebrating (a title, a
- * first-place finish) is picked out in gold type rather than a new colour.
+ * One career number. The `lead` one — lifetime points — is set large in
+ * the wordmark's struck gold; the rest are cells in a ruled strip, and a
+ * number worth celebrating (a title, a first-place finish) is picked out in
+ * gold type rather than a new colour.
  */
 function Stat({
   label,
@@ -242,10 +242,14 @@ function Stat({
     );
   }
   return (
-    <div className="card-pop-gold relative overflow-hidden p-4">
-      <TallyMark className="absolute -bottom-5 -right-2 h-28 w-28 text-pop-gold-ink opacity-[0.09]" />
-      <dt className="text-2xs font-bold uppercase tracking-[0.14em] text-tile-muted">{label}</dt>
-      <dd className={cn('relative mt-1.5 font-display text-6xl leading-none tracking-wide', valueClassName)}>
+    <div>
+      <dt className="eyebrow">{label}</dt>
+      <dd
+        className={cn(
+          'wordmark-gold mt-1.5 inline-block font-display text-6xl leading-none tracking-wide',
+          valueClassName,
+        )}
+      >
         {value}
       </dd>
     </div>
@@ -307,7 +311,7 @@ function SeasonRow({ row }: { row: SeasonHistoryRow }) {
     <li>
       <Link
         href={`/teams/${row.teamId}`}
-        className="flex items-center gap-3 px-1 py-4 transition hover:bg-surface/60"
+        className="flex items-center gap-3 rounded-btn px-1 py-4 transition hover:bg-surface/60"
       >
         {body}
       </Link>

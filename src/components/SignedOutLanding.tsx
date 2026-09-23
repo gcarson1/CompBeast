@@ -162,20 +162,21 @@ export function SignedOutLanding({
       <div className="mt-14">{live}</div>
 
       <Section id="shows" title="Pick your show" lede={facts.showsLede}>
-        {/* One tile per show, each in its own colour: the two brands get
-            equal billing, and the platform's gold stays for the platform. */}
-        <ul className="mt-5 grid gap-3 sm:grid-cols-2">
+        {/* One section per show, each in its own colour: the shows get equal
+            billing, and the platform's gold stays for the platform. Ruled
+            off from each other like every other list — no boxes. */}
+        <ul className="list mt-5">
           {facts.shows.map((show) => (
-            <li key={show.showSlug}>
+            <li key={show.showSlug} className="grid grid-cols-[auto_1fr] gap-x-4 py-5">
               <ShowTheme showSlug={show.showSlug}>
-                <div className="card-feature card-lift flex h-full flex-col p-4">
-                  <TallyMark className="absolute -right-3 -top-4 h-24 w-24 text-show-accent opacity-[0.1]" />
-                  <div className="relative flex items-start justify-between gap-3">
-                    {show.season ? (
-                      <SeasonPlate showSlug={show.showSlug} seasonSlug={show.season.slug} />
-                    ) : (
-                      <span />
-                    )}
+                {show.season ? (
+                  <SeasonPlate showSlug={show.showSlug} seasonSlug={show.season.slug} className="mt-0.5" />
+                ) : (
+                  <span />
+                )}
+                <div className="min-w-0">
+                  <div className="flex flex-wrap items-center gap-x-3 gap-y-1.5">
+                    <h3 className="headline text-3xl text-show-deep">{show.showName}</h3>
                     {show.season?.status === 'ACTIVE' ? (
                       <Tag tone="red" live size="sm">
                         Airing now
@@ -186,23 +187,16 @@ export function SignedOutLanding({
                       </Tag>
                     )}
                   </div>
-                  <h3 className="headline mt-3 text-3xl text-show-deep">{show.showName}</h3>
                   <p className="mt-2 max-w-measure text-xs leading-relaxed text-muted">{show.pitch}</p>
-                  <dl className="relative mt-3 grid grid-cols-2 gap-3 border-t border-hairline pt-3 text-2xs">
-                    <div>
-                      <dt className="font-semibold uppercase tracking-wide text-muted">Season</dt>
-                      <dd className="mt-0.5 text-sm font-semibold text-ink">{show.season?.name ?? '—'}</dd>
-                    </div>
-                    <div>
-                      <dt className="font-semibold uppercase tracking-wide text-muted">Cast</dt>
-                      <dd className="mt-0.5 text-sm font-semibold text-ink">
-                        {show.season?.contestantCount
-                          ? `${show.season.contestantCount} ${lower(show.lexicon.contestantPlural)}`
-                          : '—'}
-                      </dd>
-                    </div>
-                  </dl>
-                  <div className="relative mt-auto flex flex-wrap gap-2 pt-3">
+                  {show.season && (
+                    <p className="mt-2 text-2xs font-semibold text-ink">
+                      {show.season.name}
+                      {show.season.contestantCount
+                        ? ` · ${show.season.contestantCount} ${lower(show.lexicon.contestantPlural)}`
+                        : ''}
+                    </p>
+                  )}
+                  <div className="mt-3 flex flex-wrap gap-2">
                     {show.season && (
                       <Link href={`/seasons/${show.season.slug}`} className="btn-ghost btn-sm">
                         Meet the cast
