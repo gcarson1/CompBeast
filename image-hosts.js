@@ -11,6 +11,8 @@
  * - wp.bigbrotherjunkies.com: Big Brother headshots, from ingestion.
  * - www.paramountplus.com: Survivor headshots, from the network's own cast
  *   articles, via the Wikipedia adapter.
+ * - www.nbc.com: The Traitors headshots, from NBC Insider's cast articles,
+ *   via the same adapter pattern.
  * - img.clerk.com: member avatars, from the auth provider.
  */
-module.exports = ['wp.bigbrotherjunkies.com', 'www.paramountplus.com', 'img.clerk.com'];
+module.exports = ['wp.bigbrotherjunkies.com', 'www.paramountplus.com', 'www.nbc.com', 'img.clerk.com'];

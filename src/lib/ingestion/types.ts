@@ -129,6 +129,42 @@ export interface SurvivorSeasonFacts extends RawSeasonFacts<SurvivorEpisodeResul
   juryVotes: Array<{ player: RawPlayerRef; count: number }>;
 }
 
+/** A Round Table ballot: who voted to banish whom. */
+export interface TraitorsBallot {
+  voter: RawPlayerRef;
+  target: RawPlayerRef;
+  /** Which round of voting in the episode: 1 at the Round Table, more after a tie or in the end game. */
+  round: number;
+  /** Whether this round of voting banished its target — a tied first round did not. */
+  banished: boolean;
+  /** Whether the player it banished turned out to be a Traitor at the time. */
+  caughtTraitor: boolean;
+}
+
+export interface TraitorsEpisodeResult extends RawCycleResult {
+  /** Murdered by the Traitors — revealed at breakfast this episode. */
+  murdered: RawPlayerRef[];
+  /** Banished at the Round Table or in the end game. */
+  banished: RawPlayerRef[];
+  /** Everyone who won a shield in this episode's missions. */
+  shields: RawPlayerRef[];
+  /** Named on the Traitors' murder shortlist this episode. */
+  shortlisted: RawPlayerRef[];
+  ballots: TraitorsBallot[];
+  /** Who became a Traitor in this episode: the opening selection, a recruitment, an ultimatum. */
+  newTraitors: RawPlayerRef[];
+  /**
+   * The Traitors in the game on the night of each murder revealed this
+   * episode, once per murder — they choose together, so they share the kill.
+   */
+  murderers: RawPlayerRef[][];
+}
+
+export interface TraitorsSeasonFacts extends RawSeasonFacts<TraitorsEpisodeResult> {
+  /** Everyone who reached the end game. Empty until the finale airs. */
+  endGame: RawPlayerRef[];
+}
+
 // ---------------------------------------------------------------------------
 
 export interface SeasonSourceAdapter<TFacts extends RawSeasonFacts = RawSeasonFacts> {

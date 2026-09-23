@@ -1,7 +1,8 @@
 import { BIG_BROTHER_EVENTS, BIG_BROTHER_RULESETS } from './big-brother';
-import { BIG_BROTHER_LEXICON, SURVIVOR_LEXICON, type ShowLexicon } from './lexicon';
+import { BIG_BROTHER_LEXICON, SURVIVOR_LEXICON, TRAITORS_LEXICON, type ShowLexicon } from './lexicon';
 import type { EventDefinitionSpec, RulesetSpec } from './spec';
 import { SURVIVOR_EVENTS, SURVIVOR_RULESETS } from './survivor';
+import { TRAITORS_EVENTS, TRAITORS_RULESETS } from './traitors';
 
 export { RECORDED, rulesetRules } from './spec';
 export type { EventDefinitionSpec, ResolvedRule, RulesetSpec } from './spec';
@@ -37,5 +38,12 @@ export const SHOW_CATALOGUE: ShowSpec[] = [
     lexicon: SURVIVOR_LEXICON,
     events: SURVIVOR_EVENTS,
     rulesets: SURVIVOR_RULESETS,
+  },
+  {
+    slug: 'traitors',
+    name: 'The Traitors',
+    lexicon: TRAITORS_LEXICON,
+    events: TRAITORS_EVENTS,
+    rulesets: TRAITORS_RULESETS,
   },
 ];

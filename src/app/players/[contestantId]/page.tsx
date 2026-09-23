@@ -52,6 +52,8 @@ export default async function PlayerPage({ params }: { params: { contestantId: s
   // The viewer's own leagues only — this page is public and indexed.
   const leagues = await getContestantLeaguesForViewer(player.id, user?.id ?? null);
   const lexicon = player.showLexicon;
+  const affiliation = (player.metadata as { affiliation?: unknown } | null)?.affiliation;
+  const side = typeof affiliation === 'string' && affiliation.trim() ? affiliation.trim() : null;
 
   return (
     <ShowTheme showSlug={player.season.show.slug}>
@@ -79,6 +81,12 @@ export default async function PlayerPage({ params }: { params: { contestantId: s
                     ? lexicon.activeLabel
                     : `${eliminationLabel(lexicon, player.metadata)} · ${player.eliminatedCycle?.label ?? '—'}`}
                 </Tag>
+                {/* The Traitors: which side they played on, once the source says. */}
+                {side && (
+                  <Tag tone={/traitor/i.test(side) ? 'red' : 'outline'} size="sm">
+                    {side}
+                  </Tag>
+                )}
                 <span className="truncate">
                   {player.season.show.name} · {player.season.name}
                 </span>

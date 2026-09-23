@@ -53,6 +53,26 @@ const CASTAWAYS = [
   { name: 'Suki Nakamura', occupation: 'Escape Room Designer', hometown: 'Honolulu, HI', tribe: 'Moana' },
 ];
 
+/** A fictional castle for the demo season of The Traitors. */
+const PLAYERS = [
+  { name: 'Celeste Vandermeer', occupation: 'Opera Singer', hometown: 'Philadelphia, PA' },
+  { name: 'Marcus Oyelaran', occupation: 'Firefighter', hometown: 'Chicago, IL' },
+  { name: 'Priya Castellanos', occupation: 'Trial Lawyer', hometown: 'Miami, FL' },
+  { name: 'Dewey Holt', occupation: 'Cattle Rancher', hometown: 'Amarillo, TX' },
+  { name: 'Fiona Blackwood', occupation: 'Crossword Constructor', hometown: 'Portland, ME' },
+  { name: 'Jonah Park', occupation: 'Magician', hometown: 'Las Vegas, NV' },
+  { name: 'Rosalind Achebe', occupation: 'Diplomat', hometown: 'Washington, DC' },
+  { name: 'Tucker Beaumont', occupation: 'Car Salesman', hometown: 'Birmingham, AL' },
+  { name: 'Ingrid Solberg', occupation: 'Ski Patroller', hometown: 'Park City, UT' },
+  { name: 'Emeka Nwachukwu', occupation: 'Actuary', hometown: 'Houston, TX' },
+  { name: 'Delphine Moreau', occupation: 'Pastry Chef', hometown: 'New Orleans, LA' },
+  { name: 'Silas Crane', occupation: 'Private Investigator', hometown: 'Providence, RI' },
+  { name: 'Hazel Okonkwo', occupation: 'Kindergarten Teacher', hometown: 'Columbus, OH' },
+  { name: 'Vince Moretti', occupation: 'Tattoo Artist', hometown: 'Staten Island, NY' },
+  { name: 'Wren Calloway', occupation: 'Podcast Host', hometown: 'Nashville, TN' },
+  { name: 'Gideon Ashby', occupation: 'Antiques Dealer', hometown: 'Charleston, SC' },
+];
+
 const DEMO_USERS = [
   { handle: 'alicorak', name: 'Ali Corak', email: 'ali@compbeast.test' },
   { handle: 'alexdavis', name: 'Alex Davis', email: 'alex@compbeast.test' },
@@ -194,6 +214,56 @@ async function main() {
     });
   }
   console.log(`  ${CASTAWAYS.length} castaways, ${CYCLE_COUNT} episodes (upcoming)`);
+
+  // --- The Traitors: an upcoming demo season, open for leagues --------------
+  // The same shape as Survivor's: a cast and a schedule, nothing scored.
+  const traitors = installed.get('traitors')!.show;
+  const traitorsStart = new Date();
+  traitorsStart.setUTCDate(traitorsStart.getUTCDate() + 21);
+  traitorsStart.setUTCHours(0, 0, 0, 0);
+  const TRAITORS_EPISODES = 11;
+
+  const traitorsSeason = await prisma.season.upsert({
+    where: { slug: 'demo-traitors' },
+    update: {},
+    create: {
+      showId: traitors.id,
+      slug: 'demo-traitors',
+      name: 'Demo Season',
+      year: 2026,
+      status: 'UPCOMING',
+      startDate: traitorsStart,
+    },
+  });
+
+  for (const player of PLAYERS) {
+    const existing = await prisma.contestant.findFirst({
+      where: { seasonId: traitorsSeason.id, name: player.name },
+      select: { id: true },
+    });
+    if (existing) continue;
+    await prisma.contestant.create({
+      data: {
+        seasonId: traitorsSeason.id,
+        name: player.name,
+        metadata: { occupation: player.occupation, hometown: player.hometown },
+      },
+    });
+  }
+
+  for (let sequence = 1; sequence <= TRAITORS_EPISODES; sequence += 1) {
+    const airsAt = new Date(traitorsStart);
+    airsAt.setUTCDate(airsAt.getUTCDate() + (sequence - 1) * 7);
+    airsAt.setUTCHours(1, 0, 0, 0);
+    const locksAt = new Date(airsAt.getTime() - 30 * 60 * 1000);
+    const label = sequence === TRAITORS_EPISODES ? 'Finale' : `Episode ${sequence}`;
+    await prisma.cycle.upsert({
+      where: { seasonId_sequence: { seasonId: traitorsSeason.id, sequence } },
+      update: { label, airsAt, locksAt },
+      create: { seasonId: traitorsSeason.id, sequence, label, airsAt, locksAt, status: 'UPCOMING' },
+    });
+  }
+  console.log(`  ${PLAYERS.length} players, ${TRAITORS_EPISODES} episodes (upcoming)`);
 
   // --- Demo users & league --------------------------------------------------
   const users = [];

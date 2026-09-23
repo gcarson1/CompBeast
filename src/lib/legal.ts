@@ -48,7 +48,7 @@ export const LEGAL_UPDATED = '2026-09-21';
  * names them can carry the same disclaimer word for word.
  */
 export const AFFILIATION_DISCLAIMER =
-  'Comp Beast is an independent fan project. It is not affiliated with, endorsed by or sponsored by CBS, Paramount, or the producers of Big Brother or Survivor. Show names are trademarks of their respective owners.';
+  'Comp Beast is an independent fan project. It is not affiliated with, endorsed by or sponsored by CBS, Paramount, NBCUniversal, Peacock, or the producers of Big Brother, Survivor or The Traitors. Show names are trademarks of their respective owners.';
 
 /** Every third party that handles data on the site's behalf, for the privacy policy. */
 export const PROCESSORS = [

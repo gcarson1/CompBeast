@@ -2,10 +2,11 @@
  * Show vocabulary for the UI.
  *
  * The platform core says "contestant", "cycle" and "eliminated". A show's
- * fans do not — they say houseguest, castaway, week, episode, evicted, voted
- * out — and copy that uses the generic word on a show page reads as written
- * by someone who has never watched it. Every show-scoped page reads its words
- * from here instead of hardcoding one show's.
+ * fans do not — they say houseguest, castaway, player, week, episode,
+ * evicted, voted out, banished — and copy that uses the generic word on a
+ * show page reads as written by someone who has never watched it. Every
+ * show-scoped page reads its words from here instead of hardcoding one
+ * show's.
  *
  * Resolution is layered: the platform default, then the vocabulary this
  * module knows for the slug, then whatever `Show.lexicon` holds in the
@@ -62,9 +63,21 @@ export const SURVIVOR_LEXICON: ShowLexicon = {
   atRiskLabel: 'in danger at tribal',
 };
 
+export const TRAITORS_LEXICON: ShowLexicon = {
+  cycleSingular: 'Episode',
+  cyclePlural: 'Episodes',
+  contestantSingular: 'Player',
+  contestantPlural: 'Players',
+  eliminationVerb: 'Banished',
+  activeLabel: 'In the castle',
+  arena: 'the castle',
+  atRiskLabel: 'on the murder shortlist',
+};
+
 const KNOWN_LEXICONS: Record<string, ShowLexicon> = {
   'big-brother': BIG_BROTHER_LEXICON,
   survivor: SURVIVOR_LEXICON,
+  traitors: TRAITORS_LEXICON,
 };
 
 const KEYS = Object.keys(DEFAULT_LEXICON) as Array<keyof ShowLexicon>;

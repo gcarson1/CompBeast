@@ -1,5 +1,4 @@
 import * as cheerio from 'cheerio';
-import type { Element } from 'domhandler';
 import {
   IngestionError,
   type RawCastMember,
@@ -10,12 +9,21 @@ import {
   type SurvivorExit,
   type SurvivorSeasonFacts,
 } from '../types';
+import {
+  NameResolver,
+  USER_AGENT,
+  WIKI_BASE,
+  easternAirTime,
+  expandTable,
+  findTable,
+  norm,
+  ordinal,
+  slugify,
+  splitName,
+} from './wikipedia';
 
 const SLUG = 'wikipedia-survivor';
-const WIKI_BASE = 'https://en.wikipedia.org/wiki/';
 const CAST_PHOTOS_BASE = 'https://www.paramountplus.com/sneak-peak/';
-
-const USER_AGENT = 'CompBeastBot/0.1 (+https://github.com/gcarson1/CompBeast)';
 
 /**
  * The network's cast articles mostly follow one URL shape, but not always;
@@ -57,96 +65,6 @@ function articleTitle(seasonExternalId: string): string {
   return `Survivor_${match[1]}`;
 }
 
-interface Cell {
-  text: string;
-  /** The text before the cell's first line break — a name without what follows it. */
-  firstLine: string;
-  /** True for the cell's top-left origin; a spanned copy is false. */
-  origin: boolean;
-}
-
-/**
- * A table as a rectangle. A cell that spans rows or columns is copied into
- * every position it covers, so column N means the same thing on every row
- * whatever the spans above it did.
- */
-function expandTable($: cheerio.CheerioAPI, table: Element): Cell[][] {
-  const grid: Cell[][] = [];
-  $(table)
-    .find('tr')
-    .each((r, tr) => {
-      grid[r] = grid[r] ?? [];
-      let c = 0;
-      $(tr)
-        .children('th,td')
-        .each((_, cell) => {
-          while (grid[r][c]) c += 1;
-          const rowspan = Number.parseInt($(cell).attr('rowspan') ?? '1', 10) || 1;
-          const colspan = Number.parseInt($(cell).attr('colspan') ?? '1', 10) || 1;
-          // A returnee's cell is their name, a line break, then their past
-          // seasons; the first line is the name. Taken from the markup before
-          // the breaks are folded into the running text below.
-          const firstLine = clean(cheerio.load(($(cell).html() ?? '').split(/<br/i)[0]).text());
-          // Line breaks separate names in a list; footnote markers ([a], [1])
-          // and the "[Name]" add-on notation for advantages are dropped.
-          $(cell).find('br').replaceWith(', ');
-          $(cell).find('sup').remove();
-          const text = clean($(cell).text());
-          for (let i = 0; i < rowspan; i += 1) {
-            grid[r + i] = grid[r + i] ?? [];
-            for (let j = 0; j < colspan; j += 1) {
-              grid[r + i][c + j] = { text, firstLine, origin: i === 0 && j === 0 };
-            }
-          }
-          c += colspan;
-        });
-    });
-  return grid.filter((row) => row.length > 0);
-}
-
-function clean(text: string): string {
-  return text
-    .replace(/\[[^\]]*\]/g, '')
-    .replace(/\s+/g, ' ')
-    .replace(/\s*,\s*/g, ', ')
-    .replace(/(^,\s*|,\s*$)/g, '')
-    .trim();
-}
-
-function findTable($: cheerio.CheerioAPI, captionPattern: RegExp): Element | null {
-  const tables = $('table.wikitable').toArray();
-  return tables.find((table) => captionPattern.test($(table).find('caption').first().text())) ?? null;
-}
-
-const norm = (s: string) => s.toLowerCase().replace(/[^a-z0-9]/g, '');
-
-/** "Kimberly "Annie" Davis" → { first: "Kimberly", nickname: "Annie", last: "Davis" }. */
-function splitName(full: string): { first: string; nickname: string | null; last: string } {
-  const nickname = /["“”']([^"“”']+)["“”']/.exec(full)?.[1] ?? null;
-  const parts = full
-    .replace(/["“”']([^"“”']+)["“”']/g, '')
-    .replace(/\s+/g, ' ')
-    .trim()
-    .split(' ');
-  return { first: parts[0] ?? '', nickname, last: parts.slice(1).join(' ') };
-}
-
-function slugify(name: string): string {
-  return name
-    .normalize('NFD')
-    .replace(/[\u0300-\u036f]/g, '')
-    .toLowerCase()
-    .replace(/["“”']/g, '')
-    .replace(/[^a-z0-9]+/g, '-')
-    .replace(/(^-|-$)/g, '');
-}
-
-const ordinal = (n: number) => {
-  const s = ['th', 'st', 'nd', 'rd'];
-  const v = n % 100;
-  return `${n}${s[(v - 20) % 10] ?? s[v] ?? s[0]}`;
-};
-
 interface Contestant extends RawCastMember {
   /** Tribe per phase, keyed by the normalised phase label ("original", "firstswitch", "merged"). */
   tribes: Record<string, string>;
@@ -158,36 +76,6 @@ interface Contestant extends RawCastMember {
   /** The Placement cell verbatim, e.g. "14th voted out, 7th jury member". */
   finishText: string;
   dayLabel: string;
-}
-
-/**
- * Resolves the short names the summary and voting tables use ("Annie",
- * "Sophi", "Jake S.") to contestants. Built from the cast, so a season with
- * two Jakes resolves "Jake S." and refuses a bare "Jake".
- */
-class NameResolver {
-  private readonly byShort = new Map<string, Contestant[]>();
-
-  constructor(cast: Contestant[]) {
-    for (const member of cast) {
-      for (const short of member.shortNames) {
-        const key = norm(short);
-        const list = this.byShort.get(key) ?? [];
-        list.push(member);
-        this.byShort.set(key, list);
-      }
-    }
-  }
-
-  resolve(short: string): Contestant | null {
-    const cleaned = short.replace(/\([^)]*\)/g, '').trim();
-    if (!cleaned) return null;
-    const matches = this.byShort.get(norm(cleaned)) ?? [];
-    // One person, or the same person listed under two of their own short
-    // names; two different people is an ambiguity the page would not leave.
-    const distinct = [...new Set(matches)];
-    return distinct.length === 1 ? distinct[0] : null;
-  }
 }
 
 function ref(member: Contestant): RawPlayerRef {
@@ -267,14 +155,11 @@ function parseContestants($: cheerio.CheerioAPI): Contestant[] {
 
 /**
  * "September 23, 2026" → that evening's 8 PM Eastern air slot. The page gives
- * only the day; the time is when CBS airs the show. Pinned to Eastern Daylight
- * Time even after the clocks change, which makes a winter episode read an
- * hour early — the roster lock that hangs off it then closes an hour early,
- * the safe side of wrong.
+ * only the day; the time is when CBS airs the show, in whichever of daylight
+ * or standard time that date falls.
  */
 function parseAirDate(text: string): Date | null {
-  const parsed = new Date(`${text} 20:00:00 GMT-0400`);
-  return Number.isNaN(parsed.getTime()) ? null : parsed;
+  return easternAirTime(text, 20);
 }
 
 interface SummaryEpisode {
@@ -481,7 +366,7 @@ export const wikipediaSurvivorAdapter: SeasonSourceAdapter<SurvivorSeasonFacts> 
       for (const member of cast) member.photoUrl = photoFor(photos, member.fullName);
     }
 
-    const resolver = new NameResolver(cast);
+    const resolver = new NameResolver<Contestant>(cast);
     const tribeNames = new Set(cast.flatMap((m) => Object.values(m.tribes)));
     const summary = parseSummary($);
     const columns = parseVotingHistory($);

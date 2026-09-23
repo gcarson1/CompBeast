@@ -56,7 +56,7 @@ export interface LandingShow {
  * hero, how-it-works, league sizes and comparison are about Comp Beast and
  * say "cast", "contestant", "episode"; the live block, the show tiles and
  * the scoring section are one block per show, in that show's colour and
- * vocabulary, so neither show is the default and neither is an afterthought.
+ * vocabulary, so no show is the default and none is an afterthought.
  *
  * The page is written for two readers at once. A person skimming on a phone
  * gets the display headline and one paragraph per section. A crawler or a
@@ -109,7 +109,7 @@ export function SignedOutLanding({
           <p className="flex animate-rise flex-wrap items-center gap-x-3 gap-y-2">
             <Tag tone="gold">Free to play</Tag>
             <span className="text-2xs font-bold uppercase tracking-[0.16em] text-muted">
-              Big Brother · Survivor
+              {facts.shows.map((show) => show.showName).join(' · ')}
             </span>
           </p>
 
@@ -277,7 +277,7 @@ export function SignedOutLanding({
                     <div className="card overflow-hidden">
                       <table className="w-full table-fixed text-xs">
                         <caption className="sr-only">
-                          Point values for selected {show.showName} events under each Comp Beast ruleset
+                          Point values for selected events on {show.showName} under each Comp Beast ruleset
                         </caption>
                         <colgroup>
                           <col className={show.scoring!.columns.length > 3 ? 'w-[30%]' : 'w-[40%]'} />
@@ -494,6 +494,8 @@ const SHOW_PITCHES: Record<string, string> = {
     'Head of Household, the veto, nominations, evictions and the jury — every week in the house scored as it airs, straight from the results.',
   survivor:
     'Immunity, rewards, idols, tribal council and the merge — every episode on the island scored as it airs, from the voting history down.',
+  traitors:
+    'Shields, murders, the Round Table and the end game — every episode in the castle scored as it airs, down to who voted out a Traitor.',
 };
 
 interface ShowFacts {
@@ -582,8 +584,8 @@ function deriveShowFacts(show: LandingShow): ShowFacts {
     scoring = {
       lede:
         headline.length >= 3
-          ? `${eventCount} scored ${show.showName} events. Under the default ${defaultRuleset.name} rules: ${headlineSentence}.`
-          : `${eventCount} scored ${show.showName} events, each with a fixed point value.`,
+          ? `${eventCount} scored events on ${show.showName}. Under the default ${defaultRuleset.name} rules: ${headlineSentence}.`
+          : `${eventCount} scored events on ${show.showName}, each with a set point value.`,
       columns: rulesets.map((r) => ({ id: r.id, name: r.name })),
       rows,
     };
@@ -646,7 +648,7 @@ function deriveFacts(input: LandingShow[]): Facts {
   return {
     shows,
     onAir,
-    showsLede: `${SITE_NAME} runs leagues for ${showList}. Each show keeps its own rule book, its own words and its own colours; a league belongs to one season of one show, and everything else — the draft, the standings, the chat — works the same way for both.`,
+    showsLede: `${SITE_NAME} runs leagues for ${showList}. Each show keeps its own rule book, its own words and its own colours; a league belongs to one season of one show, and everything else — the draft, the standings, the chat — works the same way for every show.`,
     howItWorks: `A league lasts one season. A commissioner creates it, picks a scoring ruleset and opens between ${minTeams} and ${maxTeams} team seats, shared by invite code or QR code. Every team snake-drafts contestants onto a roster of up to ${maxRoster}, each episode's results are scored as they air, and the leaderboard ranks every team live until the finale.`,
     scoringLede: `Every event has a set point value, and every league picks a ruleset for its show before the draft: Classic scores only what the broadcast shows, Balanced turns the variance down, and Drama & Social adds the alliances, blowups and tears. ${houseRules.join('')}Every point on a leaderboard traces to the aired result that produced it.`,
     leagueSetup: `Leagues hold between ${minTeams} and ${maxTeams} teams, and each roster carries ${minRoster} to ${maxRoster} players, both set by the commissioner before the draft. Rosters are drafted once and stay fixed for the season. Each episode shows a roster lock time — ${DEFAULT_LOCK_OFFSET_MINUTES} minutes before airtime by default, and a commissioner can move it up to ${maxLockHours} hours earlier.`,
@@ -696,7 +698,10 @@ function buildFaq(facts: Facts, emailAlerts: boolean): FaqItem[] {
   const { minTeams, maxTeams, minRoster, maxRoster } = LEAGUE_LIMITS;
   const maxLockHours = MAX_LOCK_OFFSET_MINUTES / 60;
   const names = facts.shows.map((s) => s.showName);
-  const showList = names.length > 1 ? names.join(' and ') : (names[0] ?? 'reality competition TV');
+  const showList =
+    names.length > 1
+      ? `${names.slice(0, -1).join(', ')} and ${names.at(-1)}`
+      : (names[0] ?? 'reality competition TV');
 
   const showsAnswer = [
     ...facts.shows.map((show) => {

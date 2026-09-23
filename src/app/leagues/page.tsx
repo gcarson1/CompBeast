@@ -9,7 +9,7 @@ import { SignedOutLanding, type LandingShow } from '@/components/SignedOutLandin
 import { getCurrentUser } from '@/lib/auth';
 import { isEmailConfigured } from '@/lib/email/send';
 import { HOME_PATH, SITE_DESCRIPTION, SITE_NAME, absoluteUrl } from '@/lib/seo';
-import { hashtagFor } from '@/lib/shows/registry';
+import { FLAGSHIP_SHOW_SLUG, hashtagFor } from '@/lib/shows/registry';
 import {
   getHomeLeagues,
   getRecentHeadlines,
@@ -303,5 +303,12 @@ async function getFeaturedCasts(seasons: OpenSeason[]): Promise<FeaturedCast[]> 
       });
     }
   }
-  return featured;
+  // In the same order as every other per-show block on the page — the
+  // flagship, then the rest by name — rather than by whichever premiered
+  // last.
+  return featured.sort((a, b) => {
+    if (a.showSlug === FLAGSHIP_SHOW_SLUG) return -1;
+    if (b.showSlug === FLAGSHIP_SHOW_SLUG) return 1;
+    return a.showName.localeCompare(b.showName);
+  });
 }

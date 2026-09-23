@@ -1,15 +1,16 @@
 # Comp Beast
 
-Fantasy leagues for reality TV. Multi-tenant and show-agnostic, with *Big Brother* and
-*Survivor* rule sets shipped.
+Fantasy leagues for reality TV. Multi-tenant and show-agnostic, with *Big Brother*,
+*Survivor* and *The Traitors* rule sets shipped.
 
 The platform core knows nothing about any one show. Shows, seasons, contestants, and — most
 importantly — **scoring rules** are all rows in the database. Each show is a catalogue in
-`src/lib/shows/` (its events, rulesets and vocabulary) that the seed installs; adding
-*The Traitors* means adding a sibling file, not editing the scoring engine, the API, or
-the UI. Show-scoped pages read their words — houseguest or castaway, week or episode,
-evicted or voted out — from the show's lexicon, and wear the show's accent colour through
-`<ShowTheme>`; everything outside a show's pages speaks for the platform.
+`src/lib/shows/` (its events, rulesets and vocabulary) that the seed installs; *The
+Traitors* was added as a sibling file, an adapter and a mapper, without editing the scoring
+engine, the API, or the UI. Show-scoped pages read their words — houseguest, castaway or
+player; week or episode; evicted, voted out or banished — from the show's lexicon, and wear
+the show's accent colour through `<ShowTheme>`; everything outside a show's pages speaks for
+the platform.
 
 ## Stack
 
@@ -141,6 +142,19 @@ Brother-derived values, with the finale near half the winner's total). The final
 changes the league leader in about a quarter of leagues. `scripts/simulate-league.ts`
 plays a league over any finished season through the real draft and scoring code
 and prints the week-by-week standings, then deletes the league.
+
+### The Traitors model
+
+The Traitors' values (`src/lib/shows/traitors.ts`) were set against seasons 1–4 by the
+same method, with one more property to hold: a draft happens before anyone knows who the
+Traitors are, so the cloak must be worth something without deciding a league. A first
+pass (+5 to be chosen, +2 a murder) made a Traitor worth two to four Faithfuls. At +3 for
+the cloak, +1 a murder and +5 for voting out a Traitor, a Traitor averages 1.2–1.5× a
+Faithful on seasons 2–4 (season 1, where the Faithful almost never caught one, is the
+outlier), fantasy rank tracks the finish at ρ ≈ 0.9–0.95, the finale is a quarter to a
+third of a winner's points, and the team holding a winner takes a random four-team league
+31–52% of the time. `src/lib/shows/traitors-model.test.ts` holds all of it, across a
+Traitor win, a lone winner and a four-way Faithful split.
 
 ### Rule sets
 
@@ -347,8 +361,20 @@ they placed — scored events alone do not carry that.
   stated outright and kept current by the community within hours of an episode.
   Headshots come from the network's own "Meet the cast" article on Paramount+,
   matched by name. The adapter is `src/lib/ingestion/sources/wikipedia-survivor.ts`.
+- **[Wikipedia](https://en.wikipedia.org/wiki/The_Traitors:_New_Blood)** — for The
+  Traitors (US): the season article's contestants (affiliation and how and when each
+  left), episodes (release dates, which set the roster locks — NBC at 8 PM, Peacock at 9,
+  an hour apart on a double bill, in the right Eastern offset for the date), the
+  elimination history (the Traitors' decision each night, shields, the murder shortlist,
+  the banishment and every Round Table ballot, ties included) and the end game. Who held
+  a cloak when is derived: the contestants table gives the final side, and a recruitment,
+  ultimatum or seduction in the decision row dates a recruit's — so each murder is
+  credited to the Traitors in the game that night, and a ballot knows whether it caught a
+  Traitor. Headshots come from NBC Insider's cast article, matched by name. The adapter is
+  `src/lib/ingestion/sources/wikipedia-traitors.ts`; both Wikipedia adapters share their
+  table and name helpers in `wikipedia.ts`.
 
-Parser tests run against a saved HTML fixture and never hit the network.
+Parser tests run against saved HTML fixtures and never hit the network.
 
 ## Draft
 

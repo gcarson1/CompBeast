@@ -55,6 +55,15 @@ const SHOW_THEMES: Record<string, ShowTheme> = {
     accentSoft: 'rgba(249,115,22,0.16)',
     glow: 'rgba(249,115,22,0.45)',
   },
+  // The cloak: blood rose. Dark ink on #FB7185 is 7.1:1; #FDA4AF on the
+  // canvas is 10.2:1. Kept clear of the app's own "live" red, which is a
+  // deeper, darker fill.
+  traitors: {
+    accent: '#FB7185',
+    accentDeep: '#FDA4AF',
+    accentSoft: 'rgba(251,113,133,0.16)',
+    glow: 'rgba(251,113,133,0.45)',
+  },
 };
 
 export function themeFor(showSlug: string | null | undefined): ShowTheme {
@@ -69,6 +78,7 @@ export function themeFor(showSlug: string | null | undefined): ShowTheme {
 const SHOW_MONOGRAMS: Record<string, string> = {
   'big-brother': 'BB',
   survivor: 'S',
+  traitors: 'T',
 };
 
 export function monogramFor(showSlug: string): string {
@@ -91,11 +101,14 @@ export function monogramFor(showSlug: string): string {
  */
 const HASHTAG_OVERRIDES: Record<string, string> = {
   'big-brother-28': 'BB28',
+  // The civilian edition is tagged with the show's own US tag, not a number.
+  'traitors-new-blood': 'TheTraitorsUS',
 };
 
 const SHOW_TAG_PREFIX: Record<string, string> = {
   'big-brother': 'BB',
   survivor: 'Survivor',
+  traitors: 'TraitorsUS',
 };
 
 export function hashtagFor(showSlug: string, seasonSlug: string): string {
@@ -140,6 +153,17 @@ const SHOWCASE_EVENTS: Record<string, string[]> = {
     'PLACEMENT_WINNER',
     'JURY_VOTE_RECEIVED',
     'BLINDSIDE_ORCHESTRATED',
+    'EPISODE_TITLE_QUOTE',
+  ],
+  traitors: [
+    'SHIELD_WON',
+    'CAUGHT_A_TRAITOR',
+    'BECAME_TRAITOR',
+    'MURDER_COMMITTED',
+    'EPISODE_SURVIVED',
+    'BANISHED',
+    'REACHED_END_GAME',
+    'PLACEMENT_WINNER',
     'EPISODE_TITLE_QUOTE',
   ],
 };

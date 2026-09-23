@@ -35,8 +35,11 @@ export function Avatar({
   const [broken, setBroken] = useState(false);
 
   if (photoUrl && !broken) {
+    // Cropped toward the top: some networks publish tall portraits rather
+    // than square headshots, and a centred crop of one is a torso. A square
+    // photo is unaffected — there is nothing to crop.
     const imgClassName = cn(
-      'inline-block shrink-0 rounded-full object-cover ring-2 ring-surface',
+      'inline-block shrink-0 rounded-full object-cover object-[50%_18%] ring-2 ring-surface',
       dimmed && 'opacity-40 grayscale',
       className,
     );

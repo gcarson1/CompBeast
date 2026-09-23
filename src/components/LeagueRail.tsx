@@ -113,7 +113,7 @@ function LeagueCard({ league }: { league: HomeLeagueCard }) {
 
   return (
     // Each card wears its show's colour: the monogram plate and the rule
-    // along the top edge say Big Brother or Survivor before the words do.
+    // along the top edge say which show it is before the words do.
     <ShowTheme showSlug={league.showSlug}>
       {/* The motion frame carries the tile chrome; the link inside it is the
           control, so the focus ring lands on what the keyboard operates. */}

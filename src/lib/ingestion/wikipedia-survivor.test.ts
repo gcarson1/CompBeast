@@ -45,7 +45,8 @@ describe('wikipediaSurvivorAdapter.parseSeason — a finished season', () => {
     // September 24, 2025, 8 PM EDT.
     expect(done.weeks[0].airsAt?.toISOString()).toBe('2025-09-25T00:00:00.000Z');
     expect(done.premiereDate?.toISOString()).toBe('2025-09-25T00:00:00.000Z');
-    expect(done.finaleDate?.toISOString()).toBe('2025-12-18T00:00:00.000Z');
+    // December 17 is Eastern Standard Time: 8 PM is 01:00 UTC the next day.
+    expect(done.finaleDate?.toISOString()).toBe('2025-12-18T01:00:00.000Z');
     expect(done.weeks.every((w) => w.aired)).toBe(true);
   });
 

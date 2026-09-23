@@ -4,8 +4,10 @@ import { recalculateLeaguesForCycle, recalculateSeasonLeagues } from '../scoring
 import { lexiconFor } from '../shows/lexicon';
 import { bigBrotherJunkiesAdapter } from './sources/big-brother-junkies';
 import { wikipediaSurvivorAdapter } from './sources/wikipedia-survivor';
+import { wikipediaTraitorsAdapter } from './sources/wikipedia-traitors';
 import { mapBigBrotherSeason } from './mappers/big-brother';
 import { mapSurvivorSeason } from './mappers/survivor';
+import { mapTraitorsSeason } from './mappers/traitors';
 import {
   IngestionError,
   placementFromLabel,
@@ -25,11 +27,13 @@ import {
 const ADAPTERS: Record<string, SeasonSourceAdapter> = {
   [bigBrotherJunkiesAdapter.slug]: bigBrotherJunkiesAdapter,
   [wikipediaSurvivorAdapter.slug]: wikipediaSurvivorAdapter as SeasonSourceAdapter,
+  [wikipediaTraitorsAdapter.slug]: wikipediaTraitorsAdapter as SeasonSourceAdapter,
 };
 
 const MAPPERS: Record<string, SeasonMapper> = {
   'big-brother': mapBigBrotherSeason as SeasonMapper,
   survivor: mapSurvivorSeason as SeasonMapper,
+  traitors: mapTraitorsSeason as SeasonMapper,
 };
 
 export function getAdapter(slug: string): SeasonSourceAdapter {

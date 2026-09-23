@@ -39,11 +39,16 @@ export function nearMissMessage(rows: RankedTeam[], myTeamId: string, threshold 
 /**
  * Event codes that mean "at risk of elimination this cycle" for the
  * loss-aversion banner. `getTeamAtRiskNames` in src/server/queries.ts is the
- * one reader. Big Brother is the only show with a mid-cycle danger signal —
- * nominations — so the codes are its; a show without one simply never fires
+ * one reader. Big Brother's nominations and The Traitors' murder shortlist
+ * are the mid-cycle danger signals; a show without one simply never fires
  * the banner.
  */
-export const AT_RISK_EVENT_CODES = ['NOMINATED', 'ON_THE_BLOCK', 'REPLACEMENT_NOMINEE'] as const;
+export const AT_RISK_EVENT_CODES = [
+  'NOMINATED',
+  'ON_THE_BLOCK',
+  'REPLACEMENT_NOMINEE',
+  'MURDER_SHORTLISTED',
+] as const;
 
 /**
  * Loss aversion framing for the contestants a team has at risk this cycle,

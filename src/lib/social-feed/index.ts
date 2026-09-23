@@ -45,6 +45,13 @@ const SHOW_FEEDS: Record<string, { url: string; label: string; home: string }> =
     label: 'Inside Survivor',
     home: 'https://insidesurvivor.com',
   },
+  // No fan site for the American edition keeps a feed, and the show's name
+  // alone brings in the British one; news pinned to Peacock is its own.
+  traitors: {
+    url: `https://news.google.com/rss/search?q=${encodeURIComponent('"The Traitors" Peacock')}&hl=en-US&gl=US&ceid=US:en`,
+    label: 'The Traitors headlines',
+    home: `https://news.google.com/search?q=${encodeURIComponent('"The Traitors" Peacock')}`,
+  },
 };
 
 async function fetchText(url: string): Promise<string | null> {
