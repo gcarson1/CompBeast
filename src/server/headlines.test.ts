@@ -28,7 +28,9 @@ try {
         },
         {
           contestants: {
-            some: { scoredEvents: { some: { isVoided: false, eventDefinition: { isPerCycleAward: false } } } },
+            some: {
+              scoredEvents: { some: { isVoided: false, eventDefinition: { isPerCycleAward: false } } },
+            },
           },
         },
       ],

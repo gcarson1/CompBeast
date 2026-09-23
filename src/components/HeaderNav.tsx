@@ -20,7 +20,10 @@ export function HeaderNav({ signedIn }: { signedIn: boolean }) {
   const tabs = signedIn ? TABS : TABS.filter((tab) => tab.href === '/seasons' || tab.href === '/rules');
 
   return (
-    <nav aria-label="Main" className={cn('items-center gap-1', signedIn ? 'hidden lg:flex' : 'hidden sm:flex')}>
+    <nav
+      aria-label="Main"
+      className={cn('items-center gap-1', signedIn ? 'hidden lg:flex' : 'hidden sm:flex')}
+    >
       {tabs.map((tab) => {
         const active = tabIsActive(tab, pathname);
         return (

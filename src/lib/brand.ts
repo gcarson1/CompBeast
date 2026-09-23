@@ -61,7 +61,10 @@ export const MARK_FILLS = {
 export function markSvg({ mono, square = false }: { mono?: string; square?: boolean } = {}): string {
   const stops = (colors: readonly string[]) =>
     colors
-      .map((color, i) => `<stop offset="${colors.length === 3 && i === 1 ? 0.35 : i / (colors.length - 1)}" stop-color="${color}"/>`)
+      .map(
+        (color, i) =>
+          `<stop offset="${colors.length === 3 && i === 1 ? 0.35 : i / (colors.length - 1)}" stop-color="${color}"/>`,
+      )
       .join('');
   const defs = mono
     ? ''

@@ -205,9 +205,7 @@ function describe(
     if (place && /^\d/.test(place) && player.eliminatedLabel) {
       return `${eliminationLabel(lexicon, player.metadata)} · ${place}`;
     }
-    return (
-      place ?? (player.eliminatedLabel ? `Out · ${player.eliminatedLabel}` : lexicon.contestantSingular)
-    );
+    return place ?? (player.eliminatedLabel ? `Out · ${player.eliminatedLabel}` : lexicon.contestantSingular);
   }
   if (player.isActive) return meta?.occupation ?? lexicon.activeLabel;
   return `${eliminationLabel(lexicon, player.metadata)} · ${player.eliminatedLabel ?? '—'}`;

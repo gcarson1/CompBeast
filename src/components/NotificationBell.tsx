@@ -64,12 +64,7 @@ export function NotificationBell({ initialCount }: { initialCount: number }) {
     count === 0 ? 'Notifications' : `Notifications, ${count} unread${count >= 100 ? ' or more' : ''}`;
 
   return (
-    <Link
-      href="/notifications"
-      prefetch={false}
-      aria-label={label}
-      className="icon-btn"
-    >
+    <Link href="/notifications" prefetch={false} aria-label={label} className="icon-btn">
       <BellIcon />
       {count > 0 && (
         <span

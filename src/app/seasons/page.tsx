@@ -99,7 +99,9 @@ export default async function SeasonsPage() {
                             <Tag tone={status.tone} live={status.live} size="sm">
                               {status.label}
                             </Tag>
-                            <span className="truncate">{seasonMeta(season, lower(lexicon.contestantPlural))}</span>
+                            <span className="truncate">
+                              {seasonMeta(season, lower(lexicon.contestantPlural))}
+                            </span>
                           </span>
                         </span>
                         <ChevronRightIcon
