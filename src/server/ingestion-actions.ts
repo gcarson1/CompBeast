@@ -59,11 +59,24 @@ export async function runSyncAction(
 ): Promise<IngestionActionState> {
   try {
     const user = await requirePlatformAdmin();
-    const result = await ingestSeason({
-      sourceSlug: String(formData.get('sourceSlug') ?? ''),
-      seasonExternalId: String(formData.get('seasonSlug') ?? ''),
-      recordedById: user.id,
+    const sourceSlug = String(formData.get('sourceSlug') ?? '');
+    const seasonSlug = String(formData.get('seasonSlug') ?? '');
+    const season = await prisma.season.findUnique({
+      where: { slug: seasonSlug },
+      select: { id: true, year: true, show: { select: { slug: true } } },
     });
+
+    // The weeks and the cast first, as the scheduled sync does: a result in
+    // a week the database has not created yet has nowhere to be scored.
+    if (season) {
+      await bootstrapSeasonFromSource({
+        sourceSlug,
+        seasonExternalId: seasonSlug,
+        showSlug: season.show.slug,
+        year: season.year,
+      });
+    }
+    const result = await ingestSeason({ sourceSlug, seasonExternalId: seasonSlug, recordedById: user.id });
 
     if (result.status === 'FAILED') return { error: result.error ?? 'Sync failed.' };
     if (result.status === 'EMPTY') {
@@ -72,20 +85,15 @@ export async function runSyncAction(
 
     // New results reached leaderboards, so the leagues' chats hear about it —
     // the same step the scheduled sync takes.
-    let chats = 0;
-    if (result.autoPublished > 0) {
-      const season = await prisma.season.findUnique({
-        where: { slug: String(formData.get('seasonSlug') ?? '') },
-        select: { id: true },
-      });
-      if (season) chats = await announceSeasonResults(season.id);
-    }
+    const chats = result.autoPublished > 0 && season ? await announceSeasonResults(season.id) : 0;
 
     revalidatePath('/admin/ingestion');
     return {
       message: `${result.candidatesNew} new · ${result.autoPublished} published · ${result.pendingReview} to review${
-        chats > 0 ? ` · posted to ${chats} ${chats === 1 ? 'chat' : 'chats'}` : ''
-      }`,
+        result.withdrawn > 0 ? ` · ${result.withdrawn} withdrawn` : ''
+      }${result.restored > 0 ? ` · ${result.restored} restored` : ''}${
+        result.warning ? ` · ${result.warning}` : ''
+      }${chats > 0 ? ` · posted to ${chats} ${chats === 1 ? 'chat' : 'chats'}` : ''}`,
     };
   } catch (error) {
     return { error: messageFor(error) };

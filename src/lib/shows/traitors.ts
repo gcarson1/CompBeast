@@ -98,7 +98,8 @@ export const TRAITORS_EVENTS: EventDefinitionSpec[] = [
     category: 'ELIMINATION_ENDGAME',
     points: 2,
     isPerCycleAward: true,
-    description: 'Still in the castle at the end of the episode. Awarded automatically.',
+    description:
+      'Still in the castle at the end of the episode. Awarded automatically once its banishment is in.',
   },
   {
     code: 'MURDERED',

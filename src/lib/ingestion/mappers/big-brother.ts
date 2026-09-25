@@ -3,8 +3,10 @@ import {
   candidateCollector,
   collectPlayers,
   pushEvictionOrder,
-  pushPlacementsAndJury,
+  pushJury,
+  pushPlacements,
   pushSurvival,
+  settledCycles,
 } from './shared';
 
 /**
@@ -20,8 +22,10 @@ export const mapBigBrotherSeason: SeasonMapper<BigBrotherSeasonFacts> = (facts, 
   const { candidates, push } = candidateCollector(seasonExternalId);
 
   // Scoring a scheduled week would hand out survival points for a week
-  // nobody has played yet.
+  // nobody has played yet. A week is on the grid from its HOH on, though, and
+  // only over at its eviction — surviving it is scored from then.
   const airedWeeks = facts.weeks.filter((week) => week.aired);
+  const settled = settledCycles(facts, (week) => week.eliminated.length > 0);
 
   for (const week of airedWeeks) {
     const { weekNumber, weekLabel } = week;
@@ -58,10 +62,11 @@ export const mapBigBrotherSeason: SeasonMapper<BigBrotherSeasonFacts> = (facts, 
       push('NOMINATED', player, weekNumber, weekLabel);
       push('ON_THE_BLOCK', player, weekNumber, weekLabel);
 
-      // A nominee who was not evicted survived the block. The source does not
-      // say whether the vote was unanimous, so SURVIVED_BLOCK_ZERO_VOTES is
-      // never inferred here.
-      if (!evictedIds.has(player.externalId)) {
+      // A nominee who was not evicted survived the block — once the eviction
+      // has happened; before it, every nominee has "survived". The source
+      // does not say whether the vote was unanimous, so
+      // SURVIVED_BLOCK_ZERO_VOTES is never inferred here.
+      if (settled.has(weekNumber) && !evictedIds.has(player.externalId)) {
         push('SURVIVED_BLOCK', player, weekNumber, weekLabel);
       }
     }
@@ -94,9 +99,21 @@ export const mapBigBrotherSeason: SeasonMapper<BigBrotherSeasonFacts> = (facts, 
   }
 
   const players = collectPlayers(facts, (week) => [week.hoh, week.veto, week.nominees, week.eliminated]);
-  pushSurvival(facts, players, 'WEEK_SURVIVED', push);
-  pushPlacementsAndJury(facts, players, push);
+  pushSurvival(facts, players, 'WEEK_SURVIVED', push, settled);
+  pushJury(facts, players, push);
+  pushPlacements(facts, push);
   pushEvictionOrder(facts, players, 'EVICTION_ORDER', push);
+
+  // America's Favorite is announced at the finale, and the cast card says so
+  // outright: the tag replaces "Jury" on the winner of the viewer vote.
+  const finalWeek = airedWeeks.at(-1);
+  if (finalWeek) {
+    for (const member of facts.cast) {
+      if (member.statusLabel?.trim().toLowerCase() === 'afp') {
+        push('AMERICAS_FAVORITE', member, finalWeek.weekNumber, finalWeek.weekLabel);
+      }
+    }
+  }
 
   return candidates;
 };

@@ -9,6 +9,12 @@
  * idempotent, so a rebuild refreshes the cast and schedule and publishes
  * whatever has aired since; the daily cron does the same thereafter.
  *
+ * Every other season already linked to a source is synced as well, finished
+ * ones included. The daily cron only visits seasons still airing, so without
+ * this a fix to how a show is scored would never reach its archives — and a
+ * sync is what brings a season's ledger in line with the rules, withdrawing
+ * whatever the source (read the current way) no longer supports.
+ *
  * A source being unreachable must not fail a deploy: each season is tried
  * on its own, failures are logged, and the script exits cleanly regardless.
  * With the variable unset it does nothing, so a preview build costs nothing.
@@ -34,6 +40,7 @@ async function main() {
     (await prisma.user.findFirst({ where: { isPlatformAdmin: true }, orderBy: { createdAt: 'asc' } })) ??
     (await prisma.user.findFirst({ orderBy: { createdAt: 'asc' } }));
 
+  const targets = new Map<string, { sourceSlug: string; seasonExternalId: string; year: number }>();
   for (const entry of list) {
     const [sourceSlug, seasonExternalId, yearText] = entry.split(':');
     const year = Number.parseInt(yearText ?? '', 10);
@@ -41,6 +48,31 @@ async function main() {
       console.error(`  skip "${entry}": expected source:season-slug:year`);
       continue;
     }
+    targets.set(`${sourceSlug}:${seasonExternalId}`, { sourceSlug, seasonExternalId, year });
+  }
+  const seasons = await prisma.season.findMany({
+    where: { contestants: { some: { externalRefs: { some: {} } } } },
+    select: {
+      slug: true,
+      year: true,
+      contestants: {
+        where: { externalRefs: { some: {} } },
+        take: 1,
+        select: { externalRefs: { take: 1, select: { sourceSlug: true } } },
+      },
+    },
+  });
+  for (const season of seasons) {
+    const sourceSlug = season.contestants[0]?.externalRefs[0]?.sourceSlug;
+    if (!sourceSlug || targets.has(`${sourceSlug}:${season.slug}`)) continue;
+    targets.set(`${sourceSlug}:${season.slug}`, {
+      sourceSlug,
+      seasonExternalId: season.slug,
+      year: season.year,
+    });
+  }
+
+  for (const { sourceSlug, seasonExternalId, year } of targets.values()) {
     try {
       const adapter = getAdapter(sourceSlug);
       const result = await bootstrapSeasonFromSource({
@@ -54,7 +86,9 @@ async function main() {
       );
       if (recorder) {
         const sync = await ingestSeason({ sourceSlug, seasonExternalId, recordedById: recorder.id });
-        console.log(`  ${seasonExternalId}: sync ${sync.status}, ${sync.autoPublished} published`);
+        console.log(
+          `  ${seasonExternalId}: sync ${sync.status}, ${sync.autoPublished} published, ${sync.withdrawn} withdrawn, ${sync.restored} restored${sync.warning ? ` — ${sync.warning}` : ''}`,
+        );
       }
     } catch (error) {
       console.error(`  ${seasonExternalId} failed:`, error instanceof Error ? error.message : error);

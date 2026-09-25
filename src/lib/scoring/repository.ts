@@ -246,6 +246,37 @@ export async function recalculateLeague(
 }
 
 /**
+ * Puts every drafted contestant on their team's roster for every cycle of the
+ * season, and returns how many slots were missing.
+ *
+ * A pick writes a slot for each cycle that exists when it is made, and the
+ * engine credits an event only to a team rostering the contestant in that
+ * event's cycle. A live season grows cycles as its source lists new weeks —
+ * Big Brother Junkies lists one week ahead — so a league drafted in week 12
+ * would score nothing from week 14 on, the finale included. Nothing moves a
+ * player between teams after the draft, so the draft is the roster for every
+ * cycle; this is safe to run as often as a sync does.
+ */
+export async function ensureRosterSlots(seasonId: string): Promise<number> {
+  const [picks, cycles] = await Promise.all([
+    prisma.draftPick.findMany({
+      where: { league: { seasonId } },
+      select: { teamId: true, contestantId: true },
+    }),
+    prisma.cycle.findMany({ where: { seasonId }, select: { id: true } }),
+  ]);
+  if (picks.length === 0 || cycles.length === 0) return 0;
+
+  const { count } = await prisma.rosterSlot.createMany({
+    data: picks.flatMap((pick) =>
+      cycles.map((cycle) => ({ teamId: pick.teamId, contestantId: pick.contestantId, cycleId: cycle.id })),
+    ),
+    skipDuplicates: true,
+  });
+  return count;
+}
+
+/**
  * Recalculates every league on a season.
  *
  * A league's recompute already covers the whole season, so this is the unit

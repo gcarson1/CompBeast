@@ -145,7 +145,7 @@ export const SURVIVOR_EVENTS: EventDefinitionSpec[] = [
     category: 'ELIMINATION_ENDGAME',
     points: 3,
     isPerCycleAward: true,
-    description: 'Still in the game when the episode ended. Awarded automatically each episode.',
+    description: 'Still in the game when the episode ended. Awarded automatically once its vote is in.',
   },
   {
     code: 'VOTED_OUT',
@@ -186,7 +186,8 @@ export const SURVIVOR_EVENTS: EventDefinitionSpec[] = [
     points: 6,
     balancedPoints: 4,
     isRepeatable: false,
-    description: 'Made it far enough to sit on the jury.',
+    description:
+      'Still in the game when the jury began. Paid to everyone at once, the episode the first juror is voted out — the finalists included.',
   },
   {
     code: 'MADE_FINAL_TRIBAL',

@@ -100,20 +100,70 @@ describe('in-progress season', () => {
     expect(candidates.some((c) => c.weekNumber === scheduled.weekNumber)).toBe(false);
   });
 
-  it('counts only houseguests who have actually reached jury so far', () => {
+  it('pays the jury to everyone in it the week it began, including those still in the house', () => {
     const candidates = mapBigBrotherSeason(liveFacts, 'big-brother-28');
     const jury = candidates.filter((c) => c.eventCode === 'REACHED_JURY');
 
-    // Four have been jury-evicted; nobody else has placed yet.
-    expect(jury).toHaveLength(4);
-    expect(jury.every((c) => c.confidence === 'HIGH')).toBe(true);
+    // LaTrice (9th) was the first juror, evicted in week 9. The four evicted
+    // jurors and the five still playing have all reached it.
+    expect(jury.map((c) => c.player.externalId).sort()).toEqual([
+      'angela-murray',
+      'barrett-pfeiffer',
+      'dee-valladares',
+      'drew-campbell',
+      'latrice-verrett',
+      'melody-morris',
+      'rick-devens',
+      'taylor-brown',
+      'yash-patel',
+    ]);
+    expect(jury.every((c) => c.weekNumber === 9 && c.confidence === 'HIGH')).toBe(true);
+    // Haley (10th) was the last houseguest out before it.
+    expect(jury.some((c) => c.player.externalId === 'haley-thogmartin')).toBe(false);
+  });
 
-    // Houseguests still in the house have no placement, so they cannot yet
-    // qualify — a row-order threshold would have swept them in.
-    const activeIds = liveFacts.cast
-      .filter((c) => c.statusLabel?.toLowerCase() === 'active')
-      .map((c) => c.externalId);
-    expect(jury.some((c) => activeIds.includes(c.player.externalId))).toBe(false);
+  it('keeps the jury on the same key from one weekly sync to the next', () => {
+    // The page as it stood a week earlier: week 12 not played yet, and Yash
+    // (evicted in it) still in the house. The jury used to be pinned to the
+    // latest week, so each sync minted new keys and paid every juror again.
+    const week12 = liveFacts.weeks.find((w) => w.weekNumber === 12)!;
+    const earlier = {
+      ...liveFacts,
+      weeks: liveFacts.weeks.map((w) => (w === week12 ? { ...w, aired: false } : w)),
+      placements: liveFacts.placements.map((p) =>
+        p.player.externalId === 'yash-patel' ? { ...p, placeLabel: '' } : p,
+      ),
+      cast: liveFacts.cast.map((c) => (c.externalId === 'yash-patel' ? { ...c, statusLabel: 'Active' } : c)),
+    };
+    const refs = (facts: typeof liveFacts) =>
+      mapBigBrotherSeason(facts, 'big-brother-28')
+        .filter((c) => c.eventCode === 'REACHED_JURY')
+        .map((c) => c.sourceRef)
+        .sort();
+    expect(refs(earlier)).toEqual(refs(liveFacts));
+  });
+
+  it('pays nothing for surviving a week until its eviction is in', () => {
+    // Week 12 mid-week: HOH, veto and nominations on the grid, nobody out yet.
+    const week12 = liveFacts.weeks.find((w) => w.weekNumber === 12)!;
+    const midWeek = {
+      ...liveFacts,
+      weeks: liveFacts.weeks.map((w) => (w === week12 ? { ...w, eliminated: [] } : w)),
+    };
+    const during = mapBigBrotherSeason(midWeek, 'big-brother-28').filter((c) => c.weekNumber === 12);
+    expect(during.some((c) => c.eventCode === 'WEEK_SURVIVED')).toBe(false);
+    expect(during.some((c) => c.eventCode === 'SURVIVED_BLOCK')).toBe(false);
+    // What did happen is scored as it happens.
+    expect(during.some((c) => c.eventCode === 'NOMINATED')).toBe(true);
+
+    // Once Yash is evicted, the week pays everyone but him.
+    const after = mapBigBrotherSeason(liveFacts, 'big-brother-28').filter((c) => c.weekNumber === 12);
+    const survived = after.filter((c) => c.eventCode === 'WEEK_SURVIVED').map((c) => c.player.externalId);
+    expect(survived).toHaveLength(5);
+    expect(survived).not.toContain('yash-patel');
+    expect(after.some((c) => c.eventCode === 'SURVIVED_BLOCK' && c.player.externalId === 'yash-patel')).toBe(
+      false,
+    );
   });
 
   it('awards no placement points before anyone has placed', () => {
@@ -173,14 +223,21 @@ describe('mapBigBrotherSeason', () => {
     const jury = candidates.filter((c) => c.eventCode === 'REACHED_JURY');
     const names = jury.map((c) => c.player.name);
 
-    // Nine made jury: the final three plus the six tagged as jury.
+    // Nine made jury: the final three plus the six tagged as jury — all paid
+    // in week 9, when Rachel became its first member.
     expect(jury).toHaveLength(9);
+    expect(new Set(jury.map((c) => c.weekNumber))).toEqual(new Set([9]));
     expect(names).toContain('Ashley Hollis'); // winner, tagged "Winner"
     expect(names).toContain('Rachel Reilly'); // 9th, the jury boundary
     // Tagged "AFP" rather than "Jury", but finished 5th and was on the jury.
     expect(names).toContain('Keanu Soto');
     // Evicted pre-jury.
     expect(names).not.toContain('Mickey Lee');
+  });
+
+  it("scores America's Favorite from the cast tag, at the finale", () => {
+    const afp = candidates.filter((c) => c.eventCode === 'AMERICAS_FAVORITE');
+    expect(afp.map((c) => [c.player.name, c.weekNumber])).toEqual([['Keanu Soto', 15]]);
   });
 
   it('never infers events the source cannot support', () => {

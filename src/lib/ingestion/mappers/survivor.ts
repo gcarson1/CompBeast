@@ -1,5 +1,12 @@
 import type { SeasonMapper, SurvivorSeasonFacts } from '../types';
-import { candidateCollector, collectPlayers, pushPlacementsAndJury, pushSurvival } from './shared';
+import {
+  candidateCollector,
+  collectPlayers,
+  pushJury,
+  pushPlacements,
+  pushSurvival,
+  settledCycles,
+} from './shared';
 
 /**
  * Turns parsed Survivor facts into candidate scoring events.
@@ -122,8 +129,14 @@ export const mapSurvivorSeason: SeasonMapper<SurvivorSeasonFacts> = (facts, seas
     episode.votes.map((v) => v.player),
     episode.eliminated,
   ]);
-  pushSurvival(facts, players, 'EPISODE_SURVIVED', push);
-  pushPlacementsAndJury(facts, players, push);
+  // An episode is over at its tribal council. One whose row has its
+  // challenges but not yet its vote is still being written up.
+  const settled = settledCycles(facts, (episode) =>
+    episode.exits.some((exit) => exit.how === 'voted' || exit.how === 'fire'),
+  );
+  pushSurvival(facts, players, 'EPISODE_SURVIVED', push, settled);
+  pushJury(facts, players, push);
+  pushPlacements(facts, push);
 
   // The final tribal council: the jury table names the finalists and how
   // many votes each drew. Pinned to the last aired episode, like placements.

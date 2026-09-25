@@ -39,7 +39,6 @@ function scoreSeason(file: string, slug: string, rulesetSlug: string) {
     'PLACEMENT_THIRD',
     'JURY_VOTE_RECEIVED',
     'MADE_FINAL_TRIBAL',
-    'REACHED_JURY',
   ]);
   for (const c of mapSurvivorSeason(facts, slug)) {
     const value = points.get(c.eventCode);

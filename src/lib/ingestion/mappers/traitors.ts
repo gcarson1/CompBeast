@@ -1,6 +1,6 @@
 import { PLACEMENT_CODE_BY_LABEL } from '../types';
 import type { SeasonMapper, TraitorsSeasonFacts } from '../types';
-import { candidateCollector, collectPlayers, pushSurvival } from './shared';
+import { candidateCollector, collectPlayers, pushSurvival, settledCycles } from './shared';
 
 /**
  * Turns parsed The Traitors facts into candidate scoring events.
@@ -59,7 +59,11 @@ export const mapTraitorsSeason: SeasonMapper<TraitorsSeasonFacts> = (facts, seas
     episode.ballots.map((b) => b.voter),
     episode.eliminated,
   ]);
-  pushSurvival(facts, players, 'EPISODE_SURVIVED', push);
+  // An episode is over at the Round Table. The murder is revealed at
+  // breakfast, first thing, so a row with a murder and no banishment yet is
+  // an episode still being written up.
+  const settled = settledCycles(facts, (episode) => episode.banished.length > 0);
+  pushSurvival(facts, players, 'EPISODE_SURVIVED', push, settled);
 
   // The end game and the finish, pinned to the last aired episode.
   const finale = airedEpisodes.at(-1);

@@ -328,7 +328,7 @@ signal that a parser has silently broken.
 
 ### Live seasons
 
-An in-progress season is not just a shorter finished one, and three things only
+An in-progress season is not just a shorter finished one, and these things only
 break there:
 
 - **Unaired weeks** appear in the results grid as empty rows. They are skipped,
@@ -342,12 +342,45 @@ break there:
   jury and America's Favorite is tagged `AFP` and would be missed. The cohort is
   instead everyone finishing at or above the worst finish among jury-tagged
   houseguests, which comes out of the data rather than a hardcoded jury size.
+- **The jury is paid when it begins.** Once the first juror leaves, everyone
+  still in the game will sit on the jury or in front of it, so all of them are
+  paid then, together, in that cycle — not one by one on the way out, which
+  made the evicted look like they were winning the middle of the season.
+- **A cycle is on the page before it is over.** A Big Brother week has its HOH
+  days before its eviction, and a Wikipedia episode row fills in over the hours
+  after it airs. What happened is scored as it lands; anything paid for *still
+  being there* (survive the week, survive the block) waits for the result that
+  ends the cycle, or the next cycle to begin.
+- **Season-level facts are keyed by when they happened, never by "the latest
+  cycle".** A key that moves with the latest week is a new fact every week to
+  the dedupe check, which is how Big Brother 28 paid every juror again weekly.
 
 Cycle air dates come from eviction dates where known and are interpolated a week
 apart elsewhere, anchored to the premiere and finale dates on the page.
 
 Each sync also reconciles who is still in the house, when they left, and where
 they placed — scored events alone do not carry that.
+
+And each sync holds what it published before to what the source says now.
+Publishing only ever adds, so a fact the source has since restated would stay on
+the board beside its replacement. A published event whose key the mapper no
+longer produces is voided (the reason is on its audit trail); one the source
+states again is restored; a variable event whose value moved is re-valued.
+Hand-entered events and anything a person voided are never touched, and a sync
+that would withdraw more than 25 events or a tenth of a season stops and says so
+on `/admin/ingestion` instead — that is a parser breaking, not a season changing.
+
+A pick puts the player on the team's roster for every cycle that exists at the
+time, and a live season grows cycles as its source lists new weeks, so every
+sync (and bootstrap) also fills in rosters for cycles created since the draft —
+otherwise a league drafted in week 12 would score nothing from week 14 on.
+
+The build re-syncs every season linked to a source, archives included, and
+then runs `scripts/audit-scores.ts`, which rebuilds every league's standings and
+checks them a second way that shares no code with the engine (each team's total
+must equal the sum of its drafted players' events under the league's ruleset).
+The build log carries every league's standings and a `!` line for anything that
+does not add up.
 
 ### Sources
 

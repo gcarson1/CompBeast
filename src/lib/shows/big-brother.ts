@@ -167,7 +167,7 @@ export const BIG_BROTHER_EVENTS: EventDefinitionSpec[] = [
     category: 'ELIMINATION_ENDGAME',
     points: 5,
     isPerCycleAward: true,
-    description: 'Still in the house at the end of the week. Awarded automatically each cycle.',
+    description: 'Still in the house at the end of the week. Awarded automatically once its eviction is in.',
   },
   {
     code: 'EVICTED',
@@ -222,7 +222,8 @@ export const BIG_BROTHER_EVENTS: EventDefinitionSpec[] = [
     points: 15,
     balancedPoints: 5,
     isRepeatable: false,
-    description: 'Made it far enough to become a member of the jury.',
+    description:
+      'Still in the house when the jury began. Paid to everyone at once, the week the first juror is evicted — the finalists included.',
   },
   {
     code: 'FINAL_HOH_WIN',

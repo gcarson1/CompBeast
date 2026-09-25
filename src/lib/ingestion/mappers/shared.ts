@@ -74,7 +74,32 @@ export function collectPlayers<TCycle extends RawCycleResult>(
 }
 
 /**
- * One survival award per aired cycle for everyone not yet eliminated by the
+ * The aired cycles that are over, and so safe to reward survival in.
+ *
+ * A cycle reaches the page before it has finished: a Big Brother week has its
+ * HOH days before its eviction, and a Wikipedia episode row fills in over the
+ * hours after it airs. Anything that pays for still being in the game has to
+ * wait for the result that ends the cycle, or it pays the person about to
+ * leave — Big Brother 28 paid two houseguests "survive the week" in the week
+ * they were evicted. `closes` is the show's ending result (an eviction, a
+ * banishment); a cycle is also over once a later one has begun, or once the
+ * season has a winner.
+ */
+export function settledCycles<TCycle extends RawCycleResult>(
+  facts: RawSeasonFacts<TCycle>,
+  closes: (cycle: TCycle) => boolean,
+): Set<number> {
+  const aired = facts.weeks.filter((week) => week.aired).sort((a, b) => a.weekNumber - b.weekNumber);
+  const seasonOver = facts.placements.some((entry) => placementFromLabel(entry.placeLabel) === 1);
+  const settled = new Set<number>();
+  aired.forEach((week, index) => {
+    if (seasonOver || index < aired.length - 1 || closes(week)) settled.add(week.weekNumber);
+  });
+  return settled;
+}
+
+/**
+ * One survival award per settled cycle for everyone not yet eliminated by the
  * end of it.
  */
 export function pushSurvival(
@@ -82,10 +107,12 @@ export function pushSurvival(
   players: Map<string, RawPlayerRef>,
   code: string,
   push: PushCandidate,
+  settled: Set<number>,
 ): void {
   const gone = new Set<string>();
   const aired = facts.weeks.filter((week) => week.aired).sort((a, b) => a.weekNumber - b.weekNumber);
   for (const week of aired) {
+    if (!settled.has(week.weekNumber)) break;
     for (const player of week.eliminated) gone.add(player.externalId);
     for (const [externalId, player] of players) {
       if (gone.has(externalId)) continue;
@@ -118,40 +145,52 @@ export function pushEvictionOrder(
   for (const entry of facts.placements) {
     const placement = placementFromLabel(entry.placeLabel);
     if (placement === null || placement < 2) continue;
-    const week = leftIn.get(entry.player.externalId) ?? finalWeek;
+    // The runner-up leaves on finale night, not in a week's eviction. Anyone
+    // else the grid never shows leaving cannot be placed in time, and a guess
+    // at "the latest week" would move every week.
+    const week = leftIn.get(entry.player.externalId) ?? (placement === 2 ? finalWeek : undefined);
     if (!week) continue;
     const player = players.get(entry.player.externalId) ?? entry.player;
     push(code, player, week.weekNumber, week.weekLabel, 'HIGH', [], undefined, -(placement - 1));
   }
 }
 
+/** Final placements, pinned to the last aired cycle — the finale. */
+export function pushPlacements(facts: RawSeasonFacts, push: PushCandidate): void {
+  const finalWeek = facts.weeks.filter((week) => week.aired).at(-1);
+  if (!finalWeek) return;
+  for (const entry of facts.placements) {
+    const code = PLACEMENT_CODE_BY_LABEL[entry.placeLabel.trim().toLowerCase()];
+    if (code) push(code, entry.player, finalWeek.weekNumber, finalWeek.weekLabel);
+  }
+}
+
 /**
- * Final placements and the jury cohort, both pinned to the last aired cycle.
+ * The jury, scored once for everyone in it, in the cycle it began.
  *
- * Jury membership is derived rather than assumed. Neither obvious signal
- * works alone: the placement table's row numbers count from the winner on a
- * finished season but from the latest elimination on a live one, so a
- * threshold over them means different things at different times; and the
+ * Once the first juror leaves, everyone still in the game will either join
+ * the jury or sit in front of it — so they have all reached it, and are paid
+ * then, together, rather than one by one as they leave. Paying on the way
+ * out handed each juror a lump that the players still in the game had not
+ * had yet, which made the middle of the season read as if the evicted were
+ * winning it; and pinning the award to "the latest cycle" gave it a new
+ * dedupe key every week, so a live sync paid every juror again each week.
+ *
+ * Membership is derived rather than assumed. Neither obvious signal works
+ * alone: the placement table's row numbers count from the winner on a
+ * finished season but from the latest elimination on a live one, and the
  * cast's status tag prefers the more notable label (a fan favourite who also
  * sat on the jury is tagged as the favourite), so filtering on it drops real
- * jury members. Instead: take the worst finish among players the source does
- * tag as jury and treat that as the boundary. The cohort comes out of the
- * data rather than a hardcoded jury size that varies by season.
+ * jurors. Instead, the worst finish among players the source does tag as
+ * jury is the boundary: everyone who finished at or above it is in, and so is
+ * everyone who has not finished yet. The first cycle in which someone inside
+ * the boundary left is when the jury began.
  */
-export function pushPlacementsAndJury(
+export function pushJury(
   facts: RawSeasonFacts,
   players: Map<string, RawPlayerRef>,
   push: PushCandidate,
 ): void {
-  const finalWeek = facts.weeks.filter((week) => week.aired).at(-1);
-  const finalWeekLabel = finalWeek?.weekLabel ?? 'season';
-  const finalWeekNumber = finalWeek?.weekNumber ?? null;
-
-  for (const entry of facts.placements) {
-    const code = PLACEMENT_CODE_BY_LABEL[entry.placeLabel.trim().toLowerCase()];
-    if (code) push(code, entry.player, finalWeekNumber, finalWeekLabel);
-  }
-
   const placementByPlayer = new Map<string, number>();
   for (const entry of facts.placements) {
     const placement = placementFromLabel(entry.placeLabel);
@@ -162,13 +201,19 @@ export function pushPlacementsAndJury(
     .filter((member) => member.statusLabel?.trim().toLowerCase() === 'jury')
     .map((member) => placementByPlayer.get(member.externalId))
     .filter((placement): placement is number => placement !== undefined);
-
   if (taggedJuryPlacements.length === 0) return;
+  const boundary = Math.max(...taggedJuryPlacements);
 
-  const juryBoundary = Math.max(...taggedJuryPlacements);
-  for (const [externalId, placement] of placementByPlayer) {
-    if (placement > juryBoundary) continue;
-    const player = players.get(externalId);
-    if (player) push('REACHED_JURY', player, finalWeekNumber, finalWeekLabel);
+  const aired = facts.weeks.filter((week) => week.aired).sort((a, b) => a.weekNumber - b.weekNumber);
+  const juryBegan = aired.find((week) =>
+    week.eliminated.some((player) => (placementByPlayer.get(player.externalId) ?? Infinity) <= boundary),
+  );
+  if (!juryBegan) return;
+
+  const everEliminated = new Set(aired.flatMap((week) => week.eliminated.map((p) => p.externalId)));
+  for (const [externalId, player] of players) {
+    const placement = placementByPlayer.get(externalId);
+    const inJury = placement === undefined ? !everEliminated.has(externalId) : placement <= boundary;
+    if (inJury) push('REACHED_JURY', player, juryBegan.weekNumber, juryBegan.weekLabel);
   }
 }

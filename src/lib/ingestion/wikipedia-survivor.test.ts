@@ -230,6 +230,13 @@ describe('mapSurvivorSeason over the real season', () => {
     expect(codes('REACHED_JURY').map((c) => c.player.externalId)).not.toContain('nicole-mazullo');
   });
 
+  it('pays the jury to all eleven in the episode it began, not at the finale', () => {
+    // Nate, 11th, was voted out in episode 7 as its first member.
+    const jury = codes('REACHED_JURY');
+    expect(jury).toHaveLength(11);
+    expect(new Set(jury.map((c) => c.weekLabel))).toEqual(new Set(['E7']));
+  });
+
   it('scores the merge, fire-making and the medevac', () => {
     // Eighteen cast, seven gone before the merge in episode 7.
     expect(codes('MADE_MERGE')).toHaveLength(11);

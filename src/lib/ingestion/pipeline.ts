@@ -1,6 +1,10 @@
 import type { Prisma } from '@prisma/client';
 import { prisma } from '../db';
-import { recalculateLeaguesForCycle, recalculateSeasonLeagues } from '../scoring/repository';
+import {
+  ensureRosterSlots,
+  recalculateLeaguesForCycle,
+  recalculateSeasonLeagues,
+} from '../scoring/repository';
 import { lexiconFor } from '../shows/lexicon';
 import { bigBrotherJunkiesAdapter } from './sources/big-brother-junkies';
 import { wikipediaSurvivorAdapter } from './sources/wikipedia-survivor';
@@ -222,6 +226,9 @@ export async function bootstrapSeasonFromSource(input: {
     contestantsLinked += 1;
   }
 
+  // A new cycle has no rosters on it until someone puts them there.
+  if (cyclesCreated > 0) await ensureRosterSlots(season.id);
+
   return { seasonId: season.id, contestantsCreated, contestantsLinked, photosBackfilled, cyclesCreated };
 }
 
@@ -301,6 +308,12 @@ export interface IngestionSummary {
   candidatesNew: number;
   autoPublished: number;
   pendingReview: number;
+  /** Published events the source no longer states, voided by this sync. */
+  withdrawn: number;
+  /** Events this sync had withdrawn before, which the source states again. */
+  restored: number;
+  /** Set when the sync held back from withdrawing more than looked safe. */
+  warning?: string;
   error?: string;
 }
 
@@ -310,7 +323,8 @@ export interface IngestionSummary {
  * Candidates are upserted on `(sourceSlug, sourceRef)`, so re-running this on
  * an unchanged page is a no-op. Only HIGH-confidence candidates that resolve
  * cleanly to a contestant and cycle publish automatically; everything else is
- * left PENDING for review.
+ * left PENDING for review. Then what was published before is held to what the
+ * source says now (see `reconcilePublished`).
  */
 export async function ingestSeason(input: {
   sourceSlug: string;
@@ -352,7 +366,7 @@ export async function ingestSeason(input: {
       }),
       prisma.cycle.findMany({
         where: { seasonId: season.id },
-        select: { id: true, sequence: true },
+        select: { id: true, sequence: true, airsAt: true },
       }),
       prisma.eventDefinition.findMany({
         where: { showId: season.showId },
@@ -362,6 +376,7 @@ export async function ingestSeason(input: {
 
     const contestantByExternalId = new Map(links.map((l) => [l.externalId, l.contestantId]));
     const cycleBySequence = new Map(cycles.map((c) => [c.sequence, c.id]));
+    const airsAtByCycle = new Map(cycles.map((c) => [c.id, c.airsAt]));
     const definitionByCode = new Map(definitions.map((d) => [d.code, d]));
 
     let candidatesNew = 0;
@@ -372,13 +387,13 @@ export async function ingestSeason(input: {
     // One query for every candidate's dedupe check rather than one per
     // candidate: a full-season sync proposes hundreds, and the per-row lookup
     // made the round trips, not the work, the bottleneck.
-    const knownRefs = new Set(
+    const known = new Map(
       (
         await prisma.ingestedEventCandidate.findMany({
           where: { sourceSlug, sourceRef: { in: candidates.map((c) => c.sourceRef) } },
-          select: { sourceRef: true },
+          select: { id: true, sourceRef: true, status: true, cycleId: true, contestantId: true },
         })
-      ).map((row) => row.sourceRef),
+      ).map((row) => [row.sourceRef, row]),
     );
 
     for (const candidate of candidates) {
@@ -387,32 +402,45 @@ export async function ingestSeason(input: {
         cycleBySequence,
         hasDefinition: definitionByCode.has(candidate.eventCode),
       });
-
-      // Already handled — never re-publish or re-open a reviewed decision.
-      if (knownRefs.has(candidate.sourceRef)) continue;
-
       const canAutoPublish =
         resolved.confidence === 'HIGH' && resolved.contestantId !== null && resolved.cycleId !== null;
 
-      const record = await prisma.ingestedEventCandidate.create({
-        data: {
-          sourceSlug,
-          sourceRef: candidate.sourceRef,
-          sourceUrl: facts.sourceUrl,
-          seasonId: season.id,
-          cycleId: resolved.cycleId,
-          contestantId: resolved.contestantId,
-          eventCode: candidate.eventCode,
-          points: candidate.points,
-          rawPlayerName: candidate.player.name,
-          rawPlayerRef: candidate.player.externalId,
-          rawWeekLabel: candidate.weekLabel,
-          confidence: resolved.confidence,
-          confidenceReasons: resolved.reasons,
-          status: canAutoPublish ? 'AUTO_PUBLISHED' : 'PENDING',
-        },
-      });
-      candidatesNew += 1;
+      // Already handled — never re-publish or re-open a reviewed decision.
+      // The one exception was never a decision: a fact held only because its
+      // week or player was not in the database yet (a sync that ran before
+      // the season's cycles were refreshed). It publishes once it resolves,
+      // rather than waiting forever on a review that cannot approve it.
+      const existing = known.get(candidate.sourceRef);
+      const unblocked =
+        existing?.status === 'PENDING' &&
+        (existing.cycleId === null || existing.contestantId === null) &&
+        canAutoPublish;
+      if (existing && !unblocked) continue;
+
+      const data = {
+        cycleId: resolved.cycleId,
+        contestantId: resolved.contestantId,
+        confidence: resolved.confidence,
+        confidenceReasons: resolved.reasons,
+        status: canAutoPublish ? ('AUTO_PUBLISHED' as const) : ('PENDING' as const),
+      };
+      const record = existing
+        ? await prisma.ingestedEventCandidate.update({ where: { id: existing.id }, data })
+        : await prisma.ingestedEventCandidate.create({
+            data: {
+              ...data,
+              sourceSlug,
+              sourceRef: candidate.sourceRef,
+              sourceUrl: facts.sourceUrl,
+              seasonId: season.id,
+              eventCode: candidate.eventCode,
+              points: candidate.points,
+              rawPlayerName: candidate.player.name,
+              rawPlayerRef: candidate.player.externalId,
+              rawWeekLabel: candidate.weekLabel,
+            },
+          });
+      if (!existing) candidatesNew += 1;
 
       if (!canAutoPublish) {
         pendingReview += 1;
@@ -425,6 +453,7 @@ export async function ingestSeason(input: {
         cycleId: resolved.cycleId!,
         definition: definitionByCode.get(candidate.eventCode)!,
         points: candidate.points,
+        occurredAt: occurredAt(airsAtByCycle.get(resolved.cycleId!)),
         recordedById,
         note: `Auto-ingested from ${sourceSlug}`,
       });
@@ -434,12 +463,21 @@ export async function ingestSeason(input: {
       void scoredEventId;
     }
 
+    const reconciled = await reconcilePublished({
+      sourceSlug,
+      seasonId: season.id,
+      candidates,
+      recordedById,
+    });
+    for (const cycleId of reconciled.cycleIds) touchedCycleIds.add(cycleId);
+
     await reconcileContestantState(facts, season.id, cycleBySequence);
+    const slotsAdded = await ensureRosterSlots(season.id);
 
     // One pass per season, not per cycle: a league recompute already spans the
     // whole season, so looping the touched cycles repeated the same work for
     // every week the sync happened to publish into.
-    if (touchedCycleIds.size > 0) {
+    if (touchedCycleIds.size > 0 || slotsAdded > 0) {
       await recalculateSeasonLeagues(season.id);
     }
 
@@ -453,6 +491,7 @@ export async function ingestSeason(input: {
         candidatesNew,
         autoPublished,
         pendingReview,
+        error: reconciled.held,
         finishedAt: new Date(),
       },
     });
@@ -464,6 +503,9 @@ export async function ingestSeason(input: {
       candidatesNew,
       autoPublished,
       pendingReview,
+      withdrawn: reconciled.withdrawn,
+      restored: reconciled.restored,
+      ...(reconciled.held ? { warning: reconciled.held } : {}),
     };
   } catch (error) {
     const message = error instanceof Error ? error.message : String(error);
@@ -478,9 +520,149 @@ export async function ingestSeason(input: {
       candidatesNew: 0,
       autoPublished: 0,
       pendingReview: 0,
+      withdrawn: 0,
+      restored: 0,
       error: message,
     };
   }
+}
+
+/** How a withdrawal is recognised later, so only the pipeline's own are ever undone. */
+const WITHDRAWN = 'No longer stated by';
+
+/**
+ * Most of a season's events one sync may withdraw before it stops and asks a
+ * person: a parser that has half-broken reads as a source that retracted
+ * half its facts, and leaderboards should not empty out on its say-so.
+ */
+const WITHDRAWAL_LIMIT = { events: 25, share: 0.1 };
+
+/**
+ * Holds the season's published events to what the source says now.
+ *
+ * Publishing only ever adds, so without this a fact the source has since
+ * restated stays on the board beside its replacement. That is how a jury
+ * award keyed to "the latest week" was paid again every week, and how a
+ * houseguest evicted on Thursday kept the survival points a Tuesday sync had
+ * given the whole house. A published event whose key the mapper no longer
+ * produces is voided, with the reason on the audit trail; one that comes
+ * back (a page edit reverted) is restored; a variable event whose value has
+ * changed is re-valued. Events entered by hand, and events a person voided,
+ * are never touched.
+ */
+async function reconcilePublished(input: {
+  sourceSlug: string;
+  seasonId: string;
+  candidates: CandidateEvent[];
+  recordedById: string;
+}): Promise<{ withdrawn: number; restored: number; cycleIds: Set<string>; held: string | null }> {
+  const { sourceSlug, seasonId, candidates, recordedById } = input;
+  const current = new Map(candidates.map((candidate) => [candidate.sourceRef, candidate]));
+
+  const links = await prisma.ingestedEventCandidate.findMany({
+    where: {
+      sourceSlug,
+      seasonId,
+      status: { in: ['AUTO_PUBLISHED', 'PUBLISHED'] },
+      scoredEventId: { not: null },
+    },
+    select: { sourceRef: true, scoredEventId: true },
+  });
+  const events = new Map(
+    (
+      await prisma.scoredEvent.findMany({
+        where: { id: { in: links.map((link) => link.scoredEventId!) } },
+        select: { id: true, cycleId: true, isVoided: true, voidedReason: true, pointsAwarded: true },
+      })
+    ).map((event) => [event.id, event]),
+  );
+  const published = links.flatMap((link) => {
+    const event = events.get(link.scoredEventId!);
+    return event ? [{ sourceRef: link.sourceRef, event }] : [];
+  });
+
+  const live = published.filter((row) => !row.event.isVoided);
+  const stale = live.filter((row) => !current.has(row.sourceRef));
+  const revived = published.filter(
+    (row) =>
+      current.has(row.sourceRef) && row.event.isVoided && row.event.voidedReason?.startsWith(WITHDRAWN),
+  );
+  const revalued = live.filter((row) => {
+    const points = current.get(row.sourceRef)?.points;
+    return points !== undefined && Number(row.event.pointsAwarded) !== points;
+  });
+
+  let held: string | null = null;
+  let withdraw = stale;
+  if (stale.length > Math.max(WITHDRAWAL_LIMIT.events, live.length * WITHDRAWAL_LIMIT.share)) {
+    held = `Held back withdrawing ${stale.length} of ${live.length} published events the source no longer states — check the parser before trusting this page.`;
+    withdraw = [];
+  }
+
+  const cycleIds = new Set<string>();
+  const writes: Prisma.PrismaPromise<unknown>[] = [];
+
+  for (const row of withdraw) {
+    const { event } = row;
+    const reason = `${WITHDRAWN} ${sourceSlug} (${row.sourceRef})`;
+    cycleIds.add(event.cycleId);
+    writes.push(
+      prisma.scoredEvent.update({ where: { id: event.id }, data: { isVoided: true, voidedReason: reason } }),
+      prisma.scoreAudit.create({
+        data: {
+          scoredEventId: event.id,
+          action: 'VOIDED',
+          previousPoints: event.pointsAwarded,
+          newPoints: 0,
+          reason,
+          performedById: recordedById,
+        },
+      }),
+    );
+  }
+
+  for (const row of revived) {
+    const { event } = row;
+    cycleIds.add(event.cycleId);
+    writes.push(
+      prisma.scoredEvent.update({ where: { id: event.id }, data: { isVoided: false, voidedReason: null } }),
+      prisma.scoreAudit.create({
+        data: {
+          scoredEventId: event.id,
+          action: 'RESTORED',
+          newPoints: event.pointsAwarded,
+          reason: `Stated again by ${sourceSlug}`,
+          performedById: recordedById,
+        },
+      }),
+    );
+  }
+
+  for (const row of revalued) {
+    const { event } = row;
+    const points = current.get(row.sourceRef)!.points!;
+    cycleIds.add(event.cycleId);
+    writes.push(
+      prisma.scoredEvent.update({ where: { id: event.id }, data: { pointsAwarded: points } }),
+      prisma.ingestedEventCandidate.update({
+        where: { sourceSlug_sourceRef: { sourceSlug, sourceRef: row.sourceRef } },
+        data: { points },
+      }),
+      prisma.scoreAudit.create({
+        data: {
+          scoredEventId: event.id,
+          action: 'POINTS_ADJUSTED',
+          previousPoints: event.pointsAwarded,
+          newPoints: points,
+          reason: `Restated by ${sourceSlug}`,
+          performedById: recordedById,
+        },
+      }),
+    );
+  }
+
+  if (writes.length > 0) await prisma.$transaction(writes);
+  return { withdrawn: withdraw.length, restored: revived.length, cycleIds, held };
 }
 
 /**
@@ -588,6 +770,17 @@ function resolveCandidate(
 }
 
 /**
+ * When an ingested event happened, as near as the pipeline knows: its cycle's
+ * air date, unless that is still ahead (a week in progress is dated by its
+ * eviction night). Stamping the sync time instead made a correction to week
+ * 9, published in week 15, lead the live ticker as the latest news.
+ */
+function occurredAt(airsAt: Date | null | undefined): Date {
+  const now = new Date();
+  return airsAt && airsAt < now ? airsAt : now;
+}
+
+/**
  * Writes the ScoredEvent for a candidate and links the two.
  *
  * Goes through the same ledger + audit shape as manual admin entry, so an
@@ -601,10 +794,11 @@ async function publishCandidate(input: {
   definition: { id: string; points: Prisma.Decimal };
   /** A variable event's own value; a fixed one scores the definition's points. */
   points?: Prisma.Decimal | number | null;
+  occurredAt: Date;
   recordedById: string;
   note: string;
 }): Promise<string> {
-  const { candidateId, contestantId, cycleId, definition, points, recordedById, note } = input;
+  const { candidateId, contestantId, cycleId, definition, points, occurredAt, recordedById, note } = input;
 
   return prisma.$transaction(async (tx) => {
     const event = await tx.scoredEvent.create({
@@ -613,6 +807,7 @@ async function publishCandidate(input: {
         eventDefinitionId: definition.id,
         cycleId,
         pointsAwarded: points ?? definition.points,
+        occurredAt,
         note,
         recordedById,
       },
@@ -666,12 +861,14 @@ export async function approveCandidate(candidateId: string, userId: string): Pro
     throw new IngestionError(`No EventDefinition for "${candidate.eventCode}".`, candidate.sourceSlug);
   }
 
+  const cycle = await prisma.cycle.findUnique({ where: { id: candidate.cycleId }, select: { airsAt: true } });
   await publishCandidate({
     candidateId: candidate.id,
     contestantId: candidate.contestantId,
     cycleId: candidate.cycleId,
     definition,
     points: candidate.points,
+    occurredAt: occurredAt(cycle?.airsAt),
     recordedById: userId,
     note: `Approved from ${candidate.sourceSlug}`,
   });

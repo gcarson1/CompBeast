@@ -168,6 +168,28 @@ describe('mapSurvivorSeason', () => {
     expect(jury).not.toContain('fay');
   });
 
+  it('pays the jury in the episode its first member left', () => {
+    const jury = candidates.filter((c) => c.eventCode === 'REACHED_JURY');
+    expect(new Set(jury.map((c) => c.weekNumber))).toEqual(new Set([2]));
+  });
+
+  it('holds survival for an episode whose tribal council is not on the page yet', () => {
+    // Live, with episode 2's immunity written up and its vote still to come.
+    const live: SurvivorSeasonFacts = {
+      ...facts,
+      weeks: facts.weeks
+        .slice(0, 2)
+        .map((e) => (e.weekNumber === 2 ? { ...e, exits: [], eliminated: [] } : e)),
+      placements: [],
+      juryVotes: [],
+      cast: facts.cast.map((c) => ({ ...c, statusLabel: 'Active', placeLabel: null })),
+    };
+    const mapped = mapSurvivorSeason(live, 'survivor-50');
+    expect(mapped.filter((c) => c.eventCode === 'EPISODE_SURVIVED' && c.weekNumber === 1)).toHaveLength(5);
+    expect(mapped.some((c) => c.eventCode === 'EPISODE_SURVIVED' && c.weekNumber === 2)).toBe(false);
+    expect(mapped.some((c) => c.eventCode === 'IMMUNITY_WIN' && c.weekNumber === 2)).toBe(true);
+  });
+
   it('never infers events the source cannot support', () => {
     const codes = new Set(candidates.map((c) => c.eventCode));
     expect(codes.has('IDOL_FOUND')).toBe(false);
