@@ -28,8 +28,10 @@ import { ensureRosterSlots, recalculateLeague } from '../src/lib/scoring/reposit
 const round2 = (n: number) => Math.round((n + Number.EPSILON) * 100) / 100;
 
 async function main() {
+  // Every season with a ledger, not only those with leagues: the public
+  // player pages and season scoreboards read the ledger too.
   const seasons = await prisma.season.findMany({
-    where: { leagues: { some: {} } },
+    where: { OR: [{ leagues: { some: {} } }, { cycles: { some: { scoredEvents: { some: {} } } } }] },
     select: { id: true, slug: true },
     orderBy: { slug: 'asc' },
   });
