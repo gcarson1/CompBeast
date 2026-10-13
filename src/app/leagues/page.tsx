@@ -3,10 +3,12 @@ import Link from 'next/link';
 import { Suspense } from 'react';
 import { LeagueRail } from '@/components/LeagueRail';
 import { LiveSection, type FeaturedCast, type LiveBlockData } from '@/components/LiveSection';
+import { NativePushPrompt } from '@/components/NativePushPrompt';
 import { getSocialBuzz } from '@/lib/social-feed';
 import { SignedOutLanding, type LandingShow } from '@/components/SignedOutLanding';
 import { getCurrentUser } from '@/lib/auth';
 import { isEmailConfigured } from '@/lib/email/send';
+import { isNativeAppRequest } from '@/lib/native-server';
 import { HOME_PATH, SITE_DESCRIPTION, SITE_NAME, absoluteUrl } from '@/lib/seo';
 import { FLAGSHIP_SHOW_SLUG, hashtagFor } from '@/lib/shows/registry';
 import {
@@ -16,6 +18,7 @@ import {
   getSeasonScoreboard,
   getSeasonsByStatus,
 } from '@/server/queries';
+import { isApnsConfigured } from '@/server/notification-apns';
 
 export const dynamic = 'force-dynamic';
 
@@ -114,7 +117,14 @@ export default async function HomePage() {
       };
     });
 
-    return <SignedOutLanding live={live} shows={shows} emailAlerts={isEmailConfigured()} />;
+    return (
+      <SignedOutLanding
+        live={live}
+        shows={shows}
+        emailAlerts={isEmailConfigured()}
+        inApp={isNativeAppRequest()}
+      />
+    );
   }
 
   return (
@@ -133,6 +143,10 @@ export default async function HomePage() {
             </Link>
           </div>
         </div>
+
+        {/* In the iOS app, until push is answered either way: why the alerts
+            are worth having, before iOS asks its one-time question. */}
+        {isNativeAppRequest() && isApnsConfigured() && <NativePushPrompt />}
 
         {/* The rail is the page, so it is not folded behind a heading that
             repeats the title above it; the heading is for the outline only. */}

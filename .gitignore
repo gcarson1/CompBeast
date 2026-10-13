@@ -8,3 +8,6 @@ out/
 .DS_Store
 .vercel
 .env*
+
+# App Store screenshots: kept on this machine, out of the repository
+docs/app-store/screenshots/

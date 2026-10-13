@@ -47,6 +47,13 @@ model User {
   /// adding the column needed no backfill and no downtime.
   emailToken         String?            @unique
 
+  /// Set when a moderator ejects this person for breaking the community rules
+  /// (see src/server/moderation.ts). A suspended account can still read,
+  /// change its settings and delete itself; it can no longer post, name
+  /// anything, join or create a league, or contact anyone.
+  suspendedAt      DateTime?
+  suspensionReason String?
+
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
 
@@ -64,6 +71,12 @@ model User {
   notificationsCaused Notification[]           @relation("NotificationActor")
   careerRecords       CareerRecord[]
   pushSubscriptions   PushSubscription[]
+  nativePushTokens    NativePushToken[]
+  blocksMade          UserBlock[]              @relation("BlocksMade")
+  blocksReceived      UserBlock[]              @relation("BlocksReceived")
+  reportsFiled        ContentReport[]          @relation("ReportsFiled")
+  reportsAgainst      ContentReport[]          @relation("ReportsAgainst")
+  reportsResolved     ContentReport[]          @relation("ReportsResolved")
 
   @@map("users")
 }
@@ -87,6 +100,30 @@ model PushSubscription {
 
   @@index([userId])
   @@map("push_subscriptions")
+}
+
+/// One iPhone running the Comp Beast app, by its APNs device token.
+///
+/// The token is the identity, like a Web Push endpoint: the same phone
+/// re-registering updates its row, and a phone that changes hands between
+/// accounts moves with whoever registered it last. Rows are removed when APNs
+/// answers that the token is no longer valid (the app was deleted), so the
+/// table describes phones that can still be reached.
+model NativePushToken {
+  id          String   @id @default(cuid())
+  userId      String
+  user        User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  token       String   @unique
+  platform    String   @default("ios")
+  /// Which APNs gateway accepts this token: "production" for App Store and
+  /// TestFlight builds, "sandbox" for a build run from Xcode. Learned on the
+  /// first send (see src/server/notification-apns.ts), not trusted from the app.
+  environment String   @default("production")
+  createdAt   DateTime @default(now())
+  lastSeenAt  DateTime @default(now())
+
+  @@index([userId])
+  @@map("native_push_tokens")
 }
 
 // ---------------------------------------------------------------------------
@@ -127,11 +164,84 @@ model Friendship {
 /// BLOCKED is deliberately absent. Blocking needs its own semantics (hiding
 /// content both ways, surviving an unfriend) and bolting it onto this enum
 /// would make every friend query silently wrong until all of them were
-/// updated. It belongs in its own model when it is actually built.
+/// updated. It is its own model, `UserBlock`, below.
 enum FriendshipStatus {
   PENDING
   ACCEPTED
   DECLINED
+}
+
+/// One person blocking another.
+///
+/// Directed, because blocking is something one person does; but its effect
+/// is symmetric — neither sees the other's posts in a league feed, neither
+/// can find, befriend or invite the other — so every read matches either
+/// column (`blockedIdsFor` in src/server/blocks.ts is the one place that
+/// OR is written). Blocking ends any friendship between the two.
+model UserBlock {
+  id        String   @id @default(cuid())
+  blockerId String
+  blocker   User     @relation("BlocksMade", fields: [blockerId], references: [id], onDelete: Cascade)
+  blockedId String
+  blocked   User     @relation("BlocksReceived", fields: [blockedId], references: [id], onDelete: Cascade)
+  createdAt DateTime @default(now())
+
+  @@unique([blockerId, blockedId])
+  @@index([blockedId])
+  @@map("user_blocks")
+}
+
+/// Somebody flagging a post or a person to the platform's moderators.
+///
+/// The queue at /admin/reports reads these; a moderator removes the content,
+/// suspends its author, or dismisses the report. A block files one too
+/// (`viaBlock`), so the people running the site hear about abuse even from
+/// someone who only wanted it out of their sight.
+model ContentReport {
+  id            String         @id @default(cuid())
+  reporterId    String?
+  reporter      User?          @relation("ReportsFiled", fields: [reporterId], references: [id], onDelete: SetNull)
+  /// Whose content this is.
+  subjectUserId String
+  subjectUser   User           @relation("ReportsAgainst", fields: [subjectUserId], references: [id], onDelete: Cascade)
+  /// The post reported, when it is a post rather than a person.
+  messageId     String?
+  message       LeagueMessage? @relation(fields: [messageId], references: [id], onDelete: SetNull)
+  /// Where it happened, for the moderator's link. A plain id, not a relation:
+  /// the report outlives the league.
+  leagueId      String?
+  reason        ReportReason
+  details       String?
+  /// The post as it read when it was reported, so it can still be judged
+  /// after its author deletes it.
+  snapshot      String?
+  viaBlock      Boolean        @default(false)
+  status        ReportStatus   @default(OPEN)
+  resolution    String?
+  resolvedById  String?
+  resolvedBy    User?          @relation("ReportsResolved", fields: [resolvedById], references: [id], onDelete: SetNull)
+  resolvedAt    DateTime?
+  createdAt     DateTime       @default(now())
+
+  @@index([status, createdAt])
+  @@index([subjectUserId])
+  @@map("content_reports")
+}
+
+enum ReportReason {
+  HARASSMENT
+  HATE
+  SEXUAL
+  SPAM
+  IMPERSONATION
+  OTHER
+}
+
+enum ReportStatus {
+  OPEN
+  /// The content was removed or its author suspended.
+  ACTIONED
+  DISMISSED
 }
 
 // ---------------------------------------------------------------------------
@@ -190,6 +300,9 @@ enum NotificationType {
   LEAGUE_DRAFT_COMPLETED
   LEAGUE_UPDATED
   LEAGUE_DELETED
+  /// To platform admins only: something was reported and is waiting in the
+  /// moderation queue.
+  CONTENT_REPORTED
 }
 
 // ---------------------------------------------------------------------------
@@ -398,6 +511,7 @@ model LeagueMessage {
   createdAt DateTime  @default(now())
 
   reactions LeagueMessageReaction[]
+  reports   ContentReport[]
 
   // The feed is always "newest in this league", so the index leads with
   // leagueId and carries createdAt to serve the ordering too.

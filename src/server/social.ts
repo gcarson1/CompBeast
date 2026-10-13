@@ -1,5 +1,6 @@
 import { Prisma } from '@prisma/client';
 import { prisma } from '../lib/db';
+import { blockedIdsFor, isBlockedBetween } from './blocks';
 import { DomainError } from './errors';
 import { notify } from './notifications';
 
@@ -131,9 +132,13 @@ export async function searchPeople(
   const query = rawQuery.trim().slice(0, 120);
   if (query.length < 2) return [];
 
+  // Blocked either way means not findable either way.
+  const hidden = await blockedIdsFor(userId);
   const users = await prisma.user.findMany({
     where: {
-      id: { not: userId },
+      id: { notIn: [userId, ...hidden] },
+      // Suspended accounts cannot befriend anyone, so offering them is a dead end.
+      suspendedAt: null,
       OR: [
         { handle: { contains: query, mode: 'insensitive' } },
         { name: { contains: query, mode: 'insensitive' } },
@@ -195,6 +200,11 @@ export async function sendFriendRequest(userId: string, targetUserId: string) {
     select: { id: true, name: true, handle: true },
   });
   if (!target) throw new DomainError('That account no longer exists.', 'USER_NOT_FOUND', 404);
+  // Worded the same whichever of the two did the blocking, so a request is
+  // never a way to find out that someone blocked you.
+  if (await isBlockedBetween(userId, targetUserId)) {
+    throw new DomainError('You cannot add this person.', 'BLOCKED', 403);
+  }
 
   const me = await prisma.user.findUniqueOrThrow({
     where: { id: userId },

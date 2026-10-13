@@ -41,7 +41,7 @@ export function operator(): Operator {
 }
 
 /** The date the legal texts were last changed. Bump it when they change. */
-export const LEGAL_UPDATED = '2026-09-21';
+export const LEGAL_UPDATED = '2026-10-13';
 
 /**
  * The shows are other people's trademarks. Said once here so every page that

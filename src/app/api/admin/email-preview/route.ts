@@ -68,6 +68,11 @@ const SAMPLES: Record<NotificationType, { title: string; body: string; href: str
     body: 'You can now invite each other to leagues.',
     href: '/account',
   },
+  CONTENT_REPORTED: {
+    title: 'New report: harassment or bullying',
+    body: '“Nobody in this league wants you here.”',
+    href: '/admin/reports',
+  },
 };
 
 export async function GET(request: Request) {

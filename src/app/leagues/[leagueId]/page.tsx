@@ -356,6 +356,7 @@ export default async function LeaguePage({ params }: { params: { leagueId: strin
           messages={messages}
           canPost={isMember}
           isCommissioner={isCommissioner}
+          viewerSignedIn={Boolean(user)}
         />
         {!preDraft && referenceRows}
       </div>

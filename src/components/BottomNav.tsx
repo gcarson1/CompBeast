@@ -27,7 +27,9 @@ export function BottomNav() {
     // carried up the screen: it is not in the flow of anything that scrolls.
     // A phone and tablet control: on a wide screen the same tabs sit in the
     // header (<HeaderNav>), where a desktop reader looks for them.
-    <nav className="relative z-20 flex-none border-t border-hairline bg-surface px-4 pb-[max(0.25rem,env(safe-area-inset-bottom))] pt-2 lg:hidden">
+    // `app-tabbar` is the hook for the iOS app: it steps aside while the
+    // keyboard is up (globals.css) and taps on it are felt (NativeBridge).
+    <nav className="app-tabbar relative z-20 flex-none border-t border-hairline bg-surface px-4 pb-[max(0.25rem,env(safe-area-inset-bottom))] pt-2 lg:hidden">
       <ul className="mx-auto flex max-w-md items-center sm:max-w-lg lg:max-w-3xl justify-around">
         {TABS.map((tab) => {
           const active = tabIsActive(tab, pathname);

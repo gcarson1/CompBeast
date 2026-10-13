@@ -3,6 +3,7 @@
 import { useEffect, useRef, useState } from 'react';
 import dynamic from 'next/dynamic';
 import { toast } from 'sonner';
+import { canShare, share } from '@/lib/native';
 
 const QR_SIZE = 220;
 
@@ -72,6 +73,13 @@ export function InviteCode({ code, leagueName }: { code: string; leagueName: str
   const [joinUrl, setJoinUrl] = useState('');
   // Latches on first open and stays true, so reopening is instant.
   const [opened, setOpened] = useState(false);
+  // Only known in the browser, so it starts false and the button appears
+  // after mount rather than mismatching the server render.
+  const [shareable, setShareable] = useState(false);
+
+  useEffect(() => {
+    setShareable(canShare());
+  }, []);
 
   // The QR has to encode an absolute URL to be scannable, and the origin is
   // only knowable in the browser — which also means it is automatically right
@@ -99,11 +107,39 @@ export function InviteCode({ code, leagueName }: { code: string; leagueName: str
     }
   };
 
+  // The share sheet: Messages, WhatsApp, AirDrop — wherever the group chat
+  // actually is — with the join link, which opens the app or the site with
+  // the code already filled in.
+  const handleShare = async () => {
+    if (!joinUrl) return;
+    try {
+      await share({
+        title: `Join ${leagueName} on Comp Beast`,
+        text: `Join my league ${leagueName} on Comp Beast. Invite code: ${code}`,
+        url: joinUrl,
+      });
+    } catch {
+      toast.error('Could not open sharing — copy the link instead.');
+    }
+  };
+
   return (
     <div className="flex items-center justify-between gap-3 py-3">
       <span className="text-sm text-muted">Invite code</span>
 
       <div className="flex items-center gap-2">
+        {shareable && (
+          <button
+            type="button"
+            onClick={handleShare}
+            aria-label={`Share an invite to ${leagueName}`}
+            data-haptic="tap"
+            className="btn-ghost btn-sm px-2.5"
+          >
+            <ShareIcon />
+          </button>
+        )}
+
         <button
           type="button"
           onClick={() => handleCopy(code, 'Invite code', true)}
@@ -204,6 +240,26 @@ export function InviteCode({ code, leagueName }: { code: string; leagueName: str
         </div>
       </dialog>
     </div>
+  );
+}
+
+function ShareIcon() {
+  return (
+    <svg
+      width="16"
+      height="16"
+      viewBox="0 0 24 24"
+      fill="none"
+      stroke="currentColor"
+      strokeWidth="1.8"
+      aria-hidden
+    >
+      <path d="M12 3v12M7.5 7.5 12 3l4.5 4.5" strokeLinecap="round" strokeLinejoin="round" />
+      <path
+        d="M8 11H6.5A2.5 2.5 0 0 0 4 13.5v5A2.5 2.5 0 0 0 6.5 21h11a2.5 2.5 0 0 0 2.5-2.5v-5A2.5 2.5 0 0 0 17.5 11H16"
+        strokeLinecap="round"
+      />
+    </svg>
   );
 }
 

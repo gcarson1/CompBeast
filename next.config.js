@@ -24,6 +24,16 @@ const nextConfig = {
     // Through the optimizer they leave as WebP/AVIF at the rendered size.
     remotePatterns: imageHosts.map((hostname) => ({ protocol: 'https', hostname })),
   },
+  async rewrites() {
+    return [
+      // Apple fetches this exact path to learn which app may open the site's
+      // links (src/app/api/apple-app-site-association/route.ts).
+      {
+        source: '/.well-known/apple-app-site-association',
+        destination: '/api/apple-app-site-association',
+      },
+    ];
+  },
   async redirects() {
     return [
       // `/leagues` is home (see src/app/page.tsx). Answered here, at the edge,

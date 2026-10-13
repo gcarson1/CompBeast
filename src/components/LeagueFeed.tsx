@@ -6,6 +6,7 @@ import { AnimatePresence, m, useReducedMotion } from 'framer-motion';
 import { toast } from 'sonner';
 import { Avatar } from '@/components/Avatar';
 import { Collapsible } from '@/components/Collapsible';
+import { ReportBlockDialog } from '@/components/ReportBlockDialog';
 import { useLeaguePulse } from '@/lib/live';
 import { relativeTime } from '@/lib/ui';
 import {
@@ -37,11 +38,14 @@ export function LeagueFeed({
   messages,
   canPost,
   isCommissioner,
+  viewerSignedIn,
 }: {
   leagueId: string;
   messages: LeagueMessageView[];
   canPost: boolean;
   isCommissioner: boolean;
+  /** Anyone signed in can report or block the author of a post they can see. */
+  viewerSignedIn: boolean;
 }) {
   const [state, formAction] = useFormState<ActionState, FormData>(postMessageAction, {});
   const [body, setBody] = useState('');
@@ -156,15 +160,27 @@ export function LeagueFeed({
                 <div className="flex items-start gap-3">
                   <Avatar name={message.authorName} photoUrl={message.authorAvatarUrl} size={32} />
                   <div className="min-w-0 flex-1">
-                    <p className="flex items-baseline gap-2">
-                      <span className="truncate text-sm font-semibold">{message.authorName}</span>
-                      <time
-                        dateTime={new Date(message.createdAt).toISOString()}
-                        className="shrink-0 text-2xs text-muted"
-                      >
-                        {relativeTime(message.createdAt)}
-                      </time>
-                    </p>
+                    <div className="flex items-center gap-2">
+                      <p className="flex min-w-0 items-baseline gap-2">
+                        <span className="truncate text-sm font-semibold">{message.authorName}</span>
+                        <time
+                          dateTime={new Date(message.createdAt).toISOString()}
+                          className="shrink-0 text-2xs text-muted"
+                        >
+                          {relativeTime(message.createdAt)}
+                        </time>
+                      </p>
+                      {viewerSignedIn && !message.isMine && (
+                        <ReportBlockDialog
+                          subjectUserId={message.authorId}
+                          subjectName={message.authorName}
+                          messageId={message.id}
+                          leagueId={leagueId}
+                          label={`Report or block ${message.authorName}`}
+                          className="-my-2 -mr-2 ml-auto"
+                        />
+                      )}
+                    </div>
                     {/* whitespace-pre-wrap keeps the line breaks someone typed;
                         break-words stops an unbroken string blowing out the
                         card on a narrow screen. */}
@@ -236,6 +252,7 @@ function ReactionButton({
         // and the only other signal is a background tint.
         aria-pressed={active}
         aria-label={`${verb}${count > 0 ? ` (${count})` : ''}`}
+        data-haptic="tap"
         className={`btn btn-sm ${active ? on : 'bg-surface text-muted hover:text-ink'}`}
       >
         {kind === 'HYPE' ? <FlameIcon /> : <TargetIcon />}

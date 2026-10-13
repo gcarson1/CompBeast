@@ -1,6 +1,7 @@
 import type { NotificationType, Prisma } from '@prisma/client';
 import { prisma } from '../lib/db';
 import { background } from './background';
+import { deliverNotificationApns } from './notification-apns';
 import { deliverNotificationEmails } from './notification-email';
 import { deliverNotificationPush } from './notification-push';
 
@@ -61,6 +62,7 @@ export async function notify(inputs: NotifyInput | NotifyInput[]): Promise<numbe
 
     background(deliverNotificationEmails(created));
     background(deliverNotificationPush(created));
+    background(deliverNotificationApns(created));
     return created.length;
   } catch (error) {
     // Deliberately not rethrown. See the module comment.

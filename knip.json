@@ -2,5 +2,6 @@
   "$schema": "https://unpkg.com/knip@5/schema.json",
   "entry": ["scripts/*.ts", "image-hosts.js"],
   "project": ["src/**/*.{ts,tsx}", "scripts/**/*.ts", "prisma/**/*.ts"],
+  "ignoreDependencies": ["@capacitor/ios"],
   "ignoreExportsUsedInFile": true
 }

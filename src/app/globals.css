@@ -268,6 +268,23 @@
   }
 
   /*
+   * The iOS app (`data-shell` is set by the root layout from the request).
+   * The header and tab bar are app chrome there, so a long press on them
+   * selects nothing and pops no callout — the way a native bar behaves —
+   * and the tab bar steps aside while the keyboard is up (NativeBridge marks
+   * `data-keyboard`), giving a post being typed the whole screen above it.
+   */
+  [data-shell='ios-app'] :is(.app-header, .app-tabbar) {
+    -webkit-user-select: none;
+    user-select: none;
+    -webkit-touch-callout: none;
+  }
+
+  [data-shell='ios-app'][data-keyboard='open'] .app-tabbar {
+    display: none;
+  }
+
+  /*
    * A page's major blocks — the ones a scroll settles on. Few and large:
    * two targets closer together than about half a screen feel like the page
    * catching, not guiding, so the section directly under a page's title is

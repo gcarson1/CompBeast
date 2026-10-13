@@ -4,6 +4,7 @@ import { useEffect, useState } from 'react';
 import { useFormState, useFormStatus } from 'react-dom';
 import { toast } from 'sonner';
 import { Avatar } from '@/components/Avatar';
+import { ReportBlockDialog } from '@/components/ReportBlockDialog';
 import { Tag } from '@/components/Tag';
 import {
   removeFriendAction,
@@ -35,6 +36,13 @@ export function FriendsPanel({ overview }: { overview: FriendOverview }) {
                 </span>
                 <RespondForm friendshipId={request.friendshipId} name={request.name} accept />
                 <RespondForm friendshipId={request.friendshipId} name={request.name} accept={false} />
+                {/* A request from a stranger is where unwanted contact starts. */}
+                <ReportBlockDialog
+                  subjectUserId={request.userId}
+                  subjectName={request.name}
+                  label={`Report or block ${request.name}`}
+                  className="-mr-2"
+                />
               </li>
             ))}
           </ul>
@@ -60,6 +68,12 @@ export function FriendsPanel({ overview }: { overview: FriendOverview }) {
                   )}
                 </span>
                 <RemoveFriendForm friendUserId={friend.userId} name={friend.name} />
+                <ReportBlockDialog
+                  subjectUserId={friend.userId}
+                  subjectName={friend.name}
+                  label={`Report or block ${friend.name}`}
+                  className="-mr-2"
+                />
               </li>
             ))}
           </ul>

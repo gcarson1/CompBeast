@@ -3,7 +3,8 @@
 import { revalidatePath } from 'next/cache';
 import { redirect } from 'next/navigation';
 import { ZodError } from 'zod';
-import { requireUser } from '../lib/auth';
+import type { ReportReason } from '@prisma/client';
+import { requireActiveUser, requirePlatformAdmin, requireUser } from '../lib/auth';
 import {
   DomainError,
   createLeague,
@@ -22,6 +23,15 @@ import type { EmailCategory } from '../lib/email/templates';
 import { joinLeagueSchema } from '../lib/validation';
 import { setEmailPreference } from './notification-email';
 import { markAllNotificationsRead } from './notifications';
+import { REPORT_REASONS } from '../lib/report-reasons';
+import {
+  type ModerationAction,
+  blockUser,
+  liftSuspension,
+  reportContent,
+  resolveReport,
+  unblockUser,
+} from './moderation';
 import { inviteFriendToLeague, removeFriend, respondToFriendRequest, sendFriendRequest } from './social';
 
 export type ActionState = { error?: string; ok?: boolean };
@@ -38,6 +48,9 @@ function messageFor(error: unknown): string {
   if (error instanceof Error && error.message === 'FORBIDDEN') {
     return 'You do not have permission to do that.';
   }
+  if (error instanceof Error && error.message === 'SUSPENDED') {
+    return 'Your account is suspended for breaking the community rules, so you cannot post, join or invite. If you think this is a mistake, contact us from the support page.';
+  }
   console.error(error);
   return 'Something went wrong. Try again.';
 }
@@ -45,7 +58,7 @@ function messageFor(error: unknown): string {
 export async function createLeagueAction(_prev: ActionState, formData: FormData): Promise<ActionState> {
   let leagueId: string;
   try {
-    const user = await requireUser();
+    const user = await requireActiveUser();
     const parsed = createLeagueSchema.parse({
       name: formData.get('name'),
       seasonId: formData.get('seasonId'),
@@ -68,7 +81,7 @@ export async function createLeagueAction(_prev: ActionState, formData: FormData)
 export async function joinLeagueAction(_prev: ActionState, formData: FormData): Promise<ActionState> {
   let leagueId: string;
   try {
-    const user = await requireUser();
+    const user = await requireActiveUser();
     const parsed = joinLeagueSchema.parse({
       inviteCode: formData.get('inviteCode'),
       teamName: formData.get('teamName'),
@@ -119,7 +132,7 @@ export async function draftPickAction(_prev: ActionState, formData: FormData): P
 export async function updateLeagueAction(_prev: ActionState, formData: FormData): Promise<ActionState> {
   const leagueId = String(formData.get('leagueId') ?? '');
   try {
-    const user = await requireUser();
+    const user = await requireActiveUser();
     const parsed = updateLeagueSchema.parse({
       name: formData.get('name'),
       scoringRulesetId: formData.get('scoringRulesetId'),
@@ -167,7 +180,7 @@ export async function deleteLeagueAction(_prev: ActionState, formData: FormData)
 
 export async function sendFriendRequestAction(_prev: ActionState, formData: FormData): Promise<ActionState> {
   try {
-    const user = await requireUser();
+    const user = await requireActiveUser();
     await sendFriendRequest(user.id, String(formData.get('targetUserId') ?? ''));
   } catch (error) {
     return { error: messageFor(error) };
@@ -208,7 +221,7 @@ export async function removeFriendAction(_prev: ActionState, formData: FormData)
 export async function inviteFriendAction(_prev: ActionState, formData: FormData): Promise<ActionState> {
   const leagueId = String(formData.get('leagueId') ?? '');
   try {
-    const user = await requireUser();
+    const user = await requireActiveUser();
     await inviteFriendToLeague(user.id, String(formData.get('friendUserId') ?? ''), leagueId);
   } catch (error) {
     return { error: messageFor(error) };
@@ -266,7 +279,7 @@ export async function markAllNotificationsReadAction(
 export async function postMessageAction(_prev: ActionState, formData: FormData): Promise<ActionState> {
   const leagueId = String(formData.get('leagueId') ?? '');
   try {
-    const user = await requireUser();
+    const user = await requireActiveUser();
     await postLeagueMessage(leagueId, user.id, String(formData.get('body') ?? ''));
   } catch (error) {
     return { error: messageFor(error) };
@@ -278,7 +291,7 @@ export async function postMessageAction(_prev: ActionState, formData: FormData):
 export async function toggleReactionAction(_prev: ActionState, formData: FormData): Promise<ActionState> {
   const kind = formData.get('kind') === 'SHADE' ? ('SHADE' as const) : ('HYPE' as const);
   try {
-    const user = await requireUser();
+    const user = await requireActiveUser();
     const { leagueId } = await toggleMessageReaction(String(formData.get('messageId') ?? ''), user.id, kind);
     revalidatePath(`/leagues/${leagueId}`);
   } catch (error) {
@@ -295,5 +308,82 @@ export async function deleteMessageAction(_prev: ActionState, formData: FormData
   } catch (error) {
     return { error: messageFor(error) };
   }
+  return { ok: true };
+}
+
+// ---------------------------------------------------------------------------
+// Reporting and blocking (see src/server/moderation.ts)
+// ---------------------------------------------------------------------------
+
+function reasonFrom(value: FormDataEntryValue | null): ReportReason {
+  const reason = String(value ?? '');
+  return reason in REPORT_REASONS ? (reason as ReportReason) : 'OTHER';
+}
+
+/** Anyone signed in may report, suspended or not: reporting reaches only the moderators. */
+export async function reportContentAction(_prev: ActionState, formData: FormData): Promise<ActionState> {
+  try {
+    const user = await requireUser();
+    await reportContent(user.id, {
+      messageId: String(formData.get('messageId') ?? '') || undefined,
+      subjectUserId: String(formData.get('subjectUserId') ?? '') || undefined,
+      reason: reasonFrom(formData.get('reason')),
+      details: String(formData.get('details') ?? ''),
+    });
+  } catch (error) {
+    return { error: messageFor(error) };
+  }
+  return { ok: true };
+}
+
+export async function blockUserAction(_prev: ActionState, formData: FormData): Promise<ActionState> {
+  const leagueId = String(formData.get('leagueId') ?? '');
+  try {
+    const user = await requireUser();
+    await blockUser(user.id, String(formData.get('subjectUserId') ?? ''), {
+      messageId: String(formData.get('messageId') ?? '') || undefined,
+    });
+  } catch (error) {
+    return { error: messageFor(error) };
+  }
+  if (leagueId) revalidatePath(`/leagues/${leagueId}`);
+  revalidatePath('/account');
+  return { ok: true };
+}
+
+export async function unblockUserAction(_prev: ActionState, formData: FormData): Promise<ActionState> {
+  try {
+    const user = await requireUser();
+    await unblockUser(user.id, String(formData.get('subjectUserId') ?? ''));
+  } catch (error) {
+    return { error: messageFor(error) };
+  }
+  revalidatePath('/account');
+  return { ok: true };
+}
+
+const MODERATION_ACTIONS: ModerationAction[] = ['REMOVE_POST', 'SUSPEND', 'DISMISS'];
+
+export async function resolveReportAction(_prev: ActionState, formData: FormData): Promise<ActionState> {
+  try {
+    const admin = await requirePlatformAdmin();
+    const action = String(formData.get('action') ?? '') as ModerationAction;
+    if (!MODERATION_ACTIONS.includes(action)) return { error: 'Pick what to do with the report.' };
+    await resolveReport(admin.id, String(formData.get('reportId') ?? ''), action);
+  } catch (error) {
+    return { error: messageFor(error) };
+  }
+  revalidatePath('/admin/reports');
+  return { ok: true };
+}
+
+export async function liftSuspensionAction(_prev: ActionState, formData: FormData): Promise<ActionState> {
+  try {
+    await requirePlatformAdmin();
+    await liftSuspension(String(formData.get('userId') ?? ''));
+  } catch (error) {
+    return { error: messageFor(error) };
+  }
+  revalidatePath('/admin/reports');
   return { ok: true };
 }

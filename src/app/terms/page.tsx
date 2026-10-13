@@ -109,20 +109,41 @@ export default function TermsPage() {
           title: 'Acceptable use',
           body: (
             <>
-              <p>League chat is for the league. Do not use {SITE_NAME} to:</p>
+              <p>
+                League chat is for the league, and trash talk is part of the game. But{' '}
+                <strong>
+                  there is no tolerance for objectionable content or abusive users on {SITE_NAME}
+                </strong>
+                . Do not use it to:
+              </p>
               <ul>
                 <li>
-                  harass, threaten or abuse anyone, or post content that is unlawful where you or they are;
+                  harass, threaten, bully or abuse anyone, or post content that is unlawful where you or they
+                  are;
                 </li>
+                <li>
+                  post hate speech or slurs, or attack anyone for their race, ethnicity, religion, sex, gender
+                  identity, sexual orientation, disability or nationality;
+                </li>
+                <li>post sexually explicit or violent content;</li>
                 <li>post other people&apos;s private information;</li>
                 <li>impersonate someone, or use a league, team or display name to deceive;</li>
                 <li>scrape the site, probe it for weaknesses, or interfere with its operation;</li>
                 <li>send unsolicited invites or messages, or automate an account.</li>
               </ul>
               <p>
+                <strong>Reporting and blocking.</strong> Every post has a “⋯” button to report it or block its
+                author, and so does every team page and friend request. Blocking takes effect at once: you
+                stop seeing each other&apos;s posts, and neither of you can friend or invite the other. Posts
+                and names are also checked for slurs before they appear. Reports go to our moderators, who act
+                on them within 24 hours — removing what breaks these rules and suspending or removing the
+                accounts responsible.
+              </p>
+              <p>
                 Commissioners can remove messages in their leagues. We can remove content, close leagues and
                 suspend or delete accounts that break these rules, and will tell you why unless the law
-                prevents it.
+                prevents it. A suspended account can still see its leagues and delete itself, but cannot post,
+                join, create or invite.
               </p>
             </>
           ),
@@ -147,6 +168,29 @@ export default function TermsPage() {
               {AFFILIATION_DISCLAIMER} Cast names and season results are facts reported from the broadcast and
               from public fan and news sources, and appear here so a league can be scored.
             </p>
+          ),
+        },
+        {
+          id: 'app-store',
+          title: 'The iPhone app',
+          body: (
+            <>
+              <p>
+                If you use {SITE_NAME} through the iPhone app, these terms are between you and {who.name}, not
+                Apple. Apple is not responsible for the app or its content, has no obligation to provide
+                maintenance or support for it, and is not responsible for any claim relating to it — including
+                product liability, legal or regulatory compliance, or intellectual property claims. To the
+                extent the law allows any warranty, Apple&apos;s only obligation if the app fails to conform
+                to it is to refund the purchase price, which is nothing.
+              </p>
+              <p>
+                You may use the app only on Apple devices you own or control, as the App Store&apos;s Usage
+                Rules allow. Apple and its subsidiaries are third-party beneficiaries of these terms and may
+                enforce them against you. You confirm you are not located in a country subject to a U.S.
+                Government embargo and are not on any U.S. Government list of prohibited or restricted
+                parties.
+              </p>
+            </>
           ),
         },
         {

@@ -8,6 +8,7 @@ import { CrownIcon } from '@/components/icons';
 import { StatStrip } from '@/components/StatStrip';
 import { ShowTheme } from '@/components/ShowTheme';
 import { Tag, rankTone } from '@/components/Tag';
+import { ReportBlockDialog } from '@/components/ReportBlockDialog';
 import { getCurrentUser } from '@/lib/auth';
 import { isTraitor } from '@/lib/shows/affiliation';
 import { eliminationLabel, lower } from '@/lib/shows/lexicon';
@@ -76,6 +77,15 @@ export default async function TeamPage({ params }: { params: { teamId: string } 
                 <span className="truncate">{team.ownerName ?? 'Unclaimed'}</span>
               </p>
             </div>
+            {/* A team name or a manager's name can be the abuse too. */}
+            {user && user.id !== team.ownerId && (
+              <ReportBlockDialog
+                subjectUserId={team.ownerId}
+                subjectName={team.ownerName ?? team.name}
+                label={`Report or block ${team.ownerName ?? team.name}`}
+                className="-mr-2 ml-auto self-start"
+              />
+            )}
           </header>
 
           <StatStrip

@@ -24,6 +24,7 @@ the platform.
 | Tests | Vitest |
 | Checks | ESLint (`next/core-web-vitals`), Prettier, knip; all run in CI |
 | Deploy | Vercel |
+| iPhone app | Capacitor 8 shell around the live site (`ios/`, `capacitor.config.ts`) — see [iOS app](#ios-app) |
 
 ## Getting started
 
@@ -533,6 +534,17 @@ the app is on the home screen, which the switch explains; `src/app/manifest.ts` 
 icons in `public/icons` (rendered from the logo mark by `scripts/make-icons.ts`) are what
 make it installable.
 
+APNs is the fourth channel, for the iOS app (`src/server/notification-apns.ts`). Same
+batch, same contract: each registered iPhone (`NativePushToken`, keyed by its device
+token) gets the alert with the unread count as the icon badge and the link it should open.
+Token auth over HTTP/2 with no dependency — an ES256 JWT signed by Node's own `crypto`.
+A token production does not know is retried on the sandbox gateway (an Xcode build) and
+remembered there; a 410 deletes the row. Unconfigured is normal here too: without
+`APNS_KEY_ID` / `APNS_TEAM_ID` / `APNS_PRIVATE_KEY` (a .p8 key from the Apple Developer
+account; `APNS_BUNDLE_ID` defaults to `app.compbeast`) nothing is sent and the app hides its
+switch. The app registers a token only after asking — a one-time prompt on the home screen
+explains what alerts are for before iOS asks its one question — and retires it on sign-out.
+
 ### Email
 
 Every notification can also arrive as email (`src/lib/email/`). The copy is not
@@ -745,6 +757,22 @@ silently vanish.
 New posts and reactions arrive on their own — the feed watches the same league pulse the
 draft board does. Threaded replies and @-mentions are the natural next step.
 
+### Reporting, blocking and moderation
+
+Every post (and every team page and friend request) has a "⋯" that reports it or blocks its
+author (`<ReportBlockDialog>`). A **block** (`UserBlock`) ends contact both ways and at
+once: neither sees the other's posts (`getLeagueMessages` filters on `blockedIdsFor`),
+search hides them from each other, friendship ends and requests are refused. A **report**
+(`ContentReport`) keeps the post as it read when reported and alerts every platform admin;
+a block files one too. `/admin/reports` is the queue: remove the post, suspend the author,
+or dismiss. A suspended account (`User.suspendedAt`) can still read, change settings and
+delete itself, but `requireActiveUser` refuses everything that reaches anyone else — posting,
+naming, joining, creating, inviting, befriending. In front of all of it,
+`src/lib/content-filter.ts` refuses slurs in posts, league names and team names (whole
+words, seeing through stretched letters, look-alike digits and spacing; ordinary swearing is
+trash talk and passes). The terms commit to acting on reports within 24 hours. This is also
+what App Store guideline 1.2 requires of an app with user posts.
+
 ## Live updates
 
 One endpoint, `/api/leagues/[leagueId]/pulse`, answers "has anything happened in this
@@ -929,6 +957,47 @@ the page routes deciding the words: the site default, `/seasons/[slug]`,
 `/players/[id]`, and the invite card at `/api/og/join?code=`. The invite card never shows
 the code; a screenshot of it should not be an invitation.
 
+## iOS app
+
+The iPhone app is this site in a native shell, built with Capacitor 8 (`ios/`,
+`capacitor.config.ts`). The web view loads `https://compbeast.app`; there is no second
+copy of the app to keep in step, and a web deploy updates the app's content too. The native
+layer adds what a website cannot do on an iPhone:
+
+- **Push** through APNs with the unread count on the icon (above), tapped alerts opening
+  their page.
+- **Universal links**: a compbeast.app link or a scanned league QR code opens the app at
+  that page. `/.well-known/apple-app-site-association` is served from `APPLE_TEAM_ID`
+  (a 404 until it is set) and also enables iCloud Keychain passwords and passkeys in the
+  app's sign-in form.
+- **Share sheet** for league invites (also on mobile browsers, via the Web Share API),
+  **haptics** on tabs, reactions and every success or error toast, the **tab bar stepping
+  aside** while the keyboard is up, and the app's **icon badge**.
+- Links leaving the site open in an **in-app Safari sheet**; **swipe from the edge** goes
+  back; a **native offline screen** retries by itself when the connection returns; a launch
+  cover holds the brand mark until the first page has painted.
+
+The web side is `src/lib/native.ts` (every export a no-op without the bridge, every plugin a
+lazy import, so the website's bundle carries none of it) and `<NativeBridge>`, mounted only
+when the request's user agent carries the app's `CompBeastApp/1` token
+(`src/lib/native-server.ts`). The native side is four small Swift files in `ios/App/App`
+(`AppViewController`, `NavigationGuard`, `ShellViews`, `NativeShellPlugin`). App icon and
+launch mark are rendered from the brand geometry by `scripts/make-icons.ts`.
+
+```bash
+npm run ios:sync      # copy config into the Xcode project (after npm ci, or a config change)
+npm run ios:open      # open it in Xcode; run on a simulator or a phone
+APPLE_TEAM_ID=… npm run ios:release   # archive and upload to App Store Connect
+```
+
+`CAP_SERVER_URL=https://<preview>` before `ios:sync` points a build at another deployment.
+A plain `http://localhost` server does not work for signing in: Clerk's development
+instance sets `Secure` cookies, which WebKit refuses on plain-HTTP localhost.
+
+Submitting to the App Store — accounts, environment variables, the listing, privacy
+answers, screenshots and review notes — is written up step by step in
+[`docs/app-store/README.md`](docs/app-store/README.md).
+
 ## Tests
 
 ```bash
@@ -938,10 +1007,11 @@ npm test
 Pure unit tests cover attribution, voiding, ruleset filtering, snapshot vs. restated
 scoring, tie ranking, float drift, and draft order/validation.
 
-Four files talk to a real database instead: `league-social.test.ts` (joining, the feed,
+Five files talk to a real database instead: `league-social.test.ts` (joining, the feed,
 the home rail), `draft.test.ts` (the pick fan-out and snake order), `social.test.ts`
-(friendships, notifications, league settings and deletion) and `access.test.ts` (who may
-read a league, what a player page reveals, who is on the block). These cover the things pure
+(friendships, notifications, league settings and deletion), `access.test.ts` (who may
+read a league, what a player page reveals, who is on the block) and `moderation.test.ts`
+(blocking both ways, reports, the queue's actions, the slur filter, what deletion erases). These cover the things pure
 unit tests cannot reach — a friendship is only correct if it reads the same from *both*
 directions, a notification is only useful if it survives the thing it describes being
 deleted, and the settings rules exist to stop a database being corrupted mid-draft. Each

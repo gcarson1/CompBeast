@@ -142,9 +142,12 @@ export default async function IngestionPage() {
 
   return (
     <div className="pt-2">
-      <Link href="/leagues" className="text-xs text-muted">
-        ← Leagues
-      </Link>
+      <nav className="flex gap-4 text-xs text-muted">
+        <Link href="/leagues">← Leagues</Link>
+        <Link href="/admin/reports" prefetch={false} className="ml-auto">
+          Moderation →
+        </Link>
+      </nav>
       <h1 className="headline mt-3 text-4xl">Ingestion</h1>
       <p className="mt-2 max-w-measure text-xs text-muted">
         Automatically captured results. High-confidence events publish on their own; anything inferred waits
