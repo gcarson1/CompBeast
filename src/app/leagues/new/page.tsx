@@ -1,6 +1,7 @@
 import Link from 'next/link';
 import { CreateLeagueForm } from '@/components/LeagueForms';
 import { prisma } from '@/lib/db';
+import { listsSyntheticSeasons } from '@/lib/seo';
 import { FLAGSHIP_SHOW_SLUG } from '@/lib/shows/registry';
 
 export const dynamic = 'force-dynamic';
@@ -9,7 +10,11 @@ export default async function NewLeaguePage({ searchParams }: { searchParams: { 
   const [found, rulesets] = await Promise.all([
     prisma.season.findMany({
       // Finished seasons are archive-only — their whole cast is already known.
-      where: { status: { in: ['UPCOMING', 'ACTIVE'] } },
+      // Production offers real seasons only (`listsSyntheticSeasons`).
+      where: {
+        status: { in: ['UPCOMING', 'ACTIVE'] },
+        ...(listsSyntheticSeasons() ? {} : { NOT: { slug: { startsWith: 'demo-' } } }),
+      },
       orderBy: { year: 'desc' },
       select: {
         id: true,

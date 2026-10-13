@@ -8,6 +8,7 @@ import { DRAFT_TEAM_ORDER } from '../lib/draft/snake';
 import { AT_RISK_EVENT_CODES, atRiskMessage, nearMissMessage } from '../lib/engagement';
 import { computeLeagueSnapshot, computeTeamSnapshot } from '../lib/scoring/repository';
 import type { LeagueScoreSnapshot, TeamScore } from '../lib/scoring/types';
+import { listsSyntheticSeasons } from '../lib/seo';
 import { blockedIdsFor } from './blocks';
 
 async function getLeaguesForUser(userId: string) {
@@ -576,6 +577,8 @@ export async function getContestantLeaguesForViewer(
 
 export async function getSeasonsByStatus() {
   const seasons = await prisma.season.findMany({
+    // See `listsSyntheticSeasons`: production lists real seasons only.
+    where: listsSyntheticSeasons() ? undefined : { NOT: { slug: { startsWith: 'demo-' } } },
     orderBy: [{ year: 'desc' }, { name: 'desc' }],
     select: {
       id: true,
