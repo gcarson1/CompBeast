@@ -80,6 +80,7 @@ export function SignedOutLanding({
   live,
   shows,
   emailAlerts,
+  inApp = false,
 }: {
   /** The open seasons' casts, last scored events and buzz panels — passed in
    *  so the signed-in home renders the identical block. */
@@ -87,9 +88,11 @@ export function SignedOutLanding({
   shows: LandingShow[];
   /** Whether alerts can also go out by email in this deployment. */
   emailAlerts: boolean;
+  /** Rendering inside the iOS app, where "nothing to install" is untrue. */
+  inApp?: boolean;
 }) {
   const facts = deriveFacts(shows);
-  const faq = buildFaq(facts, emailAlerts);
+  const faq = buildFaq(facts, emailAlerts, inApp);
 
   return (
     <div className="pt-6">
@@ -688,7 +691,7 @@ interface FaqItem {
  * Each answer is complete on its own — a model that quotes one block should
  * hand the reader the whole answer, not half of it and a link.
  */
-function buildFaq(facts: Facts, emailAlerts: boolean): FaqItem[] {
+function buildFaq(facts: Facts, emailAlerts: boolean, inApp: boolean): FaqItem[] {
   const { minTeams, maxTeams, minRoster, maxRoster } = LEAGUE_LIMITS;
   const maxLockHours = MAX_LOCK_OFFSET_MINUTES / 60;
   const names = facts.shows.map((s) => s.showName);
@@ -731,7 +734,11 @@ function buildFaq(facts: Facts, emailAlerts: boolean): FaqItem[] {
     },
     {
       question: `Is ${SITE_NAME} free to play?`,
-      answer: `Yes. Creating a league, joining one and playing a whole season are free, and there is no paid tier. Sign in, create or join a league, and you are in. ${SITE_NAME} runs in a modern web browser on a phone or computer, so there is nothing to install.`,
+      answer: `Yes. Creating a league, joining one and playing a whole season are free, and there is no paid tier. Sign in, create or join a league, and you are in. ${
+        inApp
+          ? `Your account and leagues are the same here and at compbeast.app in any web browser.`
+          : `${SITE_NAME} runs in a modern web browser on a phone or computer, so there is nothing to install.`
+      }`,
     },
     {
       question: 'Which shows can I play?',

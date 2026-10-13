@@ -27,6 +27,8 @@ export type SessionUser = {
   handle: string | null;
   avatarUrl: string | null;
   isPlatformAdmin: boolean;
+  /** Ejected by a moderator: can read and leave, cannot post (see `requireActiveUser`). */
+  isSuspended: boolean;
 };
 
 const SELECT = {
@@ -36,7 +38,15 @@ const SELECT = {
   handle: true,
   avatarUrl: true,
   isPlatformAdmin: true,
+  suspendedAt: true,
 } as const;
+
+function toSession({
+  suspendedAt,
+  ...user
+}: Omit<SessionUser, 'isSuspended'> & { suspendedAt: Date | null }) {
+  return { ...user, isSuspended: suspendedAt !== null } satisfies SessionUser;
+}
 
 /**
  * Resolves the signed-in user, provisioning our `User` row on first sign-in.
@@ -61,13 +71,15 @@ export const getCurrentUser = perRequest(async function getCurrentUser(): Promis
     // stranded without admin forever, because nothing else in the app grants
     // the flag. Grant-only: a flag set some other way is never revoked here.
     if (!existing.isPlatformAdmin && adminEmailList().includes(existing.email.toLowerCase())) {
-      return prisma.user.update({
-        where: { id: existing.id },
-        data: { isPlatformAdmin: true },
-        select: SELECT,
-      });
+      return toSession(
+        await prisma.user.update({
+          where: { id: existing.id },
+          data: { isPlatformAdmin: true },
+          select: SELECT,
+        }),
+      );
     }
-    return existing;
+    return toSession(existing);
   }
 
   const email =
@@ -77,17 +89,19 @@ export const getCurrentUser = perRequest(async function getCurrentUser(): Promis
 
   const name = [clerkUser.firstName, clerkUser.lastName].filter(Boolean).join(' ') || null;
 
-  return prisma.user.create({
-    data: {
-      authId: clerkUser.id,
-      email,
-      name,
-      avatarUrl: clerkUser.imageUrl || null,
-      handle: clerkUser.username,
-      isPlatformAdmin: adminEmailList().includes(email.toLowerCase()),
-    },
-    select: SELECT,
-  });
+  return toSession(
+    await prisma.user.create({
+      data: {
+        authId: clerkUser.id,
+        email,
+        name,
+        avatarUrl: clerkUser.imageUrl || null,
+        handle: clerkUser.username,
+        isPlatformAdmin: adminEmailList().includes(email.toLowerCase()),
+      },
+      select: SELECT,
+    }),
+  );
 });
 
 /**
@@ -107,6 +121,19 @@ function adminEmailList(): string[] {
 export async function requireUser(): Promise<SessionUser> {
   const user = await getCurrentUser();
   if (!user) throw new Error('UNAUTHENTICATED');
+  return user;
+}
+
+/**
+ * Gate for everything that puts words or names in front of other people, or
+ * reaches out to them: posting, naming a league or a team, joining, inviting,
+ * befriending. A suspended account fails it; reading, settings, a draft
+ * already under way and deleting the account do not go through it, so a
+ * suspension never strands anyone else's league or traps the person in it.
+ */
+export async function requireActiveUser(): Promise<SessionUser> {
+  const user = await requireUser();
+  if (user.isSuspended) throw new Error('SUSPENDED');
   return user;
 }
 

@@ -6,6 +6,7 @@ import { SITE_NAME } from '@/lib/seo';
 const LINKS = [
   { href: '/rules', label: 'Scoring rules' },
   { href: '/seasons', label: 'Seasons' },
+  { href: '/support', label: 'Help' },
   { href: '/privacy', label: 'Privacy' },
   { href: '/terms', label: 'Terms' },
   { href: '/cookies', label: 'Cookies' },

@@ -25,7 +25,9 @@ export default function PrivacyPage() {
         <p>
           This policy explains what {SITE_NAME} collects when you use it, why, who else handles it, how long
           it is kept, and what you can do about it. It is written to be read, not skimmed past: there is no
-          advertising here, nothing is sold, and everything below is something the app actually does.
+          advertising here, nothing is sold, and everything below is something the app actually does. It
+          covers the website and the {SITE_NAME} iPhone app alike: the app shows the same site, under the same
+          account, and collects nothing the website does not except where it says so below.
         </p>
       }
       sections={[
@@ -53,7 +55,15 @@ export default function PrivacyPage() {
                 <strong>Push notifications, if you turn them on.</strong> When you switch on push for a
                 browser, that browser hands us a delivery address and two keys. We store those so we can send
                 the alert; they identify a browser, not a person, and are removed when the browser
-                unsubscribes.
+                unsubscribes. In the iPhone app, turning on alerts gives us the phone&apos;s Apple push token
+                instead — an address Apple issues for delivering notifications to this app on that phone, and
+                nothing else. It is removed when you turn alerts off, sign out, or delete the app.
+              </p>
+              <p>
+                <strong>Reports and blocks.</strong> If you report a post or a person, we keep who reported
+                what, why, and the post as it read at the time, so a moderator can act on it. If you block
+                someone, we keep that you did, so you stay hidden from each other — and a block is passed to
+                the moderators as a report too.
               </p>
               <p>
                 <strong>A chat webhook, if a commissioner adds one.</strong> A commissioner can paste a
@@ -69,7 +79,9 @@ export default function PrivacyPage() {
               </p>
               <p>
                 We do not collect your date of birth, phone number, location, payment details (there is
-                nothing to pay for), contacts, or anything from your device beyond what is listed here.
+                nothing to pay for), contacts, photos (beyond an avatar you choose to upload), advertising
+                identifiers, or anything from your device beyond what is listed here. Nothing is used to track
+                you across other companies&apos; apps or websites.
               </p>
             </>
           ),
@@ -88,7 +100,14 @@ export default function PrivacyPage() {
                 <li>
                   <strong>To send the alerts you have not turned off</strong> — in the app, by email, and by
                   push where you enabled it. Email and push are each controlled from your account page; push
-                  is only ever enabled by you, in the browser&apos;s own permission prompt (consent).
+                  is only ever enabled by you, in the browser&apos;s or the iPhone&apos;s own permission
+                  prompt (consent).
+                </li>
+                <li>
+                  <strong>To keep the community safe</strong> — reviewing reports, hiding blocked people from
+                  each other, and removing content or accounts that break the{' '}
+                  <LegalLink href="/terms#conduct">rules</LegalLink> (legitimate interest, and our obligations
+                  to the people you play with).
                 </li>
                 <li>
                   <strong>To keep the site secure and working</strong> — logs, error reports and aggregate
@@ -146,6 +165,12 @@ export default function PrivacyPage() {
                   </li>
                 ))}
                 <li>
+                  <strong>Apple</strong> — delivers the alerts you turn on in the iPhone app (Apple Push
+                  Notification service). We hand Apple the alert&apos;s text and the phone&apos;s push token;
+                  Apple distributes the app through the App Store under its own{' '}
+                  <LegalLink href="https://www.apple.com/legal/privacy/">privacy policy</LegalLink>.
+                </li>
+                <li>
                   <strong>Discord or Slack</strong> — only if a commissioner connects a webhook. What we send
                   is the league&apos;s draft and standings; what they do with it is governed by their terms.
                 </li>
@@ -194,8 +219,13 @@ export default function PrivacyPage() {
                   account.
                 </li>
                 <li>
-                  <strong>Push subscriptions</strong> — until the browser unsubscribes, you turn push off, or
-                  the push service tells us the browser is gone.
+                  <strong>Push subscriptions and iPhone push tokens</strong> — until the browser unsubscribes
+                  or you turn push off, you sign out of the app, or the push service tells us the browser or
+                  the app is gone.
+                </li>
+                <li>
+                  <strong>Reports</strong> — kept after they are dealt with, as the record of what was decided
+                  and why; <strong>blocks</strong> — until you unblock.
                 </li>
                 <li>
                   <strong>Host logs and error reports</strong> — for the periods our providers keep them,
@@ -251,10 +281,14 @@ export default function PrivacyPage() {
                   as you.
                 </li>
                 <li>
-                  Your email, name, username, avatar, email preferences, unsubscribe token, push
-                  subscriptions, friendships, notifications and career records are erased.
+                  Your email, name, username, avatar, email preferences, unsubscribe token, push subscriptions
+                  and iPhone push tokens, friendships, blocks, notifications and career records are erased.
                 </li>
-                <li>Every message you posted in a league chat is removed.</li>
+                <li>
+                  Every message you posted in a league chat is removed, including the copy of any of them kept
+                  with a report. Reports you filed are kept for the moderators but no longer say who filed
+                  them.
+                </li>
                 <li>
                   In leagues whose draft has not started, your team and seat are removed. In leagues already
                   drafted or in play, your team stays on the board — the other managers&apos; standings depend

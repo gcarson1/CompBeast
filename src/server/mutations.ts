@@ -4,6 +4,7 @@ import { Prisma } from '@prisma/client';
 import { prisma } from '../lib/db';
 import { assertLeagueRole } from '../lib/auth';
 import { playedHistory } from '../lib/career';
+import { BLOCKED_TERM_MESSAGE, containsBlockedTerm } from '../lib/content-filter';
 import { describeLockOffset } from '../lib/cycles';
 import { DRAFT_TEAM_ORDER, type DraftSlot, buildDraftOrder, validatePick } from '../lib/draft/snake';
 import { recalculateLeaguesForCycle } from '../lib/scoring/repository';
@@ -98,6 +99,7 @@ export async function createLeague(userId: string, input: z.infer<typeof createL
  * that eats members is strictly worse than no gate.
  */
 export async function joinLeague(userId: string, inviteCode: string, teamName: string) {
+  if (containsBlockedTerm(teamName)) throw new DomainError(BLOCKED_TERM_MESSAGE, 'BLOCKED_TERM');
   const league = await prisma.league.findUnique({
     where: { inviteCode: inviteCode.trim().toUpperCase() },
     select: {
@@ -906,7 +908,12 @@ export async function voidEvent(userId: string, scoredEventId: string, reason: s
 // ---------------------------------------------------------------------------
 
 const postMessageSchema = z.object({
-  body: z.string().trim().min(1, 'Say something first').max(500, 'Keep it under 500 characters'),
+  body: z
+    .string()
+    .trim()
+    .min(1, 'Say something first')
+    .max(500, 'Keep it under 500 characters')
+    .refine((body) => !containsBlockedTerm(body), BLOCKED_TERM_MESSAGE),
 });
 
 /**

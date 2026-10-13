@@ -126,7 +126,22 @@ export async function eraseUserData(userId: string): Promise<DeletionSummary> {
     await tx.notification.deleteMany({ where: { userId } });
     await tx.notification.updateMany({ where: { actorId: userId }, data: { actorId: null } });
     await tx.pushSubscription.deleteMany({ where: { userId } });
+    await tx.nativePushToken.deleteMany({ where: { userId } });
     await tx.careerRecord.deleteMany({ where: { userId } });
+    await tx.userBlock.deleteMany({ where: { OR: [{ blockerId: userId }, { blockedId: userId }] } });
+
+    // Moderation records keep *that* something was reported, not who said
+    // what: reports this person filed lose the reporter, and reports about
+    // them lose the quoted post — the post itself was blanked above.
+    await tx.contentReport.updateMany({ where: { reporterId: userId }, data: { reporterId: null } });
+    await tx.contentReport.updateMany({
+      where: { subjectUserId: userId },
+      data: { snapshot: null, details: null },
+    });
+    await tx.contentReport.updateMany({
+      where: { subjectUserId: userId, status: 'OPEN' },
+      data: { status: 'DISMISSED', resolution: 'The account was deleted.', resolvedAt: new Date() },
+    });
 
     // Provenance on the ledger records *that* someone did it, not who.
     await tx.scoredEvent.updateMany({ where: { recordedById: userId }, data: { recordedById: null } });
@@ -147,6 +162,8 @@ export async function eraseUserData(userId: string): Promise<DeletionSummary> {
         emailNotifications: false,
         emailOptOut: [],
         emailToken: null,
+        suspendedAt: null,
+        suspensionReason: null,
       },
     });
 

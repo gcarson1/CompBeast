@@ -1,5 +1,6 @@
 import { z } from 'zod';
 import { parseWebhookUrl } from './chat-webhook';
+import { BLOCKED_TERM_MESSAGE, containsBlockedTerm } from './content-filter';
 import { MAX_LOCK_OFFSET_MINUTES } from './cycles';
 
 // Schemas shared between server mutations and client forms. Kept in its own
@@ -21,6 +22,13 @@ export const LEAGUE_LIMITS = {
   maxRoster: 12,
 } as const;
 
+/**
+ * League and team names are shown to everyone in the league — and to anyone
+ * at all on a public league's page — so they pass the same slur filter as a
+ * chat post (src/lib/content-filter.ts).
+ */
+const allowed = (text: string) => !containsBlockedTerm(text);
+
 // Every message is written out rather than left to Zod's defaults. The
 // defaults ("String must contain at least 3 character(s)") leak the validator
 // into the interface, and they are the text a person sees at the exact moment
@@ -30,7 +38,8 @@ export const createLeagueSchema = z.object({
     .string()
     .trim()
     .min(3, 'Give your league a name of at least 3 characters')
-    .max(60, 'League names are limited to 60 characters'),
+    .max(60, 'League names are limited to 60 characters')
+    .refine(allowed, BLOCKED_TERM_MESSAGE),
   seasonId: z.string().min(1, 'Pick a season'),
   scoringRulesetId: z.string().min(1, 'Pick a scoring ruleset'),
   rosterSize: z.coerce
@@ -48,7 +57,8 @@ export const createLeagueSchema = z.object({
     .string()
     .trim()
     .min(2, 'Give your team a name of at least 2 characters')
-    .max(40, 'Team names are limited to 40 characters'),
+    .max(40, 'Team names are limited to 40 characters')
+    .refine(allowed, BLOCKED_TERM_MESSAGE),
 });
 
 /**
@@ -66,7 +76,8 @@ export const joinLeagueSchema = z.object({
     .string()
     .trim()
     .min(2, 'Give your team a name of at least 2 characters')
-    .max(40, 'Team names are limited to 40 characters'),
+    .max(40, 'Team names are limited to 40 characters')
+    .refine(allowed, BLOCKED_TERM_MESSAGE),
 });
 
 /**
@@ -85,7 +96,8 @@ export const updateLeagueSchema = z.object({
     .string()
     .trim()
     .min(3, 'Give your league a name of at least 3 characters')
-    .max(60, 'League names are limited to 60 characters'),
+    .max(60, 'League names are limited to 60 characters')
+    .refine(allowed, BLOCKED_TERM_MESSAGE),
   scoringRulesetId: z.string().min(1, 'Pick a scoring ruleset'),
   rosterSize: z.coerce
     .number({ invalid_type_error: 'Roster size must be a number' })

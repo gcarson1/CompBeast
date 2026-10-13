@@ -11,10 +11,12 @@ import { ErrorReporting } from '@/components/ErrorReporting';
 import { JsonLd } from '@/components/JsonLd';
 import { AppScroller } from '@/components/AppScroller';
 import { MotionProvider } from '@/components/motion/MotionProvider';
+import { NativeBridgeLoader } from '@/components/NativeBridgeLoader';
 import { ServiceWorkerRegistrar } from '@/components/ServiceWorkerRegistrar';
 import { SiteFooter } from '@/components/SiteFooter';
 import { getCurrentUser } from '@/lib/auth';
-import { clerkAppearance, clerkLocalization } from '@/lib/clerk-appearance';
+import { clerkAppAppearance, clerkAppearance, clerkLocalization } from '@/lib/clerk-appearance';
+import { isNativeAppRequest } from '@/lib/native-server';
 import { HOME_PATH, SITE_DESCRIPTION, SITE_NAME, siteGraph } from '@/lib/seo';
 import { appBaseUrl } from '@/lib/site';
 import { getUnreadNotificationCount } from '@/server/notifications';
@@ -94,6 +96,9 @@ export default async function RootLayout({ children }: { children: React.ReactNo
   // Server-rendered so the badge is correct on first paint rather than
   // popping in after a client fetch. The bell polls from here.
   const unreadCount = user ? await getUnreadNotificationCount(user.id).catch(() => 0) : 0;
+  // The iOS app (capacitor.config.ts). `data-shell` lets CSS adjust the
+  // chrome for it; the bridge is mounted only there.
+  const inApp = isNativeAppRequest();
 
   return (
     // Sign-in and sign-up are pages on this domain (src/app/sign-in, sign-up),
@@ -101,14 +106,18 @@ export default async function RootLayout({ children }: { children: React.ReactNo
     // paths. The fallbacks only apply when nothing else says where to go —
     // a `redirect_url` from the middleware or a form's forceRedirectUrl wins.
     <ClerkProvider
-      appearance={clerkAppearance}
+      appearance={inApp ? clerkAppAppearance : clerkAppearance}
       localization={clerkLocalization}
       signInUrl="/sign-in"
       signUpUrl="/sign-up"
       signInFallbackRedirectUrl={HOME_PATH}
       signUpFallbackRedirectUrl={HOME_PATH}
     >
-      <html lang="en" className={`${displayFont.variable} ${textFont.variable}`}>
+      <html
+        lang="en"
+        className={`${displayFont.variable} ${textFont.variable}`}
+        data-shell={inApp ? 'ios-app' : undefined}
+      >
         <head>
           {/* The Organization and WebSite nodes every page shares. In the
               head, not the body, so a crawler has the entity graph before it
@@ -153,7 +162,8 @@ export default async function RootLayout({ children }: { children: React.ReactNo
             {user && <BottomNav />}
           </div>
           <Toaster theme="dark" position="top-center" richColors closeButton />
-          <ServiceWorkerRegistrar />
+          {/* The push worker is the website's: the app delivers through APNs. */}
+          {inApp ? <NativeBridgeLoader signedIn={Boolean(user)} /> : <ServiceWorkerRegistrar />}
           <ErrorReporting />
           {/* Vercel's field analytics and Core Web Vitals. Both are inert until
               Web Analytics and Speed Insights are switched on for the project

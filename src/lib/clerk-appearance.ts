@@ -71,5 +71,29 @@ export const clerkAppearance: ClerkAppearance = {
     formButtonPrimary: 'uppercase tracking-wide',
     socialButtonsBlockButton: 'border border-hairline bg-canvas hover:bg-surface-raised',
     footer: 'bg-surface',
+    // Clerk's own "Delete account" removes only the sign-in and would leave
+    // the profile, posts and push addresses behind. Deleting goes through the
+    // account page instead, which erases what the privacy policy says it does
+    // (src/server/account.ts) and then the sign-in.
+    profileSection__danger: { display: 'none' },
+  },
+};
+
+/**
+ * The same, inside the iOS app, where sign-in is an email with a password or
+ * an emailed code. Google refuses OAuth inside an embedded web view
+ * ("disallowed_useragent"), so its button could only fail there; and an app
+ * offering a third-party sign-in must also offer Sign in with Apple (App
+ * Store guideline 4.8). Accounts made with Google still get in — Clerk emails
+ * them a code — and connecting Google from the profile is hidden for the
+ * same reason.
+ */
+export const clerkAppAppearance: ClerkAppearance = {
+  ...clerkAppearance,
+  elements: {
+    ...clerkAppearance.elements,
+    socialButtonsRoot: { display: 'none' },
+    dividerRow: { display: 'none' },
+    profileSection__connectedAccounts: { display: 'none' },
   },
 };

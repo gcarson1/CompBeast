@@ -124,6 +124,15 @@ export const EMAIL_STYLES: Record<NotificationType, EmailStyle> = {
     because: 'somebody accepted your friend request',
     category: 'friends',
   },
+  // Platform admins only. Filed under leagues, since that is where reported
+  // posts live; reports are answered within a day, so it emails by default.
+  CONTENT_REPORTED: {
+    eyebrow: 'Moderation',
+    accent: DANGER,
+    cta: 'Open the moderation queue',
+    because: 'you moderate Comp Beast and something was reported',
+    category: 'league',
+  },
 };
 
 export const CATEGORIES: Record<
@@ -138,7 +147,7 @@ export const CATEGORIES: Record<
   league: {
     label: 'Leagues',
     description: 'Invitations, people joining, rule changes, a league closing.',
-    types: ['LEAGUE_INVITE', 'LEAGUE_MEMBER_JOINED', 'LEAGUE_UPDATED', 'LEAGUE_DELETED'],
+    types: ['LEAGUE_INVITE', 'LEAGUE_MEMBER_JOINED', 'LEAGUE_UPDATED', 'LEAGUE_DELETED', 'CONTENT_REPORTED'],
   },
   friends: {
     label: 'Friends',

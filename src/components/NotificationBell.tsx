@@ -3,6 +3,7 @@
 import Link from 'next/link';
 import { usePathname } from 'next/navigation';
 import { useEffect, useState } from 'react';
+import { NOTIFICATIONS_CHANGED, setAppBadge } from '@/lib/native';
 
 const POLL_MS = 60_000;
 
@@ -52,13 +53,22 @@ export function NotificationBell({ initialCount }: { initialCount: number }) {
       if (!document.hidden) refresh();
     };
     document.addEventListener('visibilitychange', onVisible);
+    // The iOS app knows the moment a push arrives; no need to wait a minute.
+    window.addEventListener(NOTIFICATIONS_CHANGED, refresh);
 
     return () => {
       cancelled = true;
       clearInterval(id);
       document.removeEventListener('visibilitychange', onVisible);
+      window.removeEventListener(NOTIFICATIONS_CHANGED, refresh);
     };
   }, [pathname]);
+
+  // The same number on the app icon: the iOS app's badge, or an installed
+  // web app's where the browser supports badging.
+  useEffect(() => {
+    setAppBadge(count);
+  }, [count]);
 
   const label =
     count === 0 ? 'Notifications' : `Notifications, ${count} unread${count >= 100 ? ' or more' : ''}`;

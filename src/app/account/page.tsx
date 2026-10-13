@@ -2,6 +2,7 @@ import Link from 'next/link';
 import { redirect } from 'next/navigation';
 import { Avatar } from '@/components/Avatar';
 import { BadgeShelf, Medal } from '@/components/BadgeShelf';
+import { BlockedPeople } from '@/components/BlockedPeople';
 import { Collapsible, RowGroup } from '@/components/Collapsible';
 import { DeleteAccountPanel } from '@/components/DeleteAccountPanel';
 import { EmailPreferences } from '@/components/EmailPreferences';
@@ -9,12 +10,16 @@ import { FriendsPanel } from '@/components/FriendsPanel';
 import { PointHistoryChart } from '@/components/PointHistoryChart';
 import { CrownIcon } from '@/components/icons';
 import { RevealGroup } from '@/components/motion/Reveal';
+import { NativePushToggle } from '@/components/NativePushToggle';
 import { PushToggle } from '@/components/PushToggle';
 import { Tag, rankTone } from '@/components/Tag';
 import { getCurrentUser } from '@/lib/auth';
 import { prisma } from '@/lib/db';
 import { BADGES, earnedBadges, highestBadge } from '@/lib/badges';
+import { isNativeAppRequest } from '@/lib/native-server';
 import { cn, formatPoints, pointsTone } from '@/lib/ui';
+import { getBlockedPeople } from '@/server/moderation';
+import { isApnsConfigured } from '@/server/notification-apns';
 import { getEmailPreferences } from '@/server/notification-email';
 import { pushPublicKey } from '@/server/notification-push';
 import { getAccountOverview, type SeasonHistoryRow } from '@/server/queries';
@@ -26,11 +31,12 @@ export default async function AccountPage() {
   const user = await getCurrentUser();
   if (!user) redirect('/leagues');
 
-  const [account, friends, emailPreferences, leaguesCommissioned] = await Promise.all([
+  const [account, friends, emailPreferences, leaguesCommissioned, blocked] = await Promise.all([
     getAccountOverview(user.id),
     getFriendOverview(user.id),
     getEmailPreferences(user.id),
     prisma.league.count({ where: { commissionerId: user.id } }),
+    getBlockedPeople(user.id),
   ]);
 
   const displayName = user.name ?? user.handle ?? 'Manager';
@@ -47,7 +53,13 @@ export default async function AccountPage() {
   );
   const past = ordered.filter((row) => row.seasonStatus === 'COMPLETED');
   const badge = highestBadge(account.totalPoints);
-  const vapidKey = pushPublicKey();
+  // In the iOS app push goes through APNs, and Web Push does not exist in
+  // its web view; on the website it is the other way round. Each switch is
+  // hidden when its channel is unconfigured — a control that governs nothing
+  // is worse than none.
+  const inApp = isNativeAppRequest();
+  const vapidKey = inApp ? null : pushPublicKey();
+  const nativePush = inApp && isApnsConfigured();
 
   return (
     <div className="pt-2">
@@ -103,6 +115,26 @@ export default async function AccountPage() {
           </dl>
         </section>
       </div>
+
+      {user.isSuspended && (
+        <section className="callout mt-8" aria-labelledby="suspended">
+          <h2 id="suspended" className="text-sm font-semibold text-danger-deep">
+            Your account is suspended
+          </h2>
+          <p className="mt-1 max-w-measure text-2xs leading-relaxed text-muted">
+            A moderator suspended it for breaking the{' '}
+            <Link href="/terms#conduct" className="underline">
+              community rules
+            </Link>
+            . You can still see your leagues, change your settings and delete your account, but you cannot
+            post, join, create or invite. If you think this is a mistake,{' '}
+            <Link href="/support" className="underline">
+              contact us
+            </Link>
+            .
+          </p>
+        </section>
+      )}
 
       <RevealGroup step={80}>
         <Collapsible
@@ -185,8 +217,16 @@ export default async function AccountPage() {
             <FriendsPanel overview={friends} />
           </Collapsible>
 
-          {/* Hidden entirely when the deployment has no VAPID keys — like the
-                email switches, a control that governs nothing is worse than none. */}
+          {nativePush && (
+            <Collapsible variant="row" title="Push alerts" defaultOpen={false}>
+              <p className="mb-4 max-w-measure text-2xs leading-relaxed text-muted">
+                The same alerts as the bell, on this iPhone’s lock screen, with the unread count on the app
+                icon.
+              </p>
+              <NativePushToggle />
+            </Collapsible>
+          )}
+
           {vapidKey && (
             <Collapsible variant="row" title="Push alerts" defaultOpen={false}>
               <p className="mb-4 max-w-measure text-2xs leading-relaxed text-muted">
@@ -205,6 +245,19 @@ export default async function AccountPage() {
               <span className="text-ink">{user.email}</span>.
             </p>
             <EmailPreferences preferences={emailPreferences} />
+          </Collapsible>
+
+          <Collapsible
+            variant="row"
+            title="Blocked people"
+            defaultOpen={false}
+            aside={blocked.length > 0 ? `${blocked.length}` : undefined}
+          >
+            <p className="mb-4 max-w-measure text-2xs leading-relaxed text-muted">
+              You and the people here do not see each other’s league posts and cannot friend or invite each
+              other. They are not told.
+            </p>
+            <BlockedPeople people={blocked} />
           </Collapsible>
         </RowGroup>
       </RevealGroup>

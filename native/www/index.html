@@ -1,0 +1,39 @@
+<!doctype html>
+<!--
+  The only page the iOS shell carries inside its bundle. The app loads the
+  live site (capacitor.config.ts → server.url), so this is never shown in
+  normal use; Capacitor requires a web directory to exist, and if the shell is
+  ever pointed at it, it hands straight on to the site rather than sitting on
+  a blank screen. The offline state is native (ios/App/App/OfflineView.swift).
+-->
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
+    <meta http-equiv="refresh" content="0; url=https://compbeast.app/leagues" />
+    <title>Comp Beast</title>
+    <style>
+      html,
+      body {
+        margin: 0;
+        height: 100%;
+        background: #0f172a;
+        color: #f8fafc;
+        font:
+          600 17px/1.4 -apple-system,
+          system-ui,
+          sans-serif;
+      }
+      body {
+        display: grid;
+        place-items: center;
+      }
+      a {
+        color: #fbbf24;
+      }
+    </style>
+  </head>
+  <body>
+    <p><a href="https://compbeast.app/leagues">Open Comp Beast</a></p>
+  </body>
+</html>

@@ -8,6 +8,7 @@ import { DRAFT_TEAM_ORDER } from '../lib/draft/snake';
 import { AT_RISK_EVENT_CODES, atRiskMessage, nearMissMessage } from '../lib/engagement';
 import { computeLeagueSnapshot, computeTeamSnapshot } from '../lib/scoring/repository';
 import type { LeagueScoreSnapshot, TeamScore } from '../lib/scoring/types';
+import { blockedIdsFor } from './blocks';
 
 async function getLeaguesForUser(userId: string) {
   return prisma.league.findMany({
@@ -140,8 +141,11 @@ export async function getLeagueMessages(
   viewerId: string | null,
   limit = 50,
 ): Promise<LeagueMessageView[]> {
+  // Blocking hides posts both ways, and at once: the blocker's next render
+  // simply does not ask for them.
+  const hidden = viewerId ? await blockedIdsFor(viewerId) : [];
   const messages = await prisma.leagueMessage.findMany({
-    where: { leagueId, deletedAt: null },
+    where: { leagueId, deletedAt: null, ...(hidden.length > 0 && { authorId: { notIn: hidden } }) },
     orderBy: { createdAt: 'desc' },
     take: limit,
     select: {
@@ -312,7 +316,7 @@ export async function getLeagueLeaderboard(leagueId: string): Promise<{
 }
 
 export interface TeamDetail {
-  team: { id: string; name: string; leagueId: string; ownerName: string | null };
+  team: { id: string; name: string; leagueId: string; ownerId: string; ownerName: string | null };
   showSlug: string;
   showLexicon: ShowLexicon;
   score: TeamScore | null;
@@ -334,6 +338,7 @@ export async function getTeamDetail(teamId: string): Promise<TeamDetail | null> 
       id: true,
       name: true,
       leagueId: true,
+      ownerId: true,
       owner: { select: { name: true } },
       league: { select: { season: { select: { show: { select: { slug: true, lexicon: true } } } } } },
       draftPicks: {
@@ -361,7 +366,13 @@ export async function getTeamDetail(teamId: string): Promise<TeamDetail | null> 
 
   const show = team.league.season.show;
   return {
-    team: { id: team.id, name: team.name, leagueId: team.leagueId, ownerName: team.owner?.name ?? null },
+    team: {
+      id: team.id,
+      name: team.name,
+      leagueId: team.leagueId,
+      ownerId: team.ownerId,
+      ownerName: team.owner?.name ?? null,
+    },
     showSlug: show.slug,
     showLexicon: lexiconFor(show.slug, show.lexicon),
     score,
