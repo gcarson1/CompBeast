@@ -9,11 +9,17 @@ export function AppHeader({
   isPlatformAdmin = false,
   signedIn = false,
   unreadCount = 0,
+  inApp = false,
 }: {
   isPlatformAdmin?: boolean;
   /** From our own session lookup, not Clerk's — the bell needs a user row. */
   signedIn?: boolean;
   unreadCount?: number;
+  /**
+   * In the iOS app, signing in is a page rather than a modal: a full screen
+   * suits a phone, and the sign-up page is where the terms are agreed to.
+   */
+  inApp?: boolean;
 }) {
   return (
     // Outside the scroller (see AppScroller.tsx), so it never moves. The
@@ -42,7 +48,7 @@ export function AppHeader({
             </Link>
           )}
           <SignedOut>
-            <SignInButton mode="modal">
+            <SignInButton mode={inApp ? 'redirect' : 'modal'}>
               <button type="button" className="btn-ghost btn-sm">
                 Sign in
               </button>

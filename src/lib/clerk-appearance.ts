@@ -95,5 +95,11 @@ export const clerkAppAppearance: ClerkAppearance = {
     socialButtonsRoot: { display: 'none' },
     dividerRow: { display: 'none' },
     profileSection__connectedAccounts: { display: 'none' },
+    // The app draws under the status bar and the home indicator, so a modal
+    // (Manage account) has to keep clear of both itself.
+    modalBackdrop: {
+      paddingTop: 'calc(env(safe-area-inset-top) + 0.75rem)',
+      paddingBottom: 'calc(env(safe-area-inset-bottom) + 0.75rem)',
+    },
   },
 };

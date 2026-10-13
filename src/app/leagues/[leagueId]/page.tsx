@@ -18,6 +18,7 @@ import { atRiskMessage, nearMissMessage } from '@/lib/engagement';
 import { lexiconFor, lower } from '@/lib/shows/lexicon';
 import { describeWebhook } from '@/lib/chat-webhook';
 import { cn, formatPoints, pointsTone, relativeTime } from '@/lib/ui';
+import { isNativeAppRequest } from '@/lib/native-server';
 import { getInvitableFriends } from '@/server/social';
 import {
   getCurrentCycle,
@@ -403,7 +404,7 @@ function PrivateLeagueGate({
           </p>
           <div className="mt-5 flex flex-wrap gap-2">
             {!signedIn && (
-              <SignInButton mode="modal">
+              <SignInButton mode={isNativeAppRequest() ? 'redirect' : 'modal'}>
                 <button type="button" className="btn-primary">
                   Sign in
                 </button>
