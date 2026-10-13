@@ -32,6 +32,17 @@ export function isSyntheticSeason(slug: string): boolean {
   return slug.startsWith('demo-');
 }
 
+/**
+ * Whether season listings include the synthetic seasons. Locally, in CI and
+ * on previews they are the data there is to play with; in production they
+ * are placeholders — "Demo Season · Airing now" beside the real seasons, with
+ * sixteen invented houseguests — so production lists only real seasons. A
+ * demo season's own page, and any league already on one, still open by link.
+ */
+export function listsSyntheticSeasons(): boolean {
+  return process.env.VERCEL_ENV !== 'production';
+}
+
 export function absoluteUrl(path: string): string {
   return `${appBaseUrl()}${path}`;
 }
