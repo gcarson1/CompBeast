@@ -1,5 +1,5 @@
 import Link from 'next/link';
-import { SignInButton } from '@clerk/nextjs';
+import { SignInButton, SignUpButton } from '@clerk/nextjs';
 import type { ReactNode } from 'react';
 import { ArrowRightIcon, TallyMark } from '@/components/icons';
 import { JsonLd } from '@/components/JsonLd';
@@ -130,12 +130,23 @@ export function SignedOutLanding({
           </p>
 
           <div className="mt-7 flex animate-rise flex-wrap items-center gap-3 [animation-delay:180ms]">
-            <SignInButton mode="modal">
-              <button type="button" className="btn-primary px-6 py-3.5 text-md">
-                Start playing
-                <ArrowRightIcon size={18} />
-              </button>
-            </SignInButton>
+            {inApp ? (
+              // In the app, a newcomer goes to the sign-up page, where the
+              // terms are agreed to, rather than a modal over the pitch.
+              <SignUpButton mode="redirect">
+                <button type="button" className="btn-primary px-6 py-3.5 text-md">
+                  Start playing
+                  <ArrowRightIcon size={18} />
+                </button>
+              </SignUpButton>
+            ) : (
+              <SignInButton mode="modal">
+                <button type="button" className="btn-primary px-6 py-3.5 text-md">
+                  Start playing
+                  <ArrowRightIcon size={18} />
+                </button>
+              </SignInButton>
+            )}
             <Link href="/rules" className="btn-ghost py-3.5">
               Scoring rules
             </Link>

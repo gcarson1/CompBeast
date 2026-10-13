@@ -145,6 +145,7 @@ export default async function RootLayout({ children }: { children: React.ReactNo
               isPlatformAdmin={user?.isPlatformAdmin ?? false}
               signedIn={Boolean(user)}
               unreadCount={unreadCount}
+              inApp={inApp}
             />
             <AppScroller className="app-scroller min-h-0 flex-1">
               <div className="flex min-h-full flex-col">
