@@ -14,3 +14,6 @@ App/App/config.xml
 
 # iOS archives and exports (scripts/ios-release.sh)
 build
+
+# Free-Apple-ID signing override (npm run ios:personal)
+App/Signing.local.xcconfig

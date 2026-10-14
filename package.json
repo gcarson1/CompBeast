@@ -25,6 +25,8 @@
     "db:reset": "prisma migrate reset --force",
     "ios:sync": "cap sync ios",
     "ios:open": "cap open ios",
+    "ios:dev": "bash scripts/ios-dev.sh",
+    "ios:personal": "bash scripts/ios-personal.sh",
     "ios:release": "bash scripts/ios-release.sh"
   },
   "prisma": {

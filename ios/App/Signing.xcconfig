@@ -1,0 +1,14 @@
+// Signing for the App target, for both Debug and Release.
+//
+// The committed default is the full app: push notifications and associated
+// domains (universal links, iCloud Keychain passwords), which need the paid
+// Apple Developer Program.
+//
+// A free Apple ID ("Personal Team") cannot sign those two capabilities.
+// `npm run ios:personal` writes Signing.local.xcconfig (git-ignored) to sign
+// without them, so the app runs on your own iPhone for free; everything but
+// push alerts and links-open-the-app still works. `npm run ios:personal -- off`
+// removes it again. See docs/iphone-without-the-app-store.md.
+CODE_SIGN_ENTITLEMENTS = App/App.entitlements
+
+#include? "Signing.local.xcconfig"

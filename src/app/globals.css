@@ -285,6 +285,27 @@
   }
 
   /*
+   * The rest of what makes the app's controls feel native rather than like
+   * a page: system-drawn controls (radio buttons, pickers, autofill) in their
+   * dark form; no "Open / Copy link" callout from a long press on a link or a
+   * button; no double-tap zoom on a button tapped twice quickly (pinch-zoom
+   * stays); and a long press on a button that does not select its label.
+   */
+  [data-shell='ios-app'] {
+    color-scheme: dark;
+  }
+
+  [data-shell='ios-app'] :is(a, button, [role='button'], summary, label) {
+    -webkit-touch-callout: none;
+    touch-action: manipulation;
+  }
+
+  [data-shell='ios-app'] :is(button, [role='button'], summary) {
+    -webkit-user-select: none;
+    user-select: none;
+  }
+
+  /*
    * A page's major blocks — the ones a scroll settles on. Few and large:
    * two targets closer together than about half a screen feel like the page
    * catching, not guiding, so the section directly under a page's title is

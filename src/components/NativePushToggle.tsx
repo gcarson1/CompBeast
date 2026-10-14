@@ -6,7 +6,7 @@ import { Tag } from '@/components/Tag';
 import {
   enablePush,
   forgetPushToken,
-  nativeShell,
+  withShell,
   pushOptedOut,
   pushPermission,
   registerForPush,
@@ -102,9 +102,9 @@ export function NativePushToggle() {
         <button
           type="button"
           onClick={() =>
-            nativeShell()
-              .then((shell) => shell.openSettings())
-              .catch(() => toast.error('Open Settings → Comp Beast → Notifications.'))
+            withShell((shell) => shell.openSettings()).catch(() =>
+              toast.error('Open Settings → Comp Beast → Notifications.'),
+            )
           }
           className="btn-ghost btn-sm mt-3"
         >

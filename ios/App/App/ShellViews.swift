@@ -18,6 +18,7 @@ extension UIColor {
 /// is invisible.
 final class LaunchCoverView: UIView {
     var isLifting = false
+    private let spinner = UIActivityIndicatorView(style: .medium)
 
     override init(frame: CGRect) {
         super.init(frame: frame)
@@ -25,14 +26,32 @@ final class LaunchCoverView: UIView {
         let mark = UIImageView(image: UIImage(named: "BrandMark"))
         mark.translatesAutoresizingMaskIntoConstraints = false
         addSubview(mark)
+        spinner.color = .muted
+        spinner.hidesWhenStopped = true
+        spinner.translatesAutoresizingMaskIntoConstraints = false
+        addSubview(spinner)
         NSLayoutConstraint.activate([
             mark.centerXAnchor.constraint(equalTo: centerXAnchor),
             mark.centerYAnchor.constraint(equalTo: centerYAnchor),
             mark.widthAnchor.constraint(equalToConstant: 120),
             mark.heightAnchor.constraint(equalToConstant: 88),
+            // Under the mark, where the launch screen has nothing, so its
+            // arrival does not move anything the launch screen drew.
+            spinner.centerXAnchor.constraint(equalTo: centerXAnchor),
+            spinner.topAnchor.constraint(equalTo: mark.bottomAnchor, constant: 48),
         ])
         isAccessibilityElement = true
         accessibilityLabel = "Comp Beast is loading"
+    }
+
+    /// Starts the spinner if the cover is still up after `delay` seconds.
+    func showActivity(after delay: TimeInterval) {
+        DispatchQueue.main.asyncAfter(deadline: .now() + delay) { [weak self] in
+            guard let self, self.superview != nil, !self.isLifting else { return }
+            self.spinner.alpha = 0
+            self.spinner.startAnimating()
+            UIView.animate(withDuration: 0.3) { self.spinner.alpha = 1 }
+        }
     }
 
     required init?(coder: NSCoder) {

@@ -12,7 +12,8 @@ import WebKit
 /// - a native offline screen with a retry, instead of WebKit's blank failure;
 /// - links that leave the site open in an in-app Safari sheet (see
 ///   NavigationGuard), so the app is one swipe away rather than backgrounded;
-/// - swipe-from-the-edge to go back, as in every navigation stack on iOS.
+/// - swipe-from-the-edge to go back, as in every navigation stack on iOS;
+/// - a tap on the status bar scrolls the page to the top.
 ///
 /// capacitor.config.ts explains why the app is a hosted web view;
 /// src/lib/native.ts is the web half of everything here.
@@ -30,6 +31,12 @@ final class AppViewController: CAPBridgeViewController {
         guard let webView else { return }
         webView.allowsBackForwardNavigationGestures = true
         navigationGuard = NavigationGuard(webView: webView, controller: self)
+        NotificationCenter.default.addObserver(
+            self,
+            selector: #selector(statusBarTapped),
+            name: .capacitorStatusBarTapped,
+            object: nil
+        )
     }
 
     override func viewDidLoad() {
@@ -47,6 +54,9 @@ final class AppViewController: CAPBridgeViewController {
             ])
         }
         startMonitoringNetwork()
+        // A cold server can take a few seconds to answer; past a moment the
+        // cover says it is working rather than looking frozen.
+        launchCover.showActivity(after: 1.5)
         // The backstop for a page that is slow to say it has painted: after
         // this the page's own loading state is better than a still logo.
         DispatchQueue.main.asyncAfter(deadline: .now() + 8) { [weak self] in
@@ -56,6 +66,7 @@ final class AppViewController: CAPBridgeViewController {
 
     deinit {
         pathMonitor.cancel()
+        NotificationCenter.default.removeObserver(self)
     }
 
     // MARK: - Page lifecycle (called by NavigationGuard and NativeShellPlugin)
@@ -119,6 +130,17 @@ final class AppViewController: CAPBridgeViewController {
     }
 
     // MARK: - Private
+
+    /// iOS scrolls the topmost scroll view when the status bar is tapped, but
+    /// the page scrolls inside its own container (AppScroller.tsx), not the
+    /// web view, so the gesture has to be handed to it.
+    @objc private func statusBarTapped() {
+        let script = """
+        (document.getElementById('app-scroller') || document.scrollingElement)
+          ?.scrollTo({ top: 0, behavior: matchMedia('(prefers-reduced-motion: reduce)').matches ? 'auto' : 'smooth' });
+        """
+        webView?.evaluateJavaScript(script, completionHandler: nil)
+    }
 
     private func liftLaunchCover() {
         guard launchCover.superview != nil, !launchCover.isLifting else { return }

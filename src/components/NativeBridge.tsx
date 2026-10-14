@@ -2,13 +2,15 @@
 
 import { useRouter } from 'next/navigation';
 import { useEffect } from 'react';
+import { toast } from 'sonner';
+import { PullToRefresh } from '@/components/PullToRefresh';
 import {
   NOTIFICATIONS_CHANGED,
   forgetPushToken,
   haptic,
   hasRegisteredPushToken,
   inAppPath,
-  nativeShell,
+  withShell,
   pushOptedOut,
   pushPermission,
   registerForPush,
@@ -32,16 +34,18 @@ const STALE_AFTER_MS = 60_000;
  * - refreshes the page when the app comes back to the foreground;
  * - marks the document while the keyboard is up, so the tab bar can step
  *   aside (globals.css);
- * - gives taps on the tab bar, on anything marked `data-haptic`, and every
- *   success or error toast a touch of the Taptic Engine.
+ * - says so when the connection drops and comes back, refreshing the page
+ *   on return;
+ * - gives taps on the tab bar, on primary buttons, on anything marked
+ *   `data-haptic`, and every success or error toast a touch of the Taptic
+ *   Engine;
+ * - and renders the pull-to-refresh spinner (PullToRefresh.tsx).
  */
 export default function NativeBridge({ signedIn }: { signedIn: boolean }) {
   const router = useRouter();
 
   useEffect(() => {
-    nativeShell()
-      .then((shell) => shell.ready())
-      .catch(() => {});
+    withShell((shell) => shell.ready()).catch(() => {});
   }, []);
 
   // Universal links, push taps, and coming back to the app.
@@ -130,7 +134,7 @@ export default function NativeBridge({ signedIn }: { signedIn: boolean }) {
       if (!target) return;
       const marked = target.closest<HTMLElement>('[data-haptic]');
       if (marked && !marked.matches(':disabled')) return haptic(marked.dataset.haptic as HapticKind);
-      if (target.closest('.app-tabbar a')) haptic('tap');
+      if (target.closest('.app-tabbar a, .btn-primary:not(:disabled)')) haptic('tap');
     };
     // Sonner marks each toast with its type as it mounts.
     const toasts = new MutationObserver((mutations) => {
@@ -152,5 +156,32 @@ export default function NativeBridge({ signedIn }: { signedIn: boolean }) {
     };
   }, []);
 
-  return null;
+  // The connection, said once each way. While offline the page stays as it
+  // was last loaded; on return it re-renders so nothing shown is stale.
+  useEffect(() => {
+    let lost = false;
+    const onOffline = () => {
+      lost = true;
+      toast.warning("You're offline", {
+        id: 'connectivity',
+        description: 'Showing what was last loaded.',
+        duration: Infinity,
+      });
+    };
+    const onOnline = () => {
+      if (!lost) return;
+      lost = false;
+      toast.success('Back online', { id: 'connectivity', description: undefined, duration: 2500 });
+      router.refresh();
+      window.dispatchEvent(new Event(NOTIFICATIONS_CHANGED));
+    };
+    window.addEventListener('offline', onOffline);
+    window.addEventListener('online', onOnline);
+    return () => {
+      window.removeEventListener('offline', onOffline);
+      window.removeEventListener('online', onOnline);
+    };
+  }, [router]);
+
+  return <PullToRefresh />;
 }
