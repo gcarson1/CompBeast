@@ -1,5 +1,22 @@
-import { describe, expect, it } from 'vitest';
-import { inAppPath, isNativeApp } from './native';
+import { describe, expect, it, vi } from 'vitest';
+import { inAppPath, isNativeApp, withShell } from './native';
+
+// A Capacitor plugin as the page sees it: every property is a native method,
+// including `then`, which is what made a promise of the plugin throw.
+vi.mock('@capacitor/core', () => ({
+  registerPlugin: () =>
+    new Proxy(
+      {},
+      {
+        get: (_target, prop) =>
+          prop === 'ready'
+            ? () => Promise.resolve('ready')
+            : () => {
+                throw new Error(`"NativeShell.${String(prop)}()" is not implemented on ios`);
+              },
+      },
+    ),
+}));
 
 describe('inAppPath', () => {
   it('turns one of our links into a page path, keeping the query and the hash', () => {
@@ -25,5 +42,13 @@ describe('inAppPath', () => {
 describe('isNativeApp', () => {
   it('is false outside the app (no bridge, or no window at all)', () => {
     expect(isNativeApp()).toBe(false);
+  });
+});
+
+describe('withShell', () => {
+  it('reaches a native method without ever resolving a promise to the plugin', async () => {
+    await expect(withShell((shell) => shell.ready())).resolves.toBe('ready');
+    // Twice: the second call uses the cached plugin.
+    await expect(withShell((shell) => shell.ready())).resolves.toBe('ready');
   });
 });

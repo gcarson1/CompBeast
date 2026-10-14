@@ -20,6 +20,12 @@ export function appScroller(): HTMLElement {
   );
 }
 
+/** Back to the top of the page — smoothly, unless the reader asked for less motion. */
+export function scrollAppToTop(): void {
+  const reduce = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+  appScroller().scrollTo({ top: 0, behavior: reduce ? 'auto' : 'smooth' });
+}
+
 /** Where each page was left, for back and forward. Per tab, like the browser's own. */
 const positions = new Map<string, number>();
 

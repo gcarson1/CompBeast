@@ -1,6 +1,7 @@
 import Link from 'next/link';
-import { SignedIn, SignedOut, SignInButton, UserButton } from '@clerk/nextjs';
+import { SignedIn, UserButton } from '@clerk/nextjs';
 import { HeaderNav } from '@/components/HeaderNav';
+import { HeaderSignIn } from '@/components/HeaderSignIn';
 import { NotificationBell } from '@/components/NotificationBell';
 import { MARK_BARS, MARK_FILLS, MARK_PIP, MARK_VIEWBOX } from '@/lib/brand';
 import { cn } from '@/lib/ui';
@@ -15,10 +16,7 @@ export function AppHeader({
   /** From our own session lookup, not Clerk's — the bell needs a user row. */
   signedIn?: boolean;
   unreadCount?: number;
-  /**
-   * In the iOS app, signing in is a page rather than a modal: a full screen
-   * suits a phone, and the sign-up page is where the terms are agreed to.
-   */
+  /** In the iOS app a visitor signs in from the tab bar, so the header leaves it out. */
   inApp?: boolean;
 }) {
   return (
@@ -47,13 +45,8 @@ export function AppHeader({
               <FeedIcon />
             </Link>
           )}
-          <SignedOut>
-            <SignInButton mode={inApp ? 'redirect' : 'modal'}>
-              <button type="button" className="btn-ghost btn-sm">
-                Sign in
-              </button>
-            </SignInButton>
-          </SignedOut>
+          {/* In the app a visitor signs in from the tab bar instead. */}
+          {!inApp && <HeaderSignIn />}
           <SignedIn>
             {/* A fixed box around Clerk's button. Its root is `w-full` (the
                 sign-in page wants that), and in a flex row a full-width item

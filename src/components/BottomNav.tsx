@@ -2,6 +2,7 @@
 
 import Link from 'next/link';
 import { usePathname } from 'next/navigation';
+import { scrollAppToTop } from '@/components/AppScroller';
 import { cn } from '@/lib/ui';
 
 export const TABS = [
@@ -14,13 +15,27 @@ export const TABS = [
   { href: '/account', label: 'You', icon: PersonIcon, owns: ['/account', '/notifications'] },
 ];
 
+/**
+ * A signed-out visitor's tabs, in the iOS app only. On the website a visitor
+ * has the header and the footer; an app with no tab bar until you sign in
+ * reads as a web page, so the app gives visitors the browsable half of the
+ * tabs and puts signing in where "You" will be.
+ */
+const VISITOR_TABS: Array<(typeof TABS)[number]> = [
+  { href: '/leagues', label: 'Home', icon: HomeIcon, owns: ['/leagues'] },
+  { href: '/seasons', label: 'Seasons', icon: BoxIcon, owns: ['/seasons', '/players'] },
+  { href: '/rules', label: 'Rules', icon: BookIcon, owns: ['/rules'] },
+  { href: '/sign-in', label: 'Sign in', icon: PersonIcon, owns: ['/sign-in', '/sign-up'] },
+];
+
 /** Whether `tab` owns the page at `pathname`, so it shows as the current one. */
 export function tabIsActive(tab: (typeof TABS)[number], pathname: string): boolean {
   return tab.owns.some((prefix) => pathname === prefix || pathname.startsWith(`${prefix}/`));
 }
 
-export function BottomNav() {
+export function BottomNav({ signedIn = true }: { signedIn?: boolean }) {
   const pathname = usePathname();
+  const tabs = signedIn ? TABS : VISITOR_TABS;
 
   return (
     // Outside the scroller, at the foot of the app column, so it cannot be
@@ -31,13 +46,20 @@ export function BottomNav() {
     // keyboard is up (globals.css) and taps on it are felt (NativeBridge).
     <nav className="app-tabbar relative z-20 flex-none border-t border-hairline bg-surface px-4 pb-[max(0.25rem,env(safe-area-inset-bottom))] pt-2 lg:hidden">
       <ul className="mx-auto flex max-w-md items-center sm:max-w-lg lg:max-w-3xl justify-around">
-        {TABS.map((tab) => {
+        {tabs.map((tab) => {
           const active = tabIsActive(tab, pathname);
           const Icon = tab.icon;
           return (
             <li key={tab.href}>
               <Link
                 href={tab.href}
+                // Tapping the tab you are already on goes back to its top, the
+                // way every tab bar on a phone does, instead of doing nothing.
+                onClick={(event) => {
+                  if (pathname !== tab.href) return;
+                  event.preventDefault();
+                  scrollAppToTop();
+                }}
                 aria-current={active ? 'page' : undefined}
                 className={cn(
                   'relative flex w-16 flex-col items-center gap-1 rounded-btn py-2 transition duration-200 ease-spring motion-safe:active:scale-90 sm:w-20',

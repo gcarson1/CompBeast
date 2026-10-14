@@ -160,9 +160,20 @@ export default async function RootLayout({ children }: { children: React.ReactNo
                 <SiteFooter />
               </div>
             </AppScroller>
-            {user && <BottomNav />}
+            {/* A visitor gets the tab bar too in the app (see BottomNav). */}
+            {(user || inApp) && <BottomNav signedIn={Boolean(user)} />}
           </div>
-          <Toaster theme="dark" position="top-center" richColors closeButton />
+          <Toaster
+            theme="dark"
+            position="top-center"
+            richColors
+            closeButton
+            // Clear of the notch and the Dynamic Island wherever the page runs
+            // edge to edge (the iOS app, the installed web app). In a browser
+            // tab the inset is 0 and these are Sonner's own 24px and 16px.
+            offset={{ top: 'calc(env(safe-area-inset-top) + 24px)' }}
+            mobileOffset={{ top: 'calc(env(safe-area-inset-top) + 16px)' }}
+          />
           {/* The push worker is the website's: the app delivers through APNs. */}
           {inApp ? <NativeBridgeLoader signedIn={Boolean(user)} /> : <ServiceWorkerRegistrar />}
           <ErrorReporting />

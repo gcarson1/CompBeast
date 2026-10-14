@@ -17,15 +17,15 @@ import type { KeyboardResize } from '@capacitor/keyboard';
  * when it finds the native bridge (src/lib/native.ts), so the website is
  * untouched by any of it.
  *
- * `CAP_SERVER_URL` points a development build at a local server instead:
- *
- *   CAP_SERVER_URL=http://localhost:3000 npx cap sync ios
- *
- * Re-run `npx cap sync ios` without it before archiving a release — the value
+ * `CAP_SERVER_URL` points a build at another server. `npm run ios:dev`
+ * (scripts/ios-dev.sh) uses it to run the site locally over HTTPS — plain
+ * http://localhost cannot sign anyone in inside WebKit — and
+ * `npm run ios:sync` without it points the app back at production. The value
  * is baked into the app bundle at sync time.
  */
 const serverUrl = (process.env.CAP_SERVER_URL || 'https://compbeast.app').replace(/\/+$/, '');
-const local = serverUrl.startsWith('http://');
+/** A development server on this machine, which signs in through Clerk's development instance. */
+const local = /^https?:\/\/(localhost|127\.0\.0\.1)(:\d+)?$/.test(serverUrl);
 
 const config: CapacitorConfig = {
   appId: 'app.compbeast',
@@ -42,7 +42,7 @@ const config: CapacitorConfig = {
   appendUserAgent: 'CompBeastApp/1',
   server: {
     url: serverUrl,
-    cleartext: local,
+    cleartext: serverUrl.startsWith('http://'),
     // Navigations that stay in the web view rather than opening Safari. Clerk
     // signs in on its own subdomain (its session handshake is a top-level
     // redirect through clerk.compbeast.app), so the whole site's domain has

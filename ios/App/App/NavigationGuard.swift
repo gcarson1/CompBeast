@@ -81,6 +81,26 @@ final class NavigationGuard: NSObject, WKNavigationDelegate, WKUIDelegate {
         controller?.pageDidFail(error)
     }
 
+    #if DEBUG
+    /// `npm run ios:dev` serves the site on https://localhost with a
+    /// self-signed certificate (scripts/ios-dev.sh). A Debug build accepts it
+    /// for localhost and nothing else; a Release build never contains this.
+    func webView(
+        _ webView: WKWebView,
+        didReceive challenge: URLAuthenticationChallenge,
+        completionHandler: @escaping @MainActor (URLSession.AuthChallengeDisposition, URLCredential?) -> Void
+    ) {
+        let space = challenge.protectionSpace
+        if space.authenticationMethod == NSURLAuthenticationMethodServerTrust,
+           ["localhost", "127.0.0.1"].contains(space.host),
+           let trust = space.serverTrust {
+            completionHandler(.useCredential, URLCredential(trust: trust))
+            return
+        }
+        capacitor.webView(webView, didReceive: challenge, completionHandler: completionHandler)
+    }
+    #endif
+
     // MARK: - WKUIDelegate
 
     /// `window.open`: our own pages open in place, anything else in the sheet.

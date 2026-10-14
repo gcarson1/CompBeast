@@ -50,13 +50,22 @@ export function inAppPath(url: string, currentHost?: string): string | null {
   }
 }
 
-let shell: Promise<NativeShellPlugin> | null = null;
+let shell: NativeShellPlugin | null = null;
 
-export function nativeShell(): Promise<NativeShellPlugin> {
-  shell ??= import('@capacitor/core').then(({ registerPlugin }) =>
-    registerPlugin<NativeShellPlugin>('NativeShell'),
-  );
-  return shell;
+/**
+ * Calls one of the shell's methods: `withShell((shell) => shell.ready())`.
+ *
+ * Never hands the plugin itself back through a promise. A Capacitor plugin
+ * answers *any* property as a native method, so a promise resolving to one
+ * asks it for `.then` — "NativeShell.then() is not implemented" — and the
+ * call never happens. Only the method's own result travels through here.
+ */
+export async function withShell<T>(use: (shell: NativeShellPlugin) => Promise<T>): Promise<T> {
+  if (!shell) {
+    const { registerPlugin } = await import('@capacitor/core');
+    shell = registerPlugin<NativeShellPlugin>('NativeShell');
+  }
+  return use(shell);
 }
 
 // ---------------------------------------------------------------------------
@@ -98,9 +107,7 @@ export function haptic(kind: HapticKind): void {
 export function setAppBadge(count: number): void {
   if (typeof window === 'undefined') return;
   if (isNativeApp()) {
-    nativeShell()
-      .then((plugin) => plugin.setBadgeCount({ count }))
-      .catch(() => {});
+    withShell((plugin) => plugin.setBadgeCount({ count })).catch(() => {});
     return;
   }
   const nav = navigator as Navigator & {

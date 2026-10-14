@@ -1,5 +1,6 @@
 import Link from 'next/link';
 import { CompBeastLogo } from '@/components/AppHeader';
+import { AppVersion } from '@/components/AppVersion';
 import { AFFILIATION_DISCLAIMER, operator } from '@/lib/legal';
 import { SITE_NAME } from '@/lib/seo';
 
@@ -54,6 +55,7 @@ export function SiteFooter() {
           }. `}
         {AFFILIATION_DISCLAIMER}
       </p>
+      <AppVersion />
     </footer>
   );
 }
